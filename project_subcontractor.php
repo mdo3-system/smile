@@ -1,9 +1,10 @@
 <?php
 // project_subcontractor.php
-require_once 'db_connect.php';
+require_once 'auth.php';
+check_auth(['admin', 'subcontractor']);
 
-// ★重要：現在はテストのため「業者ID=3」固定ですが、将来的にはログインユーザーIDにします
-$sub_id = 3; 
+// セッションからログイン中の業者IDを取得
+$sub_id = $_SESSION['user_id']; 
 
 // 承諾処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset($_POST['action'])) {
@@ -95,7 +96,13 @@ $my_tasks = $stmt->fetchAll();
     </style>
 </head>
 <body>
-    <h1>👷 協力業者専用ダッシュボード</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
+        <h1 style="margin:0; font-size:24px;">👷 協力業者専用ダッシュボード</h1>
+        <div style="font-size:14px;">
+            ログイン中: <strong><?= htmlspecialchars($_SESSION['contact_name'], ENT_QUOTES) ?></strong> 様
+            <a href="logout.php" style="margin-left:15px; color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
+        </div>
+    </div>
     <?php foreach ($my_tasks as $task): 
         // 該当案件の最新のCADファイルを取得
         $stmtFiles = $pdo->prepare("

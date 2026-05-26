@@ -1,13 +1,29 @@
 <?php
 // project_detail.php
-require_once 'db_connect.php';
+require_once 'auth.php';
 require_once 'functions.php';
 
-$current_user_id = 1;
-$is_admin = true;
+check_auth(['admin', 'client']);
+
+$current_user_id = $_SESSION['user_id'];
+$is_admin = ($_SESSION['role'] === 'admin');
 
 $project_id = $_GET['id'] ?? null;
 if (!$project_id) { die("案件が指定されていません。"); }
+
+// RBACチェック: 依頼主の場合、自分がオーナーの案件以外へのアクセスを制限
+$stmtProj = $pdo->prepare("SELECT * FROM projects WHERE id = :id");
+$stmtProj->execute(['id' => $project_id]);
+$project = $stmtProj->fetch();
+
+if (!$project) {
+    die("指定された案件が見つかりません。");
+}
+
+if ($_SESSION['role'] === 'client' && $project['client_id'] !== $current_user_id) {
+    header("HTTP/1.1 403 Forbidden");
+    die("この案件へのアクセス権限がありません。<br><a href='index.php'>ダッシュボードへ戻る</a>");
+}
 
 // ==========================================
 // POST処理（発注依頼の登録など）
@@ -94,6 +110,10 @@ $delivered_orders = $stmtDelivered->fetchAll();
 <body>
     <div class="container">
         <div class="column col-right">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; font-size:12px; border-bottom:1px solid #eee; padding-bottom:8px;">
+                <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
+                <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
+            </div>
             <?php if (count($delivered_orders) > 0): ?>
                 <div class="box" style="background:#fff3cd; border: 1px solid #ffeeba; margin-bottom:15px; border-radius:6px; padding:15px;">
                     <h3 style="margin-top:0; color:#856404; font-size:13px; display:flex; align-items:center; gap:5px;">

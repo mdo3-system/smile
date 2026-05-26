@@ -1,23 +1,37 @@
 <?php
 // index.php
-require_once 'db_connect.php';
+require_once 'auth.php';
+check_auth(['admin', 'client']);
 
-// 管理者（菅原様）のID
-$current_user_id = 1;
-
-// 1. ログインユーザー（菅原様）の情報を取得
+// 1. ログインユーザーの情報を取得
+$current_user_id = $_SESSION['user_id'];
 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = :id");
 $stmt->execute(['id' => $current_user_id]);
 $user = $stmt->fetch();
 
-// 2. 登録されている全案件を、顧客名（company_name）と一緒に取得
-$query = "
-    SELECT p.*, u.company_name 
-    FROM projects p 
-    JOIN users u ON p.client_id = u.id 
-    ORDER BY p.created_at DESC
-";
-$projects = $pdo->query($query)->fetchAll();
+// 2. 案件の取得（ロールに応じたフィルタ）
+if ($_SESSION['role'] === 'client') {
+    // クライアントの場合は、自身が依頼主の案件のみ取得
+    $query = "
+        SELECT p.*, u.company_name 
+        FROM projects p 
+        JOIN users u ON p.client_id = u.id 
+        WHERE p.client_id = :cid
+        ORDER BY p.created_at DESC
+    ";
+    $stmtProj = $pdo->prepare($query);
+    $stmtProj->execute(['cid' => $current_user_id]);
+    $projects = $stmtProj->fetchAll();
+} else {
+    // 管理者の場合は全案件を取得
+    $query = "
+        SELECT p.*, u.company_name 
+        FROM projects p 
+        JOIN users u ON p.client_id = u.id 
+        ORDER BY p.created_at DESC
+    ";
+    $projects = $pdo->query($query)->fetchAll();
+}
 
 // ステータスを日本語表示に変換する用の配列
 $status_labels = [
@@ -55,7 +69,10 @@ $status_labels = [
 
     <div class="header">
         <h1>💼 案件ダッシュボード</h1>
-        <div>ログイン中: <?= htmlspecialchars($user['contact_name'], ENT_QUOTES) ?> 様</div>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <div>ログイン中: <?= htmlspecialchars($user['contact_name'], ENT_QUOTES) ?> 様 <span style="font-size:11px; background:#4b5563; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;"><?= htmlspecialchars($_SESSION['role'], ENT_QUOTES) ?></span></div>
+            <a href="logout.php" style="font-size:12px; color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
+        </div>
     </div>
 
     <div class="grid">

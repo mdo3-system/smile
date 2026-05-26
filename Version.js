@@ -6,4 +6,5 @@
 // 1.0.4: Integrate delivery upload and admin confirmation flow
 // 1.0.5: Integrate user authentication and role-based access control (RBAC)
 // 1.0.6: Switch to passwordless Magic Link authentication
-window.APP_VERSION = '1.0.6';
+// 1.0.7: Complete Magic Link and RBAC integration
+window.APP_VERSION = '1.0.7';
