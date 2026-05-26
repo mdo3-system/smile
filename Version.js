@@ -10,4 +10,5 @@
 // 1.0.8: Initialize Composer and install Google API Client library
 // 1.0.9: Introduce SMS Notification (Twilio SDK setup & Notifier)
 // 1.0.10: Integrate Twilio SDK for SMS chat notifications and cooldown logic
-window.APP_VERSION = '1.0.10';
+// 1.0.11: Remove Twilio SMS notification integration
+window.APP_VERSION = '1.0.11';
