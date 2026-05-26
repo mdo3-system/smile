@@ -5,4 +5,5 @@
 // 1.0.3: Add subcontractor delivery upload and admin review flow
 // 1.0.4: Integrate delivery upload and admin confirmation flow
 // 1.0.5: Integrate user authentication and role-based access control (RBAC)
-window.APP_VERSION = '1.0.5';
+// 1.0.6: Switch to passwordless Magic Link authentication
+window.APP_VERSION = '1.0.6';
