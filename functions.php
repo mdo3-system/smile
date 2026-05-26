@@ -86,7 +86,11 @@ function renderFileSlot($c_key, $c_label, $latest_files, $project_id) {
     }
     echo '<div class="file-slot"><div style="flex: 1;"><div class="file-slot-title">'.$c_label.'</div><div class="file-slot-info">';
     if ($latest) {
-        echo '<a href="'.htmlspecialchars($latest['drive_file_id'], ENT_QUOTES).'" target="_blank" style="text-decoration:none; color:#0056b3; font-weight:bold;">📄 '.htmlspecialchars($latest['file_name'], ENT_QUOTES).' <span class="badge" style="background:#28a745; color:white; margin-left:5px;">V'.$latest['version'].'</span></a>';
+        $download_url = htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
+        if (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) {
+            $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+        }
+        echo '<a href="'.$download_url.'" target="_blank" style="text-decoration:none; color:#0056b3; font-weight:bold;">📄 '.htmlspecialchars($latest['file_name'], ENT_QUOTES).' <span class="badge" style="background:#28a745; color:white; margin-left:5px;">V'.$latest['version'].'</span></a>';
     } else { 
         echo '<span style="color:#999; font-size:11px;">未登録</span>'; 
     }

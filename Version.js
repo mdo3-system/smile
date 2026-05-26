@@ -12,4 +12,5 @@
 // 1.0.10: Integrate Twilio SDK for SMS chat notifications and cooldown logic
 // 1.0.11: Remove Twilio SMS notification integration
 // 1.0.12: Setup Google Drive API integration and migration script
-window.APP_VERSION = '1.0.12';
+// 1.0.13: Migrate file storage to Google Drive API and perform database migration
+window.APP_VERSION = '1.0.13';

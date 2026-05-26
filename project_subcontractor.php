@@ -23,49 +23,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (isset($_FILES['delivery_file']) && $_FILES['delivery_file']['error'] === UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['delivery_file']['tmp_name'];
         $file_name = $_FILES['delivery_file']['name'];
+        $mime_type = $_FILES['delivery_file']['type'];
         
-        // ファイル名の安全化と一意化
-        $db_file_name = time() . '_' . preg_replace('/[^a-zA-Z0-9_.-]/u', '_', $file_name);
-        $upload_dir = 'uploads/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
-        }
-        $dest_path = $upload_dir . $db_file_name;
-        
-        if (move_uploaded_file($file_tmp, $dest_path)) {
+        try {
+            // Google Drive へのアップロード
+            require_once 'google_drive_client.php';
+            $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type);
+            
             $pdo->beginTransaction();
-            try {
-                // 1. 最新バージョンの確認
-                $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = 'structural_dwg'");
-                $stmtVer->execute(['pid' => $project_id]);
-                $max_v = $stmtVer->fetch()['max_v'] ?? 0;
-                $new_v = $max_v + 1;
-                
-                // 2. 過去のファイルの is_latest を 0 に更新
-                $stmtUpdateLatest = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
-                $stmtUpdateLatest->execute(['pid' => $project_id]);
-                
-                // 3. 新しいファイルを登録
-                $stmtInsertFile = $pdo->prepare("
-                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
-                    VALUES (:pid, 'structural_dwg', :fname, :fpath, :ver, 1)
-                ");
-                $stmtInsertFile->execute([
-                    'pid' => $project_id,
-                    'fname' => $file_name,
-                    'fpath' => $dest_path,
-                    'ver' => $new_v
-                ]);
-                
-                // 4. 発注ステータスを delivered (納品済) に更新
-                $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered' WHERE id = :id AND subcontractor_id = :sub_id");
-                $stmtOrder->execute(['id' => $order_id, 'sub_id' => $sub_id]);
-                
-                $pdo->commit();
-            } catch (Exception $e) {
+            // 1. 最新バージョンの確認
+            $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = 'structural_dwg'");
+            $stmtVer->execute(['pid' => $project_id]);
+            $max_v = $stmtVer->fetch()['max_v'] ?? 0;
+            $new_v = $max_v + 1;
+            
+            // 2. 過去のファイルの is_latest を 0 に更新
+            $stmtUpdateLatest = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
+            $stmtUpdateLatest->execute(['pid' => $project_id]);
+            
+            // 3. 新しいファイルを登録
+            $stmtInsertFile = $pdo->prepare("
+                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                VALUES (:pid, 'structural_dwg', :fname, :fpath, :ver, 1)
+            ");
+            $stmtInsertFile->execute([
+                'pid' => $project_id,
+                'fname' => $file_name,
+                'fpath' => $drive_file_id,
+                'ver' => $new_v
+            ]);
+            
+            // 4. 発注ステータスを delivered (納品済) に更新
+            $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered' WHERE id = :id AND subcontractor_id = :sub_id");
+            $stmtOrder->execute(['id' => $order_id, 'sub_id' => $sub_id]);
+            
+            $pdo->commit();
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
                 $pdo->rollBack();
-                die("納品処理に失敗しました: " . $e->getMessage());
             }
+            die("納品処理に失敗しました: " . $e->getMessage());
         }
     }
     header("Location: project_subcontractor.php");
@@ -136,9 +133,14 @@ $my_tasks = $stmt->fetchAll();
                     <strong>📂 CADデータダウンロード:</strong>
                     <?php if (count($cad_files) > 0): ?>
                         <ul style="margin:5px 0 0 0; padding-left:20px;">
-                            <?php foreach ($cad_files as $file): ?>
+                            <?php foreach ($cad_files as $file): 
+                                $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
+                                if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
+                                    $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                }
+                            ?>
                                 <li style="margin-bottom:3px;">
-                                    <a href="<?= htmlspecialchars($file['drive_file_id'], ENT_QUOTES) ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
+                                    <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
                                         📄 <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> <span class="badge" style="background:#555; color:white; font-size:10px; padding:1px 4px; border-radius:3px;">V<?= $file['version'] ?></span>
                                     </a>
                                 </li>
@@ -177,9 +179,14 @@ $my_tasks = $stmt->fetchAll();
                     <strong>📂 CADデータダウンロード:</strong>
                     <?php if (count($cad_files) > 0): ?>
                         <ul style="margin:5px 0 0 0; padding-left:20px;">
-                            <?php foreach ($cad_files as $file): ?>
+                            <?php foreach ($cad_files as $file): 
+                                $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
+                                if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
+                                    $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                }
+                            ?>
                                 <li style="margin-bottom:3px;">
-                                    <a href="<?= htmlspecialchars($file['drive_file_id'], ENT_QUOTES) ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
+                                    <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
                                         📄 <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> <span class="badge" style="background:#555; color:white; font-size:10px; padding:1px 4px; border-radius:3px;">V<?= $file['version'] ?></span>
                                     </a>
                                 </li>

@@ -95,8 +95,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
     
-    // ...（既存のspecs保存、スケジュール保存、ファイルUP処理はそのまま）...
-    // 【重要】既存のPOST処理をここに追加してください。省略しましたが前回と同じ内容です。
+    // ファイルアップロード処理（管理者・依頼主）
+    if (isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK) {
+        $file_category = $_POST['file_category'] ?? '';
+        if ($file_category !== '') {
+            $file_name = $_FILES['upload_file']['name'];
+            $tmp_name = $_FILES['upload_file']['tmp_name'];
+            $mime_type = $_FILES['upload_file']['type'];
+
+            try {
+                // Google Drive へのアップロード
+                require_once 'google_drive_client.php';
+                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+
+                $pdo->beginTransaction();
+                // 1. 既存の同カテゴリのファイルを最新フラグから外す
+                $stmtDisable = $pdo->prepare("
+                    UPDATE project_files 
+                    SET is_latest = 0 
+                    WHERE project_id = :pid AND file_category = :cat
+                ");
+                $stmtDisable->execute([
+                    'pid' => $project_id,
+                    'cat' => $file_category
+                ]);
+
+                // 2. 現在の最大バージョンを取得
+                $stmtVersion = $pdo->prepare("
+                    SELECT MAX(version) 
+                    FROM project_files 
+                    WHERE project_id = :pid AND file_category = :cat
+                ");
+                $stmtVersion->execute([
+                    'pid' => $project_id,
+                    'cat' => $file_category
+                ]);
+                $max_version = (int)$stmtVersion->fetchColumn();
+                $new_version = $max_version + 1;
+
+                // 3. 新しいレコードを挿入
+                $stmtInsert = $pdo->prepare("
+                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                    VALUES (:pid, :cat, :name, :drive_id, :ver, 1)
+                ");
+                $stmtInsert->execute([
+                    'pid' => $project_id,
+                    'cat' => $file_category,
+                    'name' => $file_name,
+                    'drive_id' => $drive_file_id,
+                    'ver' => $new_version
+                ]);
+
+                $pdo->commit();
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                die("ファイルのアップロードまたはデータベース登録に失敗しました: " . $e->getMessage());
+            }
+            header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+        }
+    }
 }
 
 // ==========================================
@@ -144,8 +203,13 @@ $delivered_orders = $stmtDelivered->fetchAll();
                             <strong>タスク:</strong> <?= htmlspecialchars($del['task_title'], ENT_QUOTES) ?><br>
                             <strong>金額:</strong> <?= number_format($del['order_amount']) ?>円<br>
                             <strong>納品物:</strong> 
-                            <?php if ($del['drive_file_id']): ?>
-                                <a href="<?= htmlspecialchars($del['drive_file_id'], ENT_QUOTES) ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
+                            <?php if ($del['drive_file_id']): 
+                                $download_url = htmlspecialchars($del['drive_file_id'], ENT_QUOTES);
+                                if (strpos($del['drive_file_id'], 'uploads/') !== 0 && !empty($del['drive_file_id'])) {
+                                    $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($del['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                }
+                            ?>
+                                <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
                                     📄 <?= htmlspecialchars($del['file_name'], ENT_QUOTES) ?> (V<?= $del['version'] ?>)
                                 </a>
                             <?php else: ?>
