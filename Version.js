@@ -8,4 +8,5 @@
 // 1.0.6: Switch to passwordless Magic Link authentication
 // 1.0.7: Complete Magic Link and RBAC integration
 // 1.0.8: Initialize Composer and install Google API Client library
-window.APP_VERSION = '1.0.8';
+// 1.0.9: Introduce SMS Notification (Twilio SDK setup & Notifier)
+window.APP_VERSION = '1.0.9';
