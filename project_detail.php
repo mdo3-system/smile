@@ -86,35 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 INSERT INTO messages (project_id, thread_type, message_text) 
                 VALUES (:pid, :thread, :msg)
             ");
-            $success = $stmt->execute([
+            $stmt->execute([
                 'pid' => $project_id,
                 'thread' => $thread_type,
                 'msg' => $message_text
             ]);
-            
-            if ($success) {
-                // SMS通知の送信
-                require_once 'notifier.php';
-                $notifier = new Notifier($pdo);
-                
-                // 送信先（相手）ユーザーを特定
-                // 管理者（$is_admin = true）が送信した場合 ➔ 案件の client_id 宛て
-                // クライアント（$is_admin = false）が送信した場合 ➔ 管理者（ID = 1）宛て
-                $target_user_id = $is_admin ? $project['client_id'] : 1;
-                
-                if ($notifier->check_cooldown($target_user_id)) {
-                    $stmtUser = $pdo->prepare("SELECT phone_number FROM users WHERE id = :id");
-                    $stmtUser->execute(['id' => $target_user_id]);
-                    $to_phone = $stmtUser->fetchColumn();
-                    
-                    if ($to_phone) {
-                        $msg_content = "【構造設計ポータル】新しいメッセージが届きました。\n案件: {$project['project_name']}\nログインして確認してください。";
-                        if ($notifier->send_sms($to_phone, $msg_content)) {
-                            $notifier->update_cooldown($target_user_id);
-                        }
-                    }
-                }
-            }
         }
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
@@ -242,7 +218,7 @@ $delivered_orders = $stmtDelivered->fetchAll();
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
                     <input type="hidden" name="action" value="send_message">
                     <textarea name="message_text" placeholder="メッセージを入力してください..." style="width:100%; height:50px; margin-bottom:5px; font-size:11px; box-sizing:border-box;" required></textarea>
-                    <button type="submit" style="width:100%; background:#17a2b8; color:white; border:none; padding:5px; cursor:pointer; font-size:11px; font-weight:bold; border-radius:3px;">メッセージを送信 (SMS通知連動)</button>
+                    <button type="submit" style="width:100%; background:#17a2b8; color:white; border:none; padding:5px; cursor:pointer; font-size:11px; font-weight:bold; border-radius:3px;">メッセージを送信</button>
                 </form>
             </div>
             </div>
