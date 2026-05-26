@@ -75,6 +75,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
+
+    // チャットメッセージの送信
+    if ($action === 'send_message') {
+        $message_text = trim($_POST['message_text'] ?? '');
+        if ($message_text !== '') {
+            $thread_type = 'client_admin'; // 対依頼主チャット
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO messages (project_id, thread_type, message_text) 
+                VALUES (:pid, :thread, :msg)
+            ");
+            $success = $stmt->execute([
+                'pid' => $project_id,
+                'thread' => $thread_type,
+                'msg' => $message_text
+            ]);
+            
+            if ($success) {
+                // SMS通知の送信
+                require_once 'notifier.php';
+                $notifier = new Notifier($pdo);
+                
+                // 送信先（相手）ユーザーを特定
+                // 管理者（$is_admin = true）が送信した場合 ➔ 案件の client_id 宛て
+                // クライアント（$is_admin = false）が送信した場合 ➔ 管理者（ID = 1）宛て
+                $target_user_id = $is_admin ? $project['client_id'] : 1;
+                
+                if ($notifier->check_cooldown($target_user_id)) {
+                    $stmtUser = $pdo->prepare("SELECT phone_number FROM users WHERE id = :id");
+                    $stmtUser->execute(['id' => $target_user_id]);
+                    $to_phone = $stmtUser->fetchColumn();
+                    
+                    if ($to_phone) {
+                        $msg_content = "【構造設計ポータル】新しいメッセージが届きました。\n案件: {$project['project_name']}\nログインして確認してください。";
+                        if ($notifier->send_sms($to_phone, $msg_content)) {
+                            $notifier->update_cooldown($target_user_id);
+                        }
+                    }
+                }
+            }
+        }
+        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    }
     
     // ...（既存のspecs保存、スケジュール保存、ファイルUP処理はそのまま）...
     // 【重要】既存のPOST処理をここに追加してください。省略しましたが前回と同じ内容です。
@@ -177,6 +220,31 @@ $delivered_orders = $stmtDelivered->fetchAll();
             </div>
 
             <h2 class="section-title" style="background:#17a2b8; margin-top:20px;">💬 対 依頼主チャット</h2>
+            <div class="box" style="background:#f0f8ff;">
+                <!-- メッセージ履歴 -->
+                <div style="max-height: 180px; overflow-y: auto; margin-bottom: 10px; font-size:11px; padding:5px; background:white; border:1px solid #ddd; border-radius:4px;">
+                    <?php
+                    $stmtMsgs = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'client_admin' ORDER BY id ASC");
+                    $stmtMsgs->execute(['pid' => $project_id]);
+                    $chat_messages = $stmtMsgs->fetchAll();
+                    foreach ($chat_messages as $msg) {
+                        echo '<div style="padding:4px 0; border-bottom:1px solid #eee; margin-bottom:4px;">';
+                        echo '<strong>' . htmlspecialchars($msg['thread_type'], ENT_QUOTES) . ':</strong> ';
+                        echo htmlspecialchars($msg['message_text'], ENT_QUOTES);
+                        echo '</div>';
+                    }
+                    if (empty($chat_messages)) {
+                        echo '<span style="color:#999;">メッセージはありません。</span>';
+                    }
+                    ?>
+                </div>
+                <!-- 送信フォーム -->
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
+                    <input type="hidden" name="action" value="send_message">
+                    <textarea name="message_text" placeholder="メッセージを入力してください..." style="width:100%; height:50px; margin-bottom:5px; font-size:11px; box-sizing:border-box;" required></textarea>
+                    <button type="submit" style="width:100%; background:#17a2b8; color:white; border:none; padding:5px; cursor:pointer; font-size:11px; font-weight:bold; border-radius:3px;">メッセージを送信 (SMS通知連動)</button>
+                </form>
+            </div>
             </div>
     </div>
 </body>

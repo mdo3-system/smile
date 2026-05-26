@@ -2,6 +2,7 @@
     "name": "antigravity/structure-portal",
     "description": "Structure design support portal",
     "require": {
-        "google/apiclient": "^2.15"
+        "google/apiclient": "^2.15",
+        "twilio/sdk": "^7.0"
     }
 }
