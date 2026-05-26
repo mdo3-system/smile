@@ -38,6 +38,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
+
+    // 納品承認処理
+    if ($action === 'approve_delivery') {
+        $order_id = intval($_POST['order_id']);
+        $pdo->beginTransaction();
+        try {
+            // 1. 発注ステータスを completed に更新
+            $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed' WHERE id = :id");
+            $stmt->execute(['id' => $order_id]);
+
+            // 2. 案件ステータスを「提出済・確認中 (submission)」に更新
+            $stmtUpdate = $pdo->prepare("UPDATE projects SET status = 'submission' WHERE id = :pid");
+            $stmtUpdate->execute(['pid' => $project_id]);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("承認処理に失敗しました: " . $e->getMessage());
+        }
+        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    }
     
     // ...（既存のspecs保存、スケジュール保存、ファイルUP処理はそのまま）...
     // 【重要】既存のPOST処理をここに追加してください。省略しましたが前回と同じ内容です。
@@ -54,6 +75,17 @@ $stmt = $pdo->prepare("SELECT o.*, u.contact_name FROM subcontractor_orders o JO
 $stmt->execute(['pid' => $project_id]);
 $orders = $stmt->fetchAll();
 
+// 未承認の納品を取得
+$stmtDelivered = $pdo->prepare("
+    SELECT o.*, u.contact_name, f.drive_file_id, f.file_name, f.version
+    FROM subcontractor_orders o 
+    JOIN users u ON o.subcontractor_id = u.id 
+    LEFT JOIN project_files f ON o.project_id = f.project_id AND f.file_category = 'structural_dwg' AND f.is_latest = 1
+    WHERE o.project_id = :pid AND o.status = 'delivered'
+");
+$stmtDelivered->execute(['pid' => $project_id]);
+$delivered_orders = $stmtDelivered->fetchAll();
+
 // ...（以降、前回までと同じ表示ロジック）...
 ?>
 
@@ -62,6 +94,35 @@ $orders = $stmt->fetchAll();
 <body>
     <div class="container">
         <div class="column col-right">
+            <?php if (count($delivered_orders) > 0): ?>
+                <div class="box" style="background:#fff3cd; border: 1px solid #ffeeba; margin-bottom:15px; border-radius:6px; padding:15px;">
+                    <h3 style="margin-top:0; color:#856404; font-size:13px; display:flex; align-items:center; gap:5px;">
+                        🔔 納品確認エリア（成果物の承認待ち）
+                    </h3>
+                    <?php foreach ($delivered_orders as $del): ?>
+                        <div style="font-size:11px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed #ffeeba; color:#666; line-height:1.5;">
+                            <strong>担当者:</strong> <?= htmlspecialchars($del['contact_name'], ENT_QUOTES) ?> 様<br>
+                            <strong>タスク:</strong> <?= htmlspecialchars($del['task_title'], ENT_QUOTES) ?><br>
+                            <strong>金額:</strong> <?= number_format($del['order_amount']) ?>円<br>
+                            <strong>納品物:</strong> 
+                            <?php if ($del['drive_file_id']): ?>
+                                <a href="<?= htmlspecialchars($del['drive_file_id'], ENT_QUOTES) ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
+                                    📄 <?= htmlspecialchars($del['file_name'], ENT_QUOTES) ?> (V<?= $del['version'] ?>)
+                                </a>
+                            <?php else: ?>
+                                <span style="color:#c0392b;">（図書ファイルが見つかりません）</span>
+                            <?php endif; ?><br>
+                            
+                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:8px;">
+                                <input type="hidden" name="action" value="approve_delivery">
+                                <input type="hidden" name="order_id" value="<?= $del['id'] ?>">
+                                <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer; font-weight:bold;">この納品を承認・確認する</button>
+                            </form>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
             <h2 class="section-title" style="background:#e67e22;">🤝 協力業者への発注・タスク管理</h2>
             
             <div class="box" style="background:#fff9f0;">
