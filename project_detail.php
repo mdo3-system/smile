@@ -17,13 +17,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 新規発注依頼の保存
     if ($action === 'order_subcontractor') {
-        $stmt = $pdo->prepare("INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount) VALUES (:pid, :sub_id, :task, :amount)");
-        $stmt->execute([
-            'pid' => $project_id,
-            'sub_id' => $_POST['subcontractor_id'],
-            'task' => $_POST['task_title'],
-            'amount' => $_POST['order_amount']
-        ]);
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount, status) VALUES (:pid, :sub_id, :task, :amount, 'requested')");
+            $stmt->execute([
+                'pid' => $project_id,
+                'sub_id' => $_POST['subcontractor_id'],
+                'task' => $_POST['task_title'],
+                'amount' => $_POST['order_amount']
+            ]);
+
+            // 案件のステータスを「構造図作成中 (structural_dwg)」へ自動更新
+            $stmtUpdate = $pdo->prepare("UPDATE projects SET status = 'structural_dwg' WHERE id = :pid");
+            $stmtUpdate->execute(['pid' => $project_id]);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("発注処理に失敗しました: " . $e->getMessage());
+        }
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
     

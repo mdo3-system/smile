@@ -7,7 +7,7 @@ $sub_id = 3;
 
 // 自分の担当案件リストを取得
 $stmt = $pdo->prepare("
-    SELECT o.*, p.project_name, p.status 
+    SELECT o.*, p.project_name, p.status AS project_status 
     FROM subcontractor_orders o 
     JOIN projects p ON o.project_id = p.id 
     WHERE o.subcontractor_id = :sub_id 
