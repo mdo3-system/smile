@@ -13,4 +13,5 @@
 // 1.0.11: Remove Twilio SMS notification integration
 // 1.0.12: Setup Google Drive API integration and migration script
 // 1.0.13: Migrate file storage to Google Drive API and perform database migration
-window.APP_VERSION = '1.0.13';
+// 1.0.14: Fix magic link URL generation using APP_URL or robust self-detection
+window.APP_VERSION = '1.0.14';

@@ -31,15 +31,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'token' => $token
             ]);
             
+            // .env の手動ロード
+            $app_url = '';
+            if (file_exists(__DIR__ . '/.env')) {
+                $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line) || strpos($line, '#') === 0) {
+                        continue;
+                    }
+                    if (strpos($line, '=') !== false) {
+                        list($name, $value) = explode('=', $line, 2);
+                        if (trim($name) === 'APP_URL') {
+                            $app_url = trim(trim($value), '"\'');
+                            break;
+                        }
+                    }
+                }
+            }
+
             // ログイン用URLの作成
-            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-            $host = $_SERVER['HTTP_HOST'];
-            $dir = dirname($_SERVER['REQUEST_URI']);
+            if (empty($app_url)) {
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+                $host = $_SERVER['HTTP_HOST'];
+                $script_dir = dirname($_SERVER['SCRIPT_NAME']);
+                // Windows環境のバックスラッシュをスラッシュに置換
+                $script_dir = str_replace('\\', '/', $script_dir);
+                // 末尾のスラッシュを削除し、二重スラッシュを防ぐ
+                $script_dir = rtrim($script_dir, '/');
+                $app_url = "{$protocol}://{$host}{$script_dir}";
+            } else {
+                $app_url = rtrim($app_url, '/');
+            }
             
             // 協力業者の場合は直接 project_subcontractor.php にトークン付きで遷移させ、
             // それ以外（管理者・依頼主）は index.php にトークン付きで遷移させる
             $target_page = ($user['role'] === 'subcontractor') ? 'project_subcontractor.php' : 'index.php';
-            $login_url = "{$protocol}://{$host}{$dir}/{$target_page}?token={$token}";
+            $login_url = "{$app_url}/{$target_page}?token={$token}";
             
             $message = "ご入力のメールアドレス宛にログインリンクを送信しました（開発環境用に下記にリンクを表示します）。";
             $devel_link = $login_url;
