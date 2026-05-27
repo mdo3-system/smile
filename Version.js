@@ -14,4 +14,5 @@
 // 1.0.12: Setup Google Drive API integration and migration script
 // 1.0.13: Migrate file storage to Google Drive API and perform database migration
 // 1.0.14: Fix magic link URL generation using APP_URL or robust self-detection
-window.APP_VERSION = '1.0.14';
+// 1.0.15: Implement new request flow (Pattern A), register page, and redesign dashboard UI
+window.APP_VERSION = '1.0.15';
