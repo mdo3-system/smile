@@ -104,16 +104,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            --card-bg: rgba(30, 41, 59, 0.6);
-            --card-hover: rgba(30, 41, 59, 0.8);
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-hover: rgba(255, 255, 255, 1);
             --primary-color: #3b82f6;
             --primary-hover: #2563eb;
             --accent-color: #10b981;
             --accent-hover: #059669;
-            --text-color: #f1f5f9;
-            --text-muted: #94a3b8;
-            --border-color: rgba(255, 255, 255, 0.1);
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: rgba(0, 0, 0, 0.1);
         }
         
         body {
@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 700;
             margin-top: 0;
             margin-bottom: 20px;
-            color: #cbd5e1;
+            color: #334155;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -201,8 +201,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input[type="text"], select {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #ffffff;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-color);
             font-size: 15px;
@@ -216,16 +216,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         select option {
-            background: #1e293b;
+            background: #ffffff;
             color: var(--text-color);
         }
 
         .file-upload-box {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border: 2px dashed rgba(0, 0, 0, 0.2);
             padding: 20px;
             border-radius: 8px;
             text-align: center;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(0, 0, 0, 0.02);
             transition: all 0.3s ease;
             position: relative;
         }
@@ -320,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="form-group">
                     <label for="memo">メモ・特記事項（ご要望事項など）</label>
-                    <textarea id="memo" name="memo" rows="4" placeholder="特記事項やご要望などがあればご記入ください。" style="width: 100%; padding: 12px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); font-size: 15px; box-sizing: border-box; resize: vertical;"></textarea>
+                    <textarea id="memo" name="memo" rows="4" placeholder="特記事項やご要望などがあればご記入ください。" style="width: 100%; padding: 12px 16px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-size: 15px; box-sizing: border-box; resize: vertical;"></textarea>
                 </div>
             </div>
 
