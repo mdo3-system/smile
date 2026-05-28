@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ==========================================
 // 案件と仕様情報を取得
 $stmtProj = $pdo->prepare("
-    SELECT p.*, s.soil_status, u.company_name, u.contact_name as client_name
+    SELECT p.*, s.soil_status, u.company_name, u.contact_name as client_name, u.phone_number as client_phone
     FROM projects p 
     LEFT JOIN project_specs s ON p.id = s.project_id 
     LEFT JOIN users u ON p.client_id = u.id
@@ -252,6 +252,11 @@ $chat_messages = $stmtMsgs->fetchAll();
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
                     <strong>依頼主:</strong> <?= htmlspecialchars($project_info['company_name'] . ' ' . $project_info['client_name'], ENT_QUOTES) ?><br>
+                    <?php if ($is_admin && !empty($project_info['client_phone'])): ?>
+                    <strong>📱 電話番号:</strong> <a href="tel:<?= htmlspecialchars($project_info['client_phone'], ENT_QUOTES) ?>" style="color:#0056b3; font-weight:bold;"><?= htmlspecialchars($project_info['client_phone'], ENT_QUOTES) ?></a><br>
+                    <?php elseif ($is_admin): ?>
+                    <strong>📱 電話番号:</strong> <span style="color:#e53e3e; font-size:11px;">未登録（依頼主に入力を依頼してください）</span><br>
+                    <?php endif; ?>
                     <strong>地盤調査:</strong> <?= htmlspecialchars($project_info['soil_status'] ?? '未定', ENT_QUOTES) ?><br>
                     <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($project_info['status'], ENT_QUOTES) ?></span>
                 </div>
@@ -292,6 +297,59 @@ $chat_messages = $stmtMsgs->fetchAll();
                     </button>
                 </form>
             </div>
+
+            <?php if ($is_admin): ?>
+            <!-- 管理者専用：協力業者への発注 -->
+            <h2 class="section-title" style="background:#e67e22;">🤝 協力業者への発注・タスク管理</h2>
+            <div class="box" style="background:#fff9f0;">
+                <div style="font-size:11px; margin-bottom:5px;"><strong>自動発注額算出</strong></div>
+                <div style="display:flex; gap:5px;">
+                    <input type="number" id="sub_area" placeholder="面積(㎡)" style="width:60px; font-size:12px;">
+                    <button type="button" onclick="calcSubcontractorEstimate()" style="font-size:11px; padding:2px 5px;">算出</button>
+                </div>
+                <div id="sub_calc_result" style="margin-bottom:10px;"></div>
+                <script>
+                function calcSubcontractorEstimate() {
+                    const area = parseFloat(document.getElementById('sub_area').value) || 0;
+                    if (area <= 0) return;
+                    const total = 30000 + Math.round(area * 500);
+                    document.getElementById('sub_calc_result').innerHTML = 
+                        '<span style="color:#28a745;font-size:12px;font-weight:bold;">推奨発注額: ' + total.toLocaleString() + '円</span>';
+                    document.querySelector('input[name="order_amount"]').value = total;
+                }
+                </script>
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:10px;">
+                    <input type="hidden" name="action" value="order_subcontractor">
+                    <select name="subcontractor_id" style="width:100%; margin-bottom:5px; font-size:12px;">
+                        <?php foreach($subcontractors as $sub): ?>
+                            <option value="<?= $sub['id'] ?>"><?= htmlspecialchars($sub['contact_name'], ENT_QUOTES) ?> 様</option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="text" name="task_title" placeholder="依頼内容（例：構造図作図）" style="width:100%; margin-bottom:5px; font-size:12px;">
+                    <input type="number" name="order_amount" placeholder="金額(税込)" style="width:100%; margin-bottom:5px; font-size:12px;">
+                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:5px; font-size:12px; cursor:pointer; border-radius:3px;">発注を確定・送信</button>
+                </form>
+            </div>
+
+            <div style="font-size:11px; color:#555;">
+                <h3 style="font-size:12px; border-bottom:1px solid #ccc; margin-top:0;">発注履歴</h3>
+                <?php foreach($orders as $o): ?>
+                    <div style="padding:4px 0; border-bottom:1px solid #eee;">
+                        <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?>: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?> (<?= number_format($o['order_amount']) ?>円)
+                        <span class="badge" style="background:#555;"><?= htmlspecialchars($o['status'], ENT_QUOTES) ?></span>
+                    </div>
+                <?php endforeach; ?>
+                <?php if (empty($orders)): ?>
+                    <div style="color:#999;">発注履歴はありません。</div>
+                <?php endif; ?>
+            </div>
+
+            <!-- 協力業者ダッシュボードへの切り替えリンク -->
+            <div style="margin-top:15px; padding:10px; background:#e8f0fe; border:1px solid #93c5fd; border-radius:6px; text-align:center;">
+                <div style="font-size:11px; color:#555; margin-bottom:8px;">この案件を協力業者視点で確認する</div>
+                <a href="project_subcontractor.php?id=<?= $project_id ?>" target="_blank" style="display:inline-block; background:#3b82f6; color:white; padding:7px 15px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードで見る</a>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- 中央パネル：最終成果物 -->
@@ -533,50 +591,7 @@ $chat_messages = $stmtMsgs->fetchAll();
                 window.addEventListener('DOMContentLoaded', calcClientEstimate);
                 </script>
                 <?php endif; ?>
-
-                <h2 class="section-title" style="background:#e67e22; margin-top:20px;">🤝 協力業者への発注・タスク管理</h2>
-                <div class="box" style="background:#fff9f0;">
-                    <div style="font-size:11px; margin-bottom:5px;"><strong>自動発注額算出</strong></div>
-                    <div style="display:flex; gap:5px;">
-                        <input type="number" id="sub_area" placeholder="面積(㎡)" style="width:60px; font-size:12px;">
-                        <button type="button" onclick="calcSubcontractorEstimate()" style="font-size:11px; padding:2px 5px;">算出</button>
-                    </div>
-                    <div id="sub_calc_result" style="margin-bottom:10px;"></div>
-                    <script>
-                    function calcSubcontractorEstimate() {
-                        const area = parseFloat(document.getElementById('sub_area').value) || 0;
-                        if (area <= 0) return;
-                        const pricePerSqm = 500;
-                        const basePrice = 30000;
-                        const total = basePrice + Math.round(area * pricePerSqm);
-                        document.getElementById('sub_calc_result').innerHTML = 
-                            '<span style="color:#28a745;font-size:12px;font-weight:bold;">推奨発注額: ' + total.toLocaleString() + '円</span>';
-                        document.querySelector('input[name="order_amount"]').value = total;
-                    }
-                    </script>
-
-                    <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
-                        <input type="hidden" name="action" value="order_subcontractor">
-                        <select name="subcontractor_id" style="width:100%; margin-bottom:5px; font-size:12px;">
-                            <?php foreach($subcontractors as $sub): ?>
-                                <option value="<?= $sub['id'] ?>"><?= $sub['contact_name'] ?> 様</option>
-                            <?php endforeach; ?>
-                        </select>
-                        <input type="text" name="task_title" placeholder="依頼内容（例：構造図作図）" style="width:100%; margin-bottom:5px; font-size:12px;">
-                        <input type="number" name="order_amount" placeholder="金額(税込)" style="width:100%; margin-bottom:5px; font-size:12px;">
-                        <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:5px; font-size:12px; cursor:pointer;">発注を確定・送信</button>
-                    </form>
-                </div>
-                
-                <div style="font-size:11px; color:#555; margin-top:10px;">
-                    <h3 style="font-size:12px; border-bottom:1px solid #ccc; margin-top:0;">発注履歴</h3>
-                    <?php foreach($orders as $o): ?>
-                        <div style="padding:4px 0; border-bottom:1px solid #eee;">
-                            <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?>: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?> (<?= number_format($o['order_amount']) ?>円)
-                            <span class="badge" style="background:#555;"><?= htmlspecialchars($o['status'], ENT_QUOTES) ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
+            </div>
             <?php endif; ?> <!-- 管理者エリア終了 -->
         </div>
     </div>

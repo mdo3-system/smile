@@ -10,12 +10,19 @@ $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $project_name = trim($_POST['project_name'] ?? '');
+    $phone_number = trim($_POST['phone_number'] ?? '');
     
     if (empty($project_name)) {
         $message = "案件名を入力してください。";
+    } elseif (empty($phone_number)) {
+        $message = "携帯電話番号は必須です。SMS通知のために必要です。";
     } else {
         $pdo->beginTransaction();
         try {
+            // 0. 電話番号を users テーブルへ保存（未登録または更新）
+            $stmtPhone = $pdo->prepare("UPDATE users SET phone_number = :phone WHERE id = :uid");
+            $stmtPhone->execute(['phone' => $phone_number, 'uid' => $current_user_id]);
+
             // 1. 案件作成
             $stmt = $pdo->prepare("
                 INSERT INTO projects (client_id, project_name, status) 
@@ -305,6 +312,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     基本情報
                 </h2>
+                <div class="form-group">
+                    <label for="phone_number">📱 携帯電話番号 <span style="color:#e53e3e; font-weight:bold;">（必須）</span></label>
+                    <input type="tel" id="phone_number" name="phone_number" placeholder="例: 090-1234-5678" required style="width:100%; padding:12px 16px; border:2px solid #e53e3e; border-radius:8px; font-size:15px; box-sizing:border-box;">
+                    <div style="font-size:12px; color:#e53e3e; margin-top:5px;">※ SMS通知のために必要です。ハイフンあり・なしどちらでも可</div>
+                </div>
                 <div class="form-group">
                     <label for="project_name">物件名（必須）</label>
                     <input type="text" id="project_name" name="project_name" placeholder="例: ○○様邸 新築工事" required>
