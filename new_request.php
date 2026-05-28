@@ -27,36 +27,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $new_project_id = $pdo->lastInsertId();
 
-            // 2. 仕様データの登録
-            $wood_dodai = json_encode(['type' => $_POST['wood_dodai_type'] ?? '', 'size' => $_POST['wood_dodai_size'] ?? '']);
-            $wood_obiki = json_encode(['type' => $_POST['wood_obiki_type'] ?? '', 'size' => $_POST['wood_obiki_size'] ?? '']);
-            $wood_hashira = json_encode(['type' => $_POST['wood_hashira_type'] ?? '', 'size' => $_POST['wood_hashira_size'] ?? '']);
-            $wood_hari = json_encode(['type' => $_POST['wood_hari_type'] ?? '', 'size' => '']); // 梁は寸法不定の場合が多い
-            $wood_others = json_encode(['type' => $_POST['wood_others_type'] ?? '', 'size' => $_POST['wood_others_size'] ?? '']);
-            
-            $wall_types = json_encode([
-                'menzai' => $_POST['wall_menzai'] ?? '',
-                'suichi' => $_POST['wall_suichi'] ?? ''
-            ]);
-
+            // 2. 仕様データの登録（初回は地盤の状況のみ）
             $stmtSpecs = $pdo->prepare("
-                INSERT INTO project_specs (
-                    project_id, soil_status, wood_dodai, wood_obiki, wood_hashira, wood_hari, wood_others, wall_types, hardware_type
-                ) VALUES (
-                    :pid, :soil, :dodai, :obiki, :hashira, :hari, :others, :wall, :hardware
-                )
+                INSERT INTO project_specs (project_id, soil_status) VALUES (:pid, :soil)
             ");
             $stmtSpecs->execute([
-                'pid'      => $new_project_id,
-                'soil'     => $_POST['soil_status'] ?? '',
-                'dodai'    => $wood_dodai,
-                'obiki'    => $wood_obiki,
-                'hashira'  => $wood_hashira,
-                'hari'     => $wood_hari,
-                'others'   => $wood_others,
-                'wall'     => $wall_types,
-                'hardware' => $_POST['hardware_type'] ?? ''
+                'pid'  => $new_project_id,
+                'soil' => $_POST['soil_status'] ?? ''
             ]);
+
+            // 3. メモ・特記事項があればメッセージとして登録
+            $memo = trim($_POST['memo'] ?? '');
+            if (!empty($memo)) {
+                $stmtMsg = $pdo->prepare("
+                    INSERT INTO messages (project_id, thread_type, message_text) 
+                    VALUES (:pid, 'client_admin', :msg)
+                ");
+                $stmtMsg->execute([
+                    'pid' => $new_project_id,
+                    'msg' => "【初回ご要望・特記事項】\n" . $memo
+                ]);
+            }
 
             // 3. ファイルアップロード処理 (Google Drive API)
             $upload_fields = [
@@ -318,75 +309,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="text" id="project_name" name="project_name" placeholder="例: ○○様邸 新築工事" required>
                 </div>
                 <div class="form-group">
-                    <label for="soil_status">地盤の状況</label>
+                    <label for="soil_status">地盤調査</label>
                     <select id="soil_status" name="soil_status">
                         <option value="">--- 選択してください ---</option>
-                        <option value="良好">良好</option>
-                        <option value="要改良">要改良</option>
-                        <option value="未定">未定（調査前）</option>
+                        <option value="調査前">調査前</option>
+                        <option value="調査予定なし（近隣データ+令96条但し書）">調査予定なし（近隣データ+令96条但し書）</option>
+                        <option value="調査済">調査済</option>
                     </select>
                 </div>
-            </div>
-
-            <!-- 2. 構造仕様 -->
-            <div class="card">
-                <h2 class="section-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                    構造仕様（わかる範囲で入力）
-                </h2>
-                
-                <div class="form-row">
-                    <div class="form-col">
-                        <label>土台</label>
-                        <select name="wood_dodai_type" style="margin-bottom:8px;">
-                            <?php renderOptions($wood_opts, ''); ?>
-                        </select>
-                        <select name="wood_dodai_size">
-                            <?php renderOptions($sz_main, ''); ?>
-                        </select>
-                    </div>
-                    <div class="form-col">
-                        <label>大引</label>
-                        <select name="wood_obiki_type" style="margin-bottom:8px;">
-                            <?php renderOptions($wood_opts, ''); ?>
-                        </select>
-                        <select name="wood_obiki_size">
-                            <?php renderOptions($sz_obiki_opts, ''); ?>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-col">
-                        <label>柱</label>
-                        <select name="wood_hashira_type" style="margin-bottom:8px;">
-                            <?php renderOptions($wood_opts, ''); ?>
-                        </select>
-                        <select name="wood_hashira_size">
-                            <?php renderOptions($sz_main, ''); ?>
-                        </select>
-                    </div>
-                    <div class="form-col">
-                        <label>梁</label>
-                        <select name="wood_hari_type">
-                            <?php renderOptions($wood_opts, ''); ?>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-col">
-                        <label>面材</label>
-                        <select name="wall_menzai">
-                            <?php renderOptions($menzai_opts, ''); ?>
-                        </select>
-                    </div>
-                    <div class="form-col">
-                        <label>筋違</label>
-                        <select name="wall_suichi">
-                            <?php renderOptions($suichi_opts, ''); ?>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label for="memo">メモ・特記事項（ご要望事項など）</label>
+                    <textarea id="memo" name="memo" rows="4" placeholder="特記事項やご要望などがあればご記入ください。" style="width: 100%; padding: 12px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: var(--text-color); font-size: 15px; box-sizing: border-box; resize: vertical;"></textarea>
                 </div>
             </div>
 

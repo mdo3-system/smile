@@ -217,18 +217,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-decoration: underline;
             font-weight: bold;
         }
-
-        .login-link {
-            display: inline-block;
-            margin-top: 25px;
-            font-size: 13px;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .login-link:hover {
-            color: var(--text-color);
-        }
     </style>
 </head>
 <body>
@@ -257,8 +245,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <a href="<?= $devel_link ?>">このリンクをクリックしてログイン ➔</a>
                 </div>
             <?php endif; ?>
-            
-            <a href="register.php" class="login-link">初めての方はこちら（新規登録）</a>
         </div>
     </div>
 </body>
