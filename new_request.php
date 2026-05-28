@@ -40,11 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $memo = trim($_POST['memo'] ?? '');
             if (!empty($memo)) {
                 $stmtMsg = $pdo->prepare("
-                    INSERT INTO messages (project_id, thread_type, message_text) 
-                    VALUES (:pid, 'client_admin', :msg)
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                    VALUES (:pid, :sid, 'client_admin', :msg)
                 ");
                 $stmtMsg->execute([
                     'pid' => $new_project_id,
+                    'sid' => $current_user_id,
                     'msg' => "【初回ご要望・特記事項】\n" . $memo
                 ]);
             }
