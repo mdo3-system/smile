@@ -83,11 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $thread_type = 'client_admin'; // 対依頼主チャット
             
             $stmt = $pdo->prepare("
-                INSERT INTO messages (project_id, thread_type, message_text) 
-                VALUES (:pid, :thread, :msg)
+                INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                VALUES (:pid, :sid, :thread, :msg)
             ");
             $stmt->execute([
                 'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
                 'thread' => $thread_type,
                 'msg' => $message_text
             ]);
