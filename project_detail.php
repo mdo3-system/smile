@@ -228,12 +228,41 @@ $chat_messages = $stmtMsgs->fetchAll();
         .section-title { font-size: 15px; color: white; padding: 8px 12px; border-radius: 4px; margin-top: 0; margin-bottom: 10px; display:flex; align-items:center; gap:8px; }
         .box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; }
         .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
-        
         a.file-link { display: inline-block; background: #eef2f5; color: #0056b3; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #d0d7de; }
         a.file-link:hover { background: #e1e4e8; }
         
-        .chat-container { max-height: 400px; overflow-y: auto; background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
-        .chat-msg { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee; font-size: 12px; }
+        /* ===== LINEスタイルチャット ===== */
+        .chat-wrapper { display: flex; flex-direction: column; height: 520px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 10px; background: #ece5dd; border-radius: 6px 6px 0 0; display: flex; flex-direction: column; gap: 8px; }
+        .chat-bubble-row { display: flex; align-items: flex-end; gap: 6px; }
+        .chat-bubble-row.from-me { flex-direction: row-reverse; }
+        .chat-bubble-row.from-me .chat-meta { text-align: right; }
+        .chat-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .chat-avatar.admin-avatar { background: #3b82f6; }
+        .chat-avatar.client-avatar { background: #28a745; }
+        .chat-content { max-width: 70%; }
+        .chat-name { font-size: 10px; color: #666; margin-bottom: 2px; }
+        .chat-bubble { padding: 8px 12px; border-radius: 16px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .bubble-client { background: #dcf8c6; border-radius: 0 16px 16px 16px; }
+        .bubble-admin  { background: #dbeafe; border-radius: 16px 0 16px 16px; }
+        .chat-time { font-size: 10px; color: #aaa; margin-top: 2px; }
+        .chat-image-thumb { max-width: 160px; max-height: 160px; border-radius: 8px; cursor: pointer; display: block; margin-top: 4px; }
+        .chat-pdf-link { display: inline-flex; align-items: center; gap: 5px; background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 8px; text-decoration: none; font-size: 12px; color: #0056b3; margin-top: 4px; }
+        /* チャット入力エリア */
+        .chat-input-area { background: #f0f0f0; border-radius: 0 0 6px 6px; padding: 8px; border-top: 1px solid #ddd; }
+        .chat-input-row { display: flex; gap: 6px; align-items: flex-end; }
+        .chat-textarea { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 20px; font-size: 13px; resize: none; min-height: 38px; max-height: 120px; overflow-y: auto; font-family: inherit; outline: none; }
+        .chat-send-btn { background: #17a2b8; color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+        .chat-send-btn:hover { background: #138496; }
+        .chat-attach-btn { background: #6c757d; color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+        .chat-file-preview { font-size: 11px; color: #555; margin-top: 4px; padding: 3px 8px; background: white; border-radius: 10px; display: none; }
+        /* グリーティングモーダル */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 12px; padding: 24px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #1e293b; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+        .modal-body { font-size: 13px; white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 8px; line-height: 1.7; max-height: 400px; overflow-y: auto; margin-bottom: 15px; }
+        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
     </style>
 </head>
 <body>
@@ -409,39 +438,79 @@ $chat_messages = $stmtMsgs->fetchAll();
         </div>
 
         <!-- 右パネル：チャット・管理ツール -->
-        <div class="column col-right">
-            <h2 class="section-title" style="background:#17a2b8;">💬 依頼主チャット</h2>
-            <div class="box">
-                <div class="chat-container">
-                    <?php foreach ($chat_messages as $msg): ?>
-                        <div class="chat-msg">
-                            <?php 
-                                // 送信者が管理者の場合とクライアントの場合で色を変える
-                                $isAdminMsg = ($msg['sender_id'] == 1);
-                                $name = $isAdminMsg ? '管理者' : '依頼主';
-                                $color = $isAdminMsg ? '#0056b3' : '#28a745';
-                            ?>
-                            <div style="font-weight:bold; color:<?= $color ?>; margin-bottom:3px;"><?= $name ?></div>
-                            <div style="white-space:pre-wrap;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+        <div class="column col-right" style="padding: 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h2 class="section-title" style="background:#17a2b8; margin:0;">💬 依頼主チャット</h2>
+                <?php if ($is_admin && $project_info['status'] === 'quote_req'): ?>
+                <button onclick="document.getElementById('greetingModal').classList.add('active')" style="font-size:11px; background:#28a745; color:white; border:none; padding:5px 10px; border-radius:12px; cursor:pointer;">📋 定型文を送信</button>
+                <?php endif; ?>
+            </div>
+
+            <!-- チャットエリア -->
+            <div class="chat-wrapper">
+                <div class="chat-messages" id="chatMessages">
+                    <?php foreach ($chat_messages as $msg):
+                        $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
+                        $rowClass = $isMe ? 'from-me' : '';
+                        $bubbleClass = ($msg['sender_id'] == 1) ? 'bubble-admin' : 'bubble-client';
+                        $avatarClass = ($msg['sender_id'] == 1) ? 'admin-avatar' : 'client-avatar';
+                        $avatarIcon  = ($msg['sender_id'] == 1) ? '👷' : '👤';
+                        $senderName  = ($msg['sender_id'] == 1) ? '管理者' : htmlspecialchars($project_info['client_name'], ENT_QUOTES);
+                        $timeStr     = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
+                    ?>
+                        <div class="chat-bubble-row <?= $rowClass ?>" data-msg-id="<?= $msg['id'] ?>">
+                            <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
+                            <div class="chat-content">
+                                <?php if (!$isMe): ?>
+                                <div class="chat-name"><?= $senderName ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($msg['message_text'])): ?>
+                                <div class="chat-bubble <?= $bubbleClass ?>"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($msg['file_path'])): ?>
+                                    <?php
+                                        $ftype = $msg['file_type'] ?? '';
+                                        $fpath = $msg['file_path'];
+                                        // Google Drive IDかローカルパスかを判定
+                                        $isGdrive = (strlen($fpath) > 15 && strpos($fpath, '/') === false && strpos($fpath, 'uploads/') !== 0);
+                                        $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
+                                        $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w200' : '';
+                                    ?>
+                                    <?php if ($ftype === 'image' && $isGdrive): ?>
+                                        <a href="<?= $furl ?>" target="_blank">
+                                            <img src="<?= $thumbUrl ?>" class="chat-image-thumb" alt="添付画像">
+                                        </a>
+                                    <?php elseif ($ftype === 'pdf' || !empty($fpath)): ?>
+                                        <a href="<?= $furl ?>" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                <div class="chat-time"><?= $timeStr ?></div>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                     <?php if (empty($chat_messages)): ?>
-                        <span style="color:#999; font-size:12px;">メッセージはありません。</span>
+                        <div style="text-align:center; color:#aaa; font-size:12px; margin-top:40px;">メッセージはまだありません</div>
                     <?php endif; ?>
                 </div>
-                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:10px;">
-                    <input type="hidden" name="action" value="send_message">
-                    <textarea name="message_text" placeholder="メッセージを入力してください..." style="width:100%; height:60px; margin-bottom:5px; font-size:12px; box-sizing:border-box; padding:8px; border:1px solid #ccc; border-radius:4px;" required></textarea>
-                    <button type="submit" style="width:100%; background:#17a2b8; color:white; border:none; padding:8px; cursor:pointer; font-size:12px; font-weight:bold; border-radius:4px;">送信</button>
-                </form>
+
+                <!-- 入力エリア -->
+                <div class="chat-input-area">
+                    <div id="filePreview" class="chat-file-preview"></div>
+                    <div class="chat-input-row">
+                        <label class="chat-attach-btn" title="ファイルを添付">
+                            📎
+                            <input type="file" id="chatFileInput" accept="image/*,.pdf" style="display:none;" onchange="previewFile(this)">
+                        </label>
+                        <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" onkeydown="handleKey(event)"></textarea>
+                        <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>
+                    </div>
+                </div>
             </div>
 
             <?php if ($is_admin): ?>
-            <!-- ==============================
-                 【管理者専用エリア】
-                 ============================== -->
-            <div style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 20px;">
-                <div style="font-size:12px; font-weight:bold; color:#c0392b; margin-bottom:10px;">🔒 以下は管理者のみに表示されます</div>
+            <!-- 管理者専用エリア -->
+            <div style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;">
+                <div style="font-size:11px; font-weight:bold; color:#c0392b; margin-bottom:10px;">🔒 以下は管理者のみに表示されます</div>
                 
                 <?php if ($project_info['status'] === 'quote_req'): ?>
                 <h2 class="section-title" style="background:#28a745;">💰 自動見積シミュレーター</h2>
@@ -482,11 +551,9 @@ $chat_messages = $stmtMsgs->fetchAll();
                             <label>斜め壁等特殊箇所数: <input type="number" id="est_special" value="0" style="width:40px; font-size:11px;"> 箇所</label>
                         </div>
                     </div>
-
                     <div style="margin-top:10px; padding-top:10px; border-top:1px solid #ccc; font-weight:bold;">
                         見積合計: <span id="est_total_disp" style="color:#d32f2f; font-size:14px;">0</span> 円 (税別)
                     </div>
-
                     <div style="margin-top:10px; display:flex; gap:10px; flex-direction:column;">
                         <div style="display:flex; gap:10px;">
                             <button type="button" onclick="calcClientEstimate()" style="flex:1; background:#fff; border:1px solid #28a745; color:#28a745; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">再計算</button>
@@ -495,105 +562,237 @@ $chat_messages = $stmtMsgs->fetchAll();
                         <button type="button" onclick="sendClientEstimate()" style="width:100%; background:#28a745; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">チャットに見積を送信</button>
                     </div>
                 </div>
-                
-                <script>
-                let currentEstimate = 0;
-                let currentTax = 0;
-                let currentTotal = 0;
-                
-                function calcClientEstimate() {
-                    let base = parseInt(document.getElementById('est_base').value) || 0;
-                    let area = parseFloat(document.getElementById('est_area').value) || 0;
-                    
-                    let area_extra = 0;
-                    if (area > 150) {
-                        area_extra = Math.ceil(area - 150) * 600;
-                    }
-                    
-                    let base_with_area = base + area_extra;
-
-                    let multiplier = 0;
-                    document.querySelectorAll('.est_multiplier:checked').forEach(cb => {
-                        multiplier += parseFloat(cb.value);
-                    });
-                    let shape_extra = Math.round(base_with_area * multiplier);
-
-                    let grade_extra = parseInt(document.getElementById('est_grade').value) || 0;
-                    let kanamono = parseInt(document.getElementById('est_kanamono').value) || 0;
-                    let special = parseInt(document.getElementById('est_special').value) || 0;
-                    let other_extra = (kanamono * 15000) + (special * 15000);
-
-                    currentEstimate = base_with_area + shape_extra + grade_extra + other_extra;
-                    currentTax = Math.round(currentEstimate * 0.1);
-                    currentTotal = currentEstimate + currentTax;
-                    
-                    document.getElementById('est_total_disp').innerText = currentEstimate.toLocaleString();
-                }
-
-                function getEstimateMessage() {
-                    let msg = `【概算お見積り】\n構造計算等の概算見積を算出いたしました。\n\n`;
-                    msg += `税抜金額: ${currentEstimate.toLocaleString()}円\n`;
-                    msg += `消費税: ${currentTax.toLocaleString()}円\n`;
-                    msg += `税込合計: ${currentTotal.toLocaleString()}円\n\n`;
-                    msg += `よろしければ正式にご依頼ください。`;
-                    return msg;
-                }
-
-                function sendClientEstimate() {
-                    calcClientEstimate();
-                    if (currentEstimate === 0) return;
-                    
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = 'project_detail.php?id=<?= $project_id ?>';
-                    
-                    const inputAction = document.createElement('input');
-                    inputAction.type = 'hidden';
-                    inputAction.name = 'action';
-                    inputAction.value = 'send_message';
-                    form.appendChild(inputAction);
-
-                    const inputText = document.createElement('input');
-                    inputText.type = 'hidden';
-                    inputText.name = 'message_text';
-                    inputText.value = getEstimateMessage();
-                    form.appendChild(inputText);
-
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-
-                function saveAndPrintEstimate() {
-                    calcClientEstimate();
-                    if (currentEstimate === 0) return;
-                    
-                    // fetchを用いてDBに見積情報を保存し、その直後に別タブで印刷用ページを開く
-                    const formData = new FormData();
-                    formData.append('action', 'save_estimate');
-                    formData.append('project_id', <?= $project_id ?>);
-                    formData.append('base_price', document.getElementById('est_base').value);
-                    formData.append('area', document.getElementById('est_area').value);
-                    formData.append('grade_price', document.getElementById('est_grade').value);
-                    formData.append('total_price', currentEstimate);
-                    
-                    fetch('api_save_estimate.php', {
-                        method: 'POST',
-                        body: formData
-                    }).then(res => {
-                        window.open(`estimate_print.php?id=<?= $project_id ?>`, '_blank');
-                    }).catch(err => {
-                        console.error(err);
-                        alert("見積もりの保存に失敗しましたが、プレビューを開きます。");
-                        window.open(`estimate_print.php?id=<?= $project_id ?>`, '_blank');
-                    });
-                }
-
-                window.addEventListener('DOMContentLoaded', calcClientEstimate);
-                </script>
                 <?php endif; ?>
             </div>
-            <?php endif; ?> <!-- 管理者エリア終了 -->
+            <?php endif; ?>
         </div>
     </div>
+
+    <!-- ===== 定型文モーダル ===== -->
+    <div class="modal-overlay" id="greetingModal">
+        <div class="modal-box">
+            <div class="modal-title">📋 初回お見積り案内（定型文送信）</div>
+            <div class="modal-body" id="greetingText">この度はお見積り依頼を頂きましてありがとうございます。
+早速意匠図を拝見させていただきましたのでお見積書を送付いたします。
+
+■一次回答納期は「15営業日」となります。（お昼の12時前までの依頼図書送付は1日カウント、水曜日・日曜日定休、8/10~17お盆休み）
+納期短縮は他の案件と相談になりますが、お見積もり価格の10%/日 で対応いたします。
+
+▼お見積内容
+・構造計算書 → お見積りに含みます
+・安全証明書 → お見積りに含みます
+・構造図一式 → お見積りに含みます
+・確認申請の質疑対応 → お見積りに含みます
+・現場検査対応（配筋検査、軸組検査） → お見積りに含みません。合計で30分以内で対応できる写真提出による施工確認は無償対応いたします。
+
+【業務の流れ】
+1. 一次回答は構造計算プログラムからの出力による、柱配置・耐力壁配置・梁成・梁伏・水平構面・金物等一式をUP致します。
+2. ご確認いただき、意匠図の変更を伴わない変更は無償対応いたします。梁成による階高の変更は無償対応いたします。構造図作図以降の変更は @6,000円/時間+税 となります。
+3. 一次回答を1か月以内にご確認いただきます。お見積額の50%入金をお願い致します。ご入金確認後4営業日以内に構造図をUP致します。
+4. 構造図をご確認いただき、意匠図との整合含めOKとなりましたら、安全証明書・計算書・構造図・構造標準図をUP致します。
+5. 補正通知が来ましたらUPいただき、概ね4営業日を目安に補正回答いたします。
+6. 構造補正・審査完了後、1週間以内に残金のご精算をお願いいたします。
+
+※一次回答のチェックバック・50%のご入金が4営業日以内にいただけない場合は、対応日数に加算されますこと、予めご承知おき願います。
+※基本は設計サポート業務となりますので、私は設計者にはなりません。
+
+ご依頼いただける際は下記をお送りください：
+1. 意匠図CADデータ（JWW/DXF等）
+2. 確認申請書 2面〜5面
+3. 地盤調査報告書
+4. 構造材種の指定（土台・大引・柱・梁・小屋束・母屋・棟木・垂木・火打）
+5. Z金物以外の場合は金物仕様の指定
+6. 耐力壁配置ルール（大臣認定耐力壁 EXハイパー、パーティクルボード、内部筋違 等）
+
+高さの不整合が多い傾向にございます。構造で図面間の高さの不整合は手が止まってしまいますこと、予めご承知おき願います。
+
+ご検討いただき、ご用命賜れますようお願い申し上げます。
+
+菅原
+設計サポート専用ダイヤル 070-8305-8480
+SMS送付する場合がございますので、ご依頼いただける際は上記番号を受け付ける設定としていただけますようお願い申し上げます。</div>
+            <div class="modal-btns">
+                <button onclick="document.getElementById('greetingModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
+                <button onclick="sendGreeting()" style="padding:8px 20px; background:#17a2b8; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">このメッセージを送信</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ===== チャット変数 =====
+    const PROJECT_ID = <?= $project_id ?>;
+    const CURRENT_USER_ID = <?= $_SESSION['user_id'] ?>;
+    const IS_ADMIN = <?= $is_admin ? 'true' : 'false' ?>;
+    const CLIENT_NAME = '<?= htmlspecialchars($project_info['client_name'] ?? '依頼主', ENT_QUOTES) ?>';
+    let lastMsgId = <?= !empty($chat_messages) ? end($chat_messages)['id'] : 0 ?>;
+
+    // ===== チャット自動スクロール =====
+    function scrollToBottom() {
+        const el = document.getElementById('chatMessages');
+        if (el) el.scrollTop = el.scrollHeight;
+    }
+    window.addEventListener('DOMContentLoaded', scrollToBottom);
+
+    // ===== メッセージバブルHTML生成 =====
+    function buildBubble(msg) {
+        const isMe = (msg.sender_id == CURRENT_USER_ID);
+        const isAdminMsg = (msg.sender_id == 1);
+        const rowClass = isMe ? 'from-me' : '';
+        const bubbleClass = isAdminMsg ? 'bubble-admin' : 'bubble-client';
+        const avatarClass = isAdminMsg ? 'admin-avatar' : 'client-avatar';
+        const avatarIcon = isAdminMsg ? '👷' : '👤';
+        const senderName = isAdminMsg ? '管理者' : CLIENT_NAME;
+        const timeStr = msg.created_at ? msg.created_at.substring(5, 16).replace('T', ' ') : '';
+
+        let fileHtml = '';
+        if (msg.file_path) {
+            const isGdrive = msg.file_path.length > 15 && !msg.file_path.includes('/');
+            const furl = isGdrive ? `https://drive.google.com/file/d/${msg.file_path}/view?usp=drivesdk` : msg.file_path;
+            if (msg.file_type === 'image' && isGdrive) {
+                const thumb = `https://drive.google.com/thumbnail?id=${msg.file_path}&sz=w200`;
+                fileHtml = `<a href="${furl}" target="_blank"><img src="${thumb}" class="chat-image-thumb" alt="添付画像"></a>`;
+            } else if (msg.file_path) {
+                fileHtml = `<a href="${furl}" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>`;
+            }
+        }
+
+        const nameHtml = !isMe ? `<div class="chat-name">${senderName}</div>` : '';
+        const textHtml = msg.message_text ? `<div class="chat-bubble ${bubbleClass}">${msg.message_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>` : '';
+
+        return `<div class="chat-bubble-row ${rowClass}" data-msg-id="${msg.id}">
+            <div class="chat-avatar ${avatarClass}">${avatarIcon}</div>
+            <div class="chat-content">
+                ${nameHtml}
+                ${textHtml}
+                ${fileHtml}
+                <div class="chat-time">${timeStr}</div>
+            </div>
+        </div>`;
+    }
+
+    // ===== ポーリング（30秒ごと） =====
+    function pollMessages() {
+        fetch(`api_get_messages.php?project_id=${PROJECT_ID}&since_id=${lastMsgId}`)
+            .then(r => r.json())
+            .then(msgs => {
+                if (msgs && msgs.length > 0) {
+                    const container = document.getElementById('chatMessages');
+                    // 「まだありません」テキストを消す
+                    const empty = container.querySelector('[data-empty]');
+                    if (empty) empty.remove();
+                    msgs.forEach(msg => {
+                        container.insertAdjacentHTML('beforeend', buildBubble(msg));
+                        lastMsgId = msg.id;
+                    });
+                    scrollToBottom();
+                }
+            }).catch(e => console.error('ポーリングエラー:', e));
+    }
+    setInterval(pollMessages, 30000);
+
+    // ===== メッセージ送信 =====
+    function sendMessage(text) {
+        const textarea = document.getElementById('chatTextarea');
+        const fileInput = document.getElementById('chatFileInput');
+        const msg = text || textarea.value.trim();
+        if (!msg && fileInput.files.length === 0) return;
+
+        const formData = new FormData();
+        formData.append('project_id', PROJECT_ID);
+        formData.append('message_text', msg);
+        if (fileInput.files.length > 0) {
+            formData.append('file', fileInput.files[0]);
+        }
+
+        const sendBtn = document.querySelector('.chat-send-btn');
+        sendBtn.disabled = true;
+        sendBtn.textContent = '...';
+
+        fetch('api_send_message.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    textarea.value = '';
+                    fileInput.value = '';
+                    document.getElementById('filePreview').style.display = 'none';
+                    pollMessages();
+                } else {
+                    alert('送信に失敗しました: ' + (data.error || '不明なエラー'));
+                }
+            })
+            .catch(e => alert('通信エラー: ' + e))
+            .finally(() => {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '➤';
+            });
+    }
+
+    // ===== Enterキーで送信（Shift+Enterで改行） =====
+    function handleKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    // ===== ファイルプレビュー =====
+    function previewFile(input) {
+        const preview = document.getElementById('filePreview');
+        if (input.files.length > 0) {
+            preview.textContent = '📎 ' + input.files[0].name;
+            preview.style.display = 'block';
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
+    // ===== 定型文送信 =====
+    function sendGreeting() {
+        const text = document.getElementById('greetingText').innerText;
+        document.getElementById('greetingModal').classList.remove('active');
+        sendMessage(text);
+    }
+
+    // ===== 見積シミュレーター =====
+    let currentEstimate = 0, currentTax = 0, currentTotal = 0;
+    function calcClientEstimate() {
+        let base = parseInt(document.getElementById('est_base')?.value) || 0;
+        let area = parseFloat(document.getElementById('est_area')?.value) || 0;
+        let area_extra = area > 150 ? Math.ceil(area - 150) * 600 : 0;
+        let base_with_area = base + area_extra;
+        let multiplier = 0;
+        document.querySelectorAll('.est_multiplier:checked').forEach(cb => multiplier += parseFloat(cb.value));
+        let shape_extra = Math.round(base_with_area * multiplier);
+        let grade_extra = parseInt(document.getElementById('est_grade')?.value) || 0;
+        let kanamono = parseInt(document.getElementById('est_kanamono')?.value) || 0;
+        let special = parseInt(document.getElementById('est_special')?.value) || 0;
+        let other_extra = (kanamono * 15000) + (special * 15000);
+        currentEstimate = base_with_area + shape_extra + grade_extra + other_extra;
+        currentTax = Math.round(currentEstimate * 0.1);
+        currentTotal = currentEstimate + currentTax;
+        const el = document.getElementById('est_total_disp');
+        if (el) el.innerText = currentEstimate.toLocaleString();
+    }
+    function sendClientEstimate() {
+        calcClientEstimate();
+        if (currentEstimate === 0) return;
+        const msg = `【概算お見積り】\n税抜金額: ${currentEstimate.toLocaleString()}円\n消費税: ${currentTax.toLocaleString()}円\n税込合計: ${currentTotal.toLocaleString()}円\n\nよろしければ正式にご依頼ください。`;
+        sendMessage(msg);
+    }
+    function saveAndPrintEstimate() {
+        calcClientEstimate();
+        if (currentEstimate === 0) return;
+        const formData = new FormData();
+        formData.append('project_id', PROJECT_ID);
+        formData.append('base_price', document.getElementById('est_base').value);
+        formData.append('area', document.getElementById('est_area').value);
+        formData.append('grade_price', document.getElementById('est_grade').value);
+        formData.append('total_price', currentEstimate);
+        fetch('api_save_estimate.php', { method: 'POST', body: formData })
+            .then(() => window.open(`estimate_print.php?id=${PROJECT_ID}`, '_blank'))
+            .catch(() => window.open(`estimate_print.php?id=${PROJECT_ID}`, '_blank'));
+    }
+    window.addEventListener('DOMContentLoaded', calcClientEstimate);
+    </script>
 </body>
 </html>
