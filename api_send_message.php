@@ -82,6 +82,7 @@ try {
     ]);
     $new_id = $pdo->lastInsertId();
 
+    /*
     // SMS通知（クールダウン付き）
     try {
         require_once 'notifier.php';
@@ -105,6 +106,7 @@ try {
         // SMS失敗してもメッセージ送信は成功とみなす
         error_log('SMS notification failed: ' . $e->getMessage());
     }
+    */
 
     echo json_encode(['success' => true, 'id' => $new_id]);
 

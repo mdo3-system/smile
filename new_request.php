@@ -10,37 +10,34 @@ $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $project_name = trim($_POST['project_name'] ?? '');
-    $phone_number = trim($_POST['phone_number'] ?? '');
     
     if (empty($project_name)) {
         $message = "案件名を入力してください。";
-    } elseif (empty($phone_number)) {
-        $message = "携帯電話番号は必須です。SMS通知のために必要です。";
     } else {
         $pdo->beginTransaction();
         try {
-            // 0. 電話番号を users テーブルへ保存（未登録または更新）
-            $stmtPhone = $pdo->prepare("UPDATE users SET phone_number = :phone WHERE id = :uid");
-            $stmtPhone->execute(['phone' => $phone_number, 'uid' => $current_user_id]);
-
             // 1. 案件作成
             $stmt = $pdo->prepare("
-                INSERT INTO projects (client_id, project_name, status) 
-                VALUES (:client_id, :name, 'quote_req')
+                INSERT INTO projects (client_id, project_name, status, req_permit, req_wall, req_skin, req_sky, req_opt_kisohari) 
+                VALUES (:client_id, :name, 'quote_req', :permit, :wall, :skin, :sky, :kisohari)
             ");
             $stmt->execute([
                 'client_id' => $current_user_id,
-                'name'      => $project_name
+                'name'      => $project_name,
+                'permit'    => isset($_POST['req_permit']) ? 1 : 0,
+                'wall'      => isset($_POST['req_wall']) ? 1 : 0,
+                'skin'      => isset($_POST['req_skin']) ? 1 : 0,
+                'sky'       => isset($_POST['req_sky']) ? 1 : 0,
+                'kisohari'  => isset($_POST['req_opt_kisohari']) ? 1 : 0,
             ]);
             $new_project_id = $pdo->lastInsertId();
 
-            // 2. 仕様データの登録（初回は地盤の状況のみ）
+            // 2. 仕様データの初期登録 (空枠を作成)
             $stmtSpecs = $pdo->prepare("
-                INSERT INTO project_specs (project_id, soil_status) VALUES (:pid, :soil)
+                INSERT INTO project_specs (project_id) VALUES (:pid)
             ");
             $stmtSpecs->execute([
-                'pid'  => $new_project_id,
-                'soil' => $_POST['soil_status'] ?? ''
+                'pid'  => $new_project_id
             ]);
 
             // 3. メモ・特記事項があればメッセージとして登録
@@ -57,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
-            // 3. ファイルアップロード処理 (Google Drive API)
+            // 4. ファイルアップロード処理 (Google Drive API)
             $upload_fields = [
                 'file_pdf_plan'      => 'pdf_plan',
                 'file_pdf_elevation' => 'pdf_elevation',
@@ -313,23 +310,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     基本情報
                 </h2>
                 <div class="form-group">
-                    <label for="phone_number">📱 携帯電話番号 <span style="color:#e53e3e; font-weight:bold;">（必須）</span></label>
-                    <input type="tel" id="phone_number" name="phone_number" placeholder="例: 090-1234-5678" required style="width:100%; padding:12px 16px; border:2px solid #e53e3e; border-radius:8px; font-size:15px; box-sizing:border-box;">
-                    <div style="font-size:12px; color:#e53e3e; margin-top:5px;">※ SMS通知のために必要です。ハイフンあり・なしどちらでも可</div>
-                </div>
-                <div class="form-group">
                     <label for="project_name">物件名（必須）</label>
                     <input type="text" id="project_name" name="project_name" placeholder="例: ○○様邸 新築工事" required>
                 </div>
+                
                 <div class="form-group">
-                    <label for="soil_status">地盤調査</label>
-                    <select id="soil_status" name="soil_status">
-                        <option value="">--- 選択してください ---</option>
-                        <option value="調査前">調査前</option>
-                        <option value="調査予定なし（近隣データ+令96条但し書）">調査予定なし（近隣データ+令96条但し書）</option>
-                        <option value="調査済">調査済</option>
-                    </select>
+                    <label>📋 見積を依頼する計算・設計内容（複数選択可・最低1つ必須）</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" name="req_permit" value="1" id="req_permit" class="calc-type-chk"> 許容応力度設計
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" name="req_wall" value="1" id="req_wall" class="calc-type-chk"> （性能表示）壁量計算（※基準法の計算もカバーされます）
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" name="req_skin" value="1" id="req_skin" class="calc-type-chk"> 外皮計算（一次エネ計算セット）
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" name="req_sky" value="1" id="req_sky" class="calc-type-chk"> 天空率（道路斜線・北側斜線）
+                        </label>
+                        <div style="margin-top: 5px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                            <strong style="font-size: 12px; color: var(--text-muted);">追加オプション：</strong><br>
+                            <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; margin-top: 5px; font-weight: 600;">
+                                <input type="checkbox" name="req_opt_kisohari" value="1" id="req_opt_kisohari"> 基礎・横架材の許容応力度計算
+                            </label>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="form-group">
                     <label for="memo">メモ・特記事項（ご要望事項など）</label>
                     <textarea id="memo" name="memo" rows="4" placeholder="特記事項やご要望などがあればご記入ください。" style="width: 100%; padding: 12px 16px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-size: 15px; box-sizing: border-box; resize: vertical;"></textarea>
@@ -385,6 +393,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
+        // 送信時のバリデーション（計算タイプを最低1つ選択させる）
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const checkboxes = document.querySelectorAll('.calc-type-chk');
+            let checkedOne = false;
+            checkboxes.forEach(chk => {
+                if (chk.checked) checkedOne = true;
+            });
+            if (!checkedOne) {
+                e.preventDefault();
+                alert('見積を依頼する計算・設計内容を最低1つ選択してください。');
+            }
+        });
+
         // ファイル選択時のUI更新
         document.querySelectorAll('input[type="file"]').forEach(input => {
             input.addEventListener('change', function(e) {

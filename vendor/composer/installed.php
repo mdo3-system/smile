@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'antigravity/structure-portal',
-        'pretty_version' => 'dev-master',
-        'version' => 'dev-master',
-        'reference' => '348448eea6bdca06caec6c3afe8a5adc9f982a22',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'f0e841380b9712e5d93c270c656d62bada6f30a6',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'antigravity/structure-portal' => array(
-            'pretty_version' => 'dev-master',
-            'version' => 'dev-master',
-            'reference' => '348448eea6bdca06caec6c3afe8a5adc9f982a22',
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'f0e841380b9712e5d93c270c656d62bada6f30a6',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -175,6 +175,15 @@
             'reference' => '50f59d1f3ca46d41ac911f97a78626b6756af35b',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/deprecation-contracts',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'tecnickcom/tcpdf' => array(
+            'pretty_version' => '6.11.3',
+            'version' => '6.11.3.0',
+            'reference' => 'b18f6119161019916c5bb07cb8da5205ae5c1b63',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../tecnickcom/tcpdf',
             'aliases' => array(),
             'dev_requirement' => false,
         ),

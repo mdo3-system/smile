@@ -23,6 +23,13 @@ if (!$data) {
     die("案件情報の取得に失敗しました。");
 }
 
+if (!empty($data['pdf_drive_file_id'])) {
+    // Google Drive上のPDFプレビュー画面へリダイレクト
+    $drive_url = "https://drive.google.com/file/d/" . $data['pdf_drive_file_id'] . "/view?usp=drivesdk";
+    header("Location: " . $drive_url);
+    exit;
+}
+
 if (!$data['total_price']) {
     die("この案件にはまだ保存された見積もりがありません。");
 }
