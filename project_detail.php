@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmtSpecs = $pdo->prepare("
                 UPDATE project_specs 
-                SET wood_details = :wood, wall_details = :wall, hardware_details = :hw, client_notes_extra = :notes
+                SET wood_details = :wood, wall_details = :wall, hardware_details = :hw, client_notes_extra = :notes, soil_status = :soil
                 WHERE project_id = :pid
             ");
             $stmtSpecs->execute([
@@ -136,33 +136,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'wall' => json_encode($wall_details, JSON_UNESCAPED_UNICODE),
                 'hw' => json_encode($hardware_details, JSON_UNESCAPED_UNICODE),
                 'notes' => trim($_POST['client_notes_extra'] ?? ''),
+                'soil' => $_POST['soil_status'] ?? null,
                 'pid' => $project_id
             ]);
 
             // Process multi file uploads
             require_once 'google_drive_client.php';
+            
+            // 既存アップロード済の同カテゴリを最新(is_latest=1)から外すためのユーティリティ
+            $disableOldFiles = function($cat) use ($pdo, $project_id) {
+                $stmt = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+                $stmt->execute(['pid' => $project_id, 'cat' => $cat]);
+            };
+
+            // 個別ファイルアップロード (配列対応)
             if (!empty($_FILES['upload_files']['name'])) {
-                foreach ($_FILES['upload_files']['name'] as $cat => $file_name) {
-                    if ($_FILES['upload_files']['error'][$cat] === UPLOAD_ERR_OK && $file_name !== '') {
-                        $tmp_name = $_FILES['upload_files']['tmp_name'][$cat];
-                        $mime_type = $_FILES['upload_files']['type'][$cat];
-                        try {
-                            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                foreach ($_FILES['upload_files']['name'] as $cat => $file_names) {
+                    if (is_array($file_names)) {
+                        // 複数ファイル (配列)
+                        // アップロードがある場合のみ既存ファイルを非アクティブにする
+                        $has_upload = false;
+                        foreach ($file_names as $idx => $f_name) {
+                            if ($_FILES['upload_files']['error'][$cat][$idx] === UPLOAD_ERR_OK && $f_name !== '') {
+                                $has_upload = true;
+                                break;
+                            }
+                        }
+                        if ($has_upload) {
+                            $disableOldFiles($cat);
+                        }
 
-                            // Disable old
-                            $stmtDisable = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
-                            $stmtDisable->execute(['pid' => $project_id, 'cat' => $cat]);
-
-                            // Get version
-                            $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-                            $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
-                            $max_version = (int)$stmtVersion->fetchColumn();
-                            
-                            // Insert new
-                            $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :name, :drive_id, :ver, 1)");
-                            $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1]);
-                        } catch (Exception $e) {
-                            error_log("Multi upload error: " . $e->getMessage());
+                        foreach ($file_names as $idx => $file_name) {
+                            if ($_FILES['upload_files']['error'][$cat][$idx] === UPLOAD_ERR_OK && $file_name !== '') {
+                                $tmp_name = $_FILES['upload_files']['tmp_name'][$cat][$idx];
+                                $mime_type = $_FILES['upload_files']['type'][$cat][$idx];
+                                try {
+                                    $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                                    
+                                    // Get version
+                                    $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+                                    $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
+                                    $max_version = (int)$stmtVersion->fetchColumn();
+                                    
+                                    $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :name, :drive_id, :ver, 1)");
+                                    $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1]);
+                                } catch (Exception $e) {
+                                    error_log("Multi upload error (Array): " . $e->getMessage());
+                                }
+                            }
+                        }
+                    } else {
+                        // 単一ファイル
+                        $file_name = $file_names;
+                        if ($_FILES['upload_files']['error'][$cat] === UPLOAD_ERR_OK && $file_name !== '') {
+                            $tmp_name = $_FILES['upload_files']['tmp_name'][$cat];
+                            $mime_type = $_FILES['upload_files']['type'][$cat];
+                            try {
+                                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                                $disableOldFiles($cat);
+                                
+                                $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+                                $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
+                                $max_version = (int)$stmtVersion->fetchColumn();
+                                
+                                $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :name, :drive_id, :ver, 1)");
+                                $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1]);
+                            } catch (Exception $e) {
+                                error_log("Multi upload error (Single): " . $e->getMessage());
+                            }
                         }
                     }
                 }
@@ -733,16 +774,38 @@ $chat_messages = $stmtMsgs->fetchAll();
                             <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">B. 構造仕様・図書</div>
                             
                             <div style="display:grid; gap:10px;">
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">地盤調査報告書 / 改良設計書</div>
-                                    <div style="display:flex; gap:10px;">
-                                        <input type="file" name="upload_files[soil_report]" style="font-size:11px; flex:1;" title="調査報告書">
-                                        <input type="file" name="upload_files[soil_improvement_spec]" style="font-size:11px; flex:1;" title="改良設計書(必要時)">
+                                <div style="background:#f8fafc; padding:10px; border-radius:4px; border:1px solid #e2e8f0;">
+                                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">地盤調査の状況</div>
+                                    <div style="display:flex; gap:15px; font-size:11px; margin-bottom:10px;">
+                                        <label><input type="radio" name="soil_status" value="調査済" <?= ($project_info['soil_status']??'')==='調査済' ? 'checked' : '' ?>> 調査済</label>
+                                        <label><input type="radio" name="soil_status" value="未調査+令96条但し書" <?= ($project_info['soil_status']??'')==='未調査+令96条但し書' ? 'checked' : '' ?>> 未調査+令96条但し書</label>
+                                        <label><input type="radio" name="soil_status" value="調査予定" <?= ($project_info['soil_status']??'')==='調査予定' ? 'checked' : '' ?>> 調査予定</label>
                                     </div>
+                                    
+                                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">地盤調査報告書 / 改良関連図書</div>
+                                    <div style="font-size:10px; color:#ef4444; margin-bottom:5px;">※新しくアップロードすると、過去にアップロードした同種の図書は上書き(非表示)されます。</div>
+                                    <div style="display:grid; gap:5px;">
+                                        <div style="display:flex; align-items:center; gap:5px;">
+                                            <span style="font-size:11px; width:70px;">調査報告書:</span>
+                                            <input type="file" name="upload_files[soil_report]" style="font-size:11px; flex:1;">
+                                        </div>
+                                        <div id="soil_imp_container" style="display:flex; flex-direction:column; gap:5px;">
+                                            <div style="display:flex; align-items:center; gap:5px;">
+                                                <span style="font-size:11px; width:70px;">改良関連図書:</span>
+                                                <input type="file" name="upload_files[soil_improvement_spec][]" style="font-size:11px; flex:1;" title="改良設計書/計算書/認定書など">
+                                                <button type="button" onclick="addSoilRow()" style="font-size:11px; padding:2px 5px; cursor:pointer;">＋追加</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="margin-top:10px; font-size:10px;">
                                     <?php 
-                                        if(isset($files_by_cat['soil_report'])) echo '<div style="font-size:10px; color:#16a34a;">✅ 調査報告書: '.htmlspecialchars($files_by_cat['soil_report']['file_name']).'</div>'; 
-                                        if(isset($files_by_cat['soil_improvement_spec'])) echo '<div style="font-size:10px; color:#16a34a;">✅ 改良設計書: '.htmlspecialchars($files_by_cat['soil_improvement_spec']['file_name']).'</div>';
+                                        if(isset($files_by_cat['soil_report'])) echo '<div style="color:#16a34a;">✅ 調査報告書: '.htmlspecialchars($files_by_cat['soil_report']['file_name']).'</div>'; 
+                                        // 複数あるかもしれない改良設計書（現在は最新のみ表示する設計だが、履歴も含め複数あれば表示）
+                                        // TODO: 厳密には $files_by_cat はカテゴリごと1つしか持っていない場合がある。複数対応は別途考慮。
+                                        if(isset($files_by_cat['soil_improvement_spec'])) echo '<div style="color:#16a34a;">✅ 改良関連図書: '.htmlspecialchars($files_by_cat['soil_improvement_spec']['file_name']).'</div>';
                                     ?>
+                                    </div>
                                 </div>
                                 
                                 <div style="background:#f8fafc; padding:10px; border-radius:4px; border:1px solid #e2e8f0;">
@@ -920,6 +983,15 @@ $chat_messages = $stmtMsgs->fetchAll();
                     }
                     function closeDesignModal() {
                         document.getElementById('designModal').classList.remove('active');
+                    }
+                    function addSoilRow() {
+                        const container = document.getElementById('soil_imp_container');
+                        const div = document.createElement('div');
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.style.gap = '5px';
+                        div.innerHTML = '<span style="font-size:11px; width:70px;">(追加分):</span><input type="file" name="upload_files[soil_improvement_spec][]" style="font-size:11px; flex:1;" title="改良設計書/計算書/認定書など"><button type="button" onclick="this.parentElement.remove()" style="font-size:11px; padding:2px 5px; cursor:pointer;">削除</button>';
+                        container.appendChild(div);
                     }
                 </script>
                 </div>
