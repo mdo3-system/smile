@@ -576,7 +576,22 @@ $chat_messages = $stmtMsgs->fetchAll();
 <body>
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
         <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
-        <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <?php if ($is_admin): ?>
+                <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
+                    <strong>📂 Drive連携:</strong>
+                    <?php if (file_exists(__DIR__ . '/token.json')): ?>
+                        <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
+                    <?php else: ?>
+                        <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
+                    <?php endif; ?>
+                    <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">
+                        <?= file_exists(__DIR__ . '/token.json') ? '認証更新' : '連携ログイン' ?>
+                    </a>
+                </div>
+            <?php endif; ?>
+            <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
+        </div>
     </div>
 
     <div class="container">
@@ -1460,19 +1475,6 @@ $chat_messages = $stmtMsgs->fetchAll();
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
-                    
-                    <!-- Google Drive 連携状況（目立つ位置へ移動） -->
-                    <div style="background:#e8f5e9; border:1px solid #28a745; padding:5px 10px; border-radius:5px; font-size:11px; display:flex; align-items:center; gap:10px;">
-                        <strong>📂 Drive連携:</strong>
-                        <?php if (file_exists(__DIR__ . '/token.json')): ?>
-                            <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
-                        <?php else: ?>
-                            <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
-                        <?php endif; ?>
-                        <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">
-                            <?= file_exists(__DIR__ . '/token.json') ? '認証更新' : '連携ログイン' ?>
-                        </a>
-                    </div>
                 </div>
 
                 <div class="box" style="background:#e8f5e9; font-size:11px; display:flex; flex-direction:column; gap:10px;">
@@ -1713,7 +1715,13 @@ SMS送付する場合がございますので、ご依頼いただける際は�
         const el = document.getElementById('chatMessages');
         if (el) el.scrollTop = el.scrollHeight;
     }
-    window.addEventListener('DOMContentLoaded', scrollToBottom);
+    window.addEventListener('DOMContentLoaded', () => {
+        scrollToBottom();
+        if (typeof toggleEstContainers === 'function') {
+            toggleEstContainers();
+            calcClientEstimate();
+        }
+    });
 
     // ===== メッセージバブルHTML生成 =====
     function buildBubble(msg) {

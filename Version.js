@@ -16,4 +16,5 @@
 // 1.0.14: Fix magic link URL generation using APP_URL or robust self-detection
 // 1.0.15: Implement new request flow (Pattern A), register page, and redesign dashboard UI
 // 1.0.16: Refine new request flow (Estimate vs Design request separation) and schedule criteria
-window.APP_VERSION = '1.0.16';
+// 1.0.17: Fix simulator visibility and relocate Google Drive auth button
+window.APP_VERSION = '1.0.17';
