@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // 仕様保存・一括ファイルアップロード処理
-    if ($action === 'save_client_specs') {
+    if ($action === 'save_client_specs_draft' || $action === 'request_design_start') {
         $pdo->beginTransaction();
         try {
             // Update upload mode
@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'wood' => json_encode($wood_details, JSON_UNESCAPED_UNICODE),
                 'wall' => json_encode($wall_details, JSON_UNESCAPED_UNICODE),
                 'hw' => json_encode($hardware_details, JSON_UNESCAPED_UNICODE),
-                'notes' => $_POST['client_notes_extra'] ?? '',
+                'notes' => trim($_POST['client_notes_extra'] ?? ''),
                 'pid' => $project_id
             ]);
 
@@ -168,35 +168,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Only execute validation and status change if action is request_design_start
+            if ($action === 'request_design_start') {
+                // Backend validation for drawing change report
+                $drawing_changed = $_POST['drawing_changed'] ?? '';
+                $drawing_change_notes = trim($_POST['drawing_change_notes'] ?? '');
+                
+                if (empty($drawing_changed)) {
+                    throw new Exception("見積時からの図面変更の有無を選択してください。");
+                }
+                if ($drawing_changed === 'yes' && empty($drawing_change_notes)) {
+                    throw new Exception("図面変更がある場合は、変更箇所を入力してください。");
+                }
+
+                // Save drawing change report to messages
+                $change_msg = "【図面変更の有無報告】\n";
+                $change_msg .= ($drawing_changed === 'yes') ? "見積時から変更あり\n詳細: " . $drawing_change_notes : "見積時から変更なし";
+                
+                $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                $stmtMsg->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => $change_msg
+                ]);
+
+                // Update status to primary_prep and notify admin that design request is completed
+                $stmtStatus = $pdo->prepare("UPDATE projects SET status = 'primary_prep' WHERE id = :pid");
+                $stmtStatus->execute(['pid' => $project_id]);
+                
+                $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                $stmtNotify->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => "【通知】構造仕様の指定と必要図書の提出が完了し、設計開始が依頼されました。一次回答期日の設定をお願いします。"
+                ]);
+            }
+
             $pdo->commit();
         } catch (Exception $e) {
             $pdo->rollBack();
-            die("仕様の保存に失敗しました: " . $e->getMessage());
+            die("処理に失敗しました: " . $e->getMessage());
         }
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
 
-    // 設計開始の依頼 (ステータス移行)
-    if ($action === 'request_start') {
-        $pdo->beginTransaction();
-        try {
-            $stmt = $pdo->prepare("UPDATE projects SET status = 'primary_prep' WHERE id = :pid");
-            $stmt->execute(['pid' => $project_id]);
-            
-            // Auto message
-            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
-            $stmtMsg->execute([
-                'pid' => $project_id,
-                'sid' => $_SESSION['user_id'],
-                'msg' => "【通知】必要図書が揃いました。一次回答期日の設定をお願いします。"
-            ]);
-            $pdo->commit();
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            die("設計開始の依頼に失敗しました: " . $e->getMessage());
-        }
-        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
-    }
+
     
     // 管理者による一次回答期日設定
     if ($action === 'set_primary_due_date') {
@@ -213,6 +229,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'sid' => $_SESSION['user_id'],
                     'msg' => "【通知】一次回答の基準日（期日）が {$due_date} に設定され、スケジュールが確定しました。左パネルのスケジュール表をご確認ください。"
                 ]);
+            }
+        }
+        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    }
+
+    // スケジュール実施日（実績）の更新
+    if ($action === 'update_schedule_actual') {
+        if ($is_admin) {
+            $step_idx = $_POST['step_idx'] ?? '';
+            $actual_date = $_POST['actual_date'] ?? '';
+            if ($step_idx !== '') {
+                $stmtProj = $pdo->prepare("SELECT schedule_actuals FROM projects WHERE id = :pid");
+                $stmtProj->execute(['pid' => $project_id]);
+                $current_actuals_json = $stmtProj->fetchColumn();
+                $actuals = json_decode($current_actuals_json ?? '{}', true) ?: [];
+                
+                if (empty($actual_date)) {
+                    unset($actuals[$step_idx]);
+                } else {
+                    $actuals[$step_idx] = $actual_date;
+                }
+                $stmt = $pdo->prepare("UPDATE projects SET schedule_actuals = :act WHERE id = :pid");
+                $stmt->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
             }
         }
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
@@ -428,7 +467,8 @@ $chat_messages = $stmtMsgs->fetchAll();
                         'pdf_plan' => '平面図',
                         'pdf_elevation' => '立面図',
                         'pdf_layout' => '配置図',
-                        'pdf_section' => '矩計図'
+                        'pdf_section' => '矩計図',
+                        'pdf_area_calc' => '求積図'
                     ];
                     foreach ($categories as $cat => $label) {
                         if (isset($files_by_cat[$cat])) {
@@ -513,10 +553,11 @@ $chat_messages = $stmtMsgs->fetchAll();
                 }
 
                 echo '<table style="width:100%; border-collapse:collapse; font-size:11px;">';
-                echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定</th></tr></thead>';
+                echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定</th><th style="padding:6px; text-align:left;">実施日</th></tr></thead>';
                 echo '<tbody>';
                 
                 $calc_date = $primary_due_date; // primary_due_date がある場合はこれを基準日として以降を計算
+                $schedule_actuals = json_decode($project_info['schedule_actuals'] ?? '{}', true) ?: [];
                 
                 foreach ($schedule_steps as $idx => $step) {
                     $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
@@ -535,6 +576,7 @@ $chat_messages = $stmtMsgs->fetchAll();
                         if ($idx == 0) {
                             $date_str = '<span style="color:#64748b;">-</span>';
                         } elseif ($idx == 1) {
+                            $calc_date = $primary_due_date;
                             $date_str = '<strong>' . date('m/d', strtotime($primary_due_date)) . '</strong>';
                         } else {
                             if ($step['type'] == 'biz') {
@@ -546,10 +588,30 @@ $chat_messages = $stmtMsgs->fetchAll();
                         }
                     }
 
+                    // 実施日があればそれを起算日に上書きする
+                    $actual_date = $schedule_actuals[$idx] ?? '';
+                    if ($actual_date) {
+                        $calc_date = $actual_date;
+                        $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
+                    }
+
+                    // 実施日入力フォーム (管理者のみ、一次回答日設定後)
+                    $actual_form = '';
+                    if ($is_admin && $primary_due_date) {
+                        $actual_form = '
+                        <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:5px; align-items:center;">
+                            <input type="hidden" name="action" value="update_schedule_actual">
+                            <input type="hidden" name="step_idx" value="'.$idx.'">
+                            <input type="date" name="actual_date" value="'.htmlspecialchars($actual_date, ENT_QUOTES).'" style="font-size:10px; padding:2px;">
+                            <button type="submit" style="font-size:10px; padding:2px 5px; background:#e2e8f0; border:1px solid #cbd5e1; border-radius:3px; cursor:pointer;">保存</button>
+                        </form>';
+                    }
+
                     echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
                     echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                     echo "<td style='padding:6px;'>{$badge}</td>";
                     echo "<td style='padding:6px;'>{$date_str}</td>";
+                    echo "<td style='padding:6px;'>{$actual_form}</td>";
                     echo "</tr>";
                 }
                 echo '</tbody></table>';
@@ -577,7 +639,7 @@ $chat_messages = $stmtMsgs->fetchAll();
             <!-- ▼▼▼ 依頼主 詳細仕様指定・図書アップロード ▼▼▼ -->
             <div class="box" style="background:#f8fafc; border-color:#cbd5e1; margin-top:15px;">
                 <h3 style="margin-top:0; font-size:14px; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">
-                    📤 必要図書の提出と詳細仕様の指定
+                    📤 設計開始依頼（必要図書の提出と詳細仕様の指定）
                 </h3>
                 
                 <?php
@@ -588,7 +650,15 @@ $chat_messages = $stmtMsgs->fetchAll();
                 ?>
                 
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="action" value="save_client_specs">
+                    
+                    <div style="margin-bottom:15px; background:#fff; padding:15px; border:2px solid #ef4444; border-radius:6px;">
+                        <div style="font-size:13px; font-weight:bold; color:#b91c1c; margin-bottom:8px;">⚠️ 見積時からの図面変更の有無（必須）</div>
+                        <div style="display:flex; gap:15px; font-size:12px; margin-bottom:10px;">
+                            <label><input type="radio" name="drawing_changed" value="no" required> 変更なし</label>
+                            <label><input type="radio" name="drawing_changed" value="yes" required> 変更あり</label>
+                        </div>
+                        <textarea name="drawing_change_notes" placeholder="変更ありの場合は、変更箇所を簡単にご記入ください。" style="width:100%; padding:8px; font-size:12px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
+                    </div>
                     
                     <div style="margin-bottom:15px;">
                         <label style="font-size:12px; font-weight:bold; color:#334155; display:block; margin-bottom:5px;">📂 ファイルの提出方法</label>
@@ -600,7 +670,7 @@ $chat_messages = $stmtMsgs->fetchAll();
 
                     <!-- 一括アップロードエリア -->
                     <div id="mode_combined" style="display: <?= $upload_mode === 'combined' ? 'block' : 'none' ?>; background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:15px;">
-                        <div style="font-size:12px; font-weight:bold; margin-bottom:10px;">必要図書一括 (ZIP/PDF)</div>
+                        <div style="font-size:12px; font-weight:bold; margin-bottom:10px;">必要図書一括 (ZIP/PDF) <span style="color:#ef4444;">※CADデータ必須</span></div>
                         <input type="file" name="upload_files[all_in_one_zip]" style="font-size:12px; width:100%;">
                         <?php if(isset($files_by_cat['all_in_one_zip'])): ?>
                             <div style="font-size:11px; margin-top:5px;">✅ 提出済: <a href="https://drive.google.com/file/d/<?= htmlspecialchars($files_by_cat['all_in_one_zip']['drive_file_id'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank"><?= htmlspecialchars($files_by_cat['all_in_one_zip']['file_name'], ENT_QUOTES) ?></a></div>
@@ -615,7 +685,7 @@ $chat_messages = $stmtMsgs->fetchAll();
                             <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">A. 共通図書</div>
                             <div style="display:grid; gap:10px;">
                                 <div>
-                                    <div style="font-size:11px; font-weight:bold;">意匠CADデータ (平面・立面・配置・矩計を含む)</div>
+                                    <div style="font-size:11px; font-weight:bold;">意匠CADデータ (平面・立面・配置・矩計を含む) <span style="color:#ef4444;">※必須</span></div>
                                     <input type="file" name="upload_files[cad_design_all]" style="font-size:11px; width:100%;">
                                     <?php if(isset($files_by_cat['cad_design_all'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['cad_design_all']['file_name']).'</div>'; ?>
                                 </div>
@@ -623,6 +693,11 @@ $chat_messages = $stmtMsgs->fetchAll();
                                     <div style="font-size:11px; font-weight:bold;">確認申請書 (2面〜5面)</div>
                                     <input type="file" name="upload_files[app_doc]" style="font-size:11px; width:100%;">
                                     <?php if(isset($files_by_cat['app_doc'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['app_doc']['file_name']).'</div>'; ?>
+                                </div>
+                                <div>
+                                    <div style="font-size:11px; font-weight:bold;">求積図</div>
+                                    <input type="file" name="upload_files[pdf_area_calc]" style="font-size:11px; width:100%;">
+                                    <?php if(isset($files_by_cat['pdf_area_calc'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['pdf_area_calc']['file_name']).'</div>'; ?>
                                 </div>
                             </div>
                         </div>
@@ -796,9 +871,17 @@ $chat_messages = $stmtMsgs->fetchAll();
 
                     </div>
 
-                    <button type="submit" style="width:100%; background:#3b82f6; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow:0 2px 4px rgba(59,130,246,0.3);">
-                        💾 仕様・ファイルを保存する
-                    </button>
+                    <input type="hidden" name="action" id="form_action" value="">
+                    
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button type="submit" onclick="document.getElementById('form_action').value='save_client_specs_draft'; document.querySelectorAll('input[required], textarea[required], select[required]').forEach(e => e.removeAttribute('required'));" style="flex:1; background:#f8fafc; color:#475569; border:1px solid #cbd5e1; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                            💾 一時保存する（適宜アップロード用）
+                        </button>
+                        
+                        <button type="submit" onclick="document.getElementById('form_action').value='request_design_start'; return confirm('必要図書・仕様を提出し、設計開始を依頼します。よろしいですか？');" style="flex:2; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(16,185,129,0.3);">
+                            🚀 全て揃ったので設計開始を依頼する
+                        </button>
+                    </div>
                 </form>
 
                 <script>
@@ -809,16 +892,6 @@ $chat_messages = $stmtMsgs->fetchAll();
                     }
                 </script>
             </div>
-            
-            <?php if ($project_info['status'] === 'quote_req'): ?>
-            <!-- 設計開始依頼ボタン -->
-            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:15px;">
-                <input type="hidden" name="action" value="request_start">
-                <button type="submit" style="width:100%; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:15px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(16,185,129,0.3);" onclick="return confirm('必要図書を提出し、設計開始を依頼します。よろしいですか？');">
-                    🚀 必要図書を提出し、設計開始を依頼する
-                </button>
-            </form>
-            <?php endif; ?>
             
             <!-- ▲▲▲ 依頼主 詳細仕様指定・図書アップロード ▲▲▲ -->
             <?php endif; ?>

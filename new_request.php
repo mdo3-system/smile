@@ -59,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'file_pdf_plan'      => 'pdf_plan',
                 'file_pdf_elevation' => 'pdf_elevation',
                 'file_pdf_layout'    => 'pdf_layout',
-                'file_pdf_section'   => 'pdf_section'
+                'file_pdf_section'   => 'pdf_section',
+                'file_pdf_area'      => 'pdf_area_calc'
             ];
 
             foreach ($upload_fields as $input_name => $cat_key) {
@@ -348,8 +349,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card">
                 <h2 class="section-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                    見積用図面（PDF等）
+                    見積用図面（PDF推奨・CAD可）
                 </h2>
+                <div style="font-size: 13px; color: #dc2626; font-weight: 600; margin-bottom: 15px; background: #fef2f2; border: 1px solid #fecaca; padding: 10px; border-radius: 8px;">
+                    ※見積依頼時はPDFまたはCADデータでご提出いただけますが、<strong>設計依頼時（見積後）には改めて「最新のCADデータ」の提出が必須</strong>となります。
+                </div>
                 
                 <div class="form-row">
                     <div class="form-col">
@@ -382,6 +386,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="file-label">矩計図（必要時）</div>
                             <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="file-upload-box">
+                            <input type="file" name="file_pdf_area" accept=".pdf,.zip">
+                            <div class="file-label">求積図 を選択</div>
+                            <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <!-- 空枠 -->
                     </div>
                 </div>
             </div>
