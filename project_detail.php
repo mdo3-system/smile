@@ -455,7 +455,29 @@ $chat_messages = $stmtMsgs->fetchAll();
                     <strong>📱 電話番号:</strong> <span style="color:#e53e3e; font-size:11px;">未登録（依頼主に入力を依頼してください）</span><br>
                     <?php endif; ?>
                     <strong>地盤調査:</strong> <?= htmlspecialchars($project_info['soil_status'] ?? '未定', ENT_QUOTES) ?><br>
-                    <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($project_info['status'], ENT_QUOTES) ?></span>
+                    <?php
+                    // ステータス日本語化
+                    global $status_options;
+                    $status_ja = $status_options[$project_info['status']] ?? $project_info['status'];
+                    
+                    // 契約状態の判定
+                    $has_cad = isset($files_by_cat['cad_design_all']) || isset($files_by_cat['all_in_one_zip']);
+                    $contract_badge = '';
+                    if ($has_cad) {
+                        $contract_badge = '<span class="badge" style="background:#8b5cf6; margin-left:5px;">✅ 契約完了 (納期未定)</span>';
+                    }
+
+                    // 依頼内容の文字列化
+                    $req_types = [];
+                    if ($project_info['req_permit'] == 1) $req_types[] = '許容応力度設計';
+                    if ($project_info['req_wall'] == 1) $req_types[] = '壁量計算';
+                    if ($project_info['req_skin'] == 1) $req_types[] = '外皮計算';
+                    if ($project_info['req_sky'] == 1) $req_types[] = '天空率';
+                    if ($project_info['req_opt_kisohari'] == 1) $req_types[] = '基礎・横架材許容応力度';
+                    $req_str = empty($req_types) ? '未指定' : implode(' / ', $req_types);
+                    ?>
+                    <strong>依頼内容:</strong> <span style="color:#d97706; font-weight:bold;"><?= htmlspecialchars($req_str, ENT_QUOTES) ?></span><br>
+                    <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span><?= $contract_badge ?>
                 </div>
             </div>
 
@@ -563,9 +585,10 @@ $chat_messages = $stmtMsgs->fetchAll();
                     $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
                     $badge = '';
                     if ($step['actor'] == 'designer') {
-                        $badge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟦 設計者</span>';
+                        $badge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟦 サポート</span>';
                     } elseif ($step['actor'] == 'client') {
-                        $badge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟩 依頼主</span>';
+                        $client_display_name = htmlspecialchars($project_info['client_name'], ENT_QUOTES) . '様';
+                        $badge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟩 ' . $client_display_name . '</span>';
                     } else {
                         $badge = '<span style="background:#64748b; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">⬛ 審査・待機</span>';
                     }

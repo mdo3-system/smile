@@ -15,4 +15,5 @@
 // 1.0.13: Migrate file storage to Google Drive API and perform database migration
 // 1.0.14: Fix magic link URL generation using APP_URL or robust self-detection
 // 1.0.15: Implement new request flow (Pattern A), register page, and redesign dashboard UI
-window.APP_VERSION = '1.0.15';
+// 1.0.16: Refine new request flow (Estimate vs Design request separation) and schedule criteria
+window.APP_VERSION = '1.0.16';

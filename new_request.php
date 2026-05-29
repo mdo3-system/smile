@@ -40,9 +40,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'pid'  => $new_project_id
             ]);
 
-            // 3. メモ・特記事項があればメッセージとして登録
+            // 3. メモ・通知先があればメッセージとして登録
             $memo = trim($_POST['memo'] ?? '');
+            $contact_notify = trim($_POST['contact_notify'] ?? '');
+            
+            $msg_body = "";
+            if (!empty($contact_notify)) {
+                $msg_body .= "【見積完了時の通知先（SMS/Email）】\n" . $contact_notify . "\n\n";
+            }
             if (!empty($memo)) {
+                $msg_body .= "【初回ご要望・特記事項】\n" . $memo;
+            }
+
+            if (!empty($msg_body)) {
                 $stmtMsg = $pdo->prepare("
                     INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
                     VALUES (:pid, :sid, 'client_admin', :msg)
@@ -50,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtMsg->execute([
                     'pid' => $new_project_id,
                     'sid' => $current_user_id,
-                    'msg' => "【初回ご要望・特記事項】\n" . $memo
+                    'msg' => trim($msg_body)
                 ]);
             }
 
@@ -313,6 +323,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label for="project_name">物件名（必須）</label>
                     <input type="text" id="project_name" name="project_name" placeholder="例: ○○様邸 新築工事" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact_notify">見積完了の通知先（Email または SMS用電話番号）※任意</label>
+                    <input type="text" id="contact_notify" name="contact_notify" placeholder="例: sample@example.com または 090-1234-5678">
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">※ご入力いただくと、見積完了時にこちらへ通知をお送りします。</div>
                 </div>
                 
                 <div class="form-group">
