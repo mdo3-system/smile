@@ -1335,9 +1335,6 @@ $chat_messages = $stmtMsgs->fetchAll();
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h2 class="section-title" style="background:#17a2b8; margin:0;">💬 依頼主チャット</h2>
-                <?php if ($is_admin && $project_info['status'] === 'quote_req'): ?>
-                <button onclick="document.getElementById('greetingModal').classList.add('active')" style="font-size:11px; background:#28a745; color:white; border:none; padding:5px 10px; border-radius:12px; cursor:pointer;">📋 定型文を送信</button>
-                <?php endif; ?>
             </div>
 
             <!-- チャットエリア -->

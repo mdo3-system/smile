@@ -64,11 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $temp_pdf_path = generate_estimate_pdf($project_id, $pdo);
 
         // 4. Google Driveの案件フォルダにアップロード
-        // 案件名を取得
-        $stmtProj = $pdo->prepare("SELECT project_name FROM projects WHERE id = :pid");
+        // 案件名と依頼内容を取得
+        $stmtProj = $pdo->prepare("SELECT project_name, req_permit, req_wall, req_skin, req_sky FROM projects WHERE id = :pid");
         $stmtProj->execute(['pid' => $project_id]);
-        $proj_name = $stmtProj->fetchColumn();
-        $pdf_filename = '御見積書_' . ($proj_name ? $proj_name : $project_id) . '.pdf';
+        $proj_info = $stmtProj->fetch();
+        $proj_name = $proj_info ? $proj_info['project_name'] : $project_id;
+        $pdf_filename = '御見積書_' . $proj_name . '.pdf';
 
         $drive_file_id = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
 
@@ -88,13 +89,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tax = round($total_price * 0.1);
         $grand_total = $total_price + $tax;
         
-        $chat_message = "【御見積書が発行されました】\n";
+        $chat_message = "お世話になっております。システムより初期見積書を発行いたしました。\n";
         $chat_message .= "添付のファイルより御見積書PDFをご確認いただけます。\n\n";
         $chat_message .= "件名: " . ($proj_name ? $proj_name : 'ご指定案件') . " 新築工事 設計等業務\n";
         $chat_message .= "税抜金額: " . number_format($total_price) . "円\n";
         $chat_message .= "消費税: " . number_format($tax) . "円\n";
         $chat_message .= "税込合計: " . number_format($grand_total) . "円\n\n";
-        $chat_message .= "ご確認のほどよろしくお願いいたします。";
+        
+        $chat_message .= "【今後の流れについて】\n";
+        $chat_message .= "内容に問題がなければ、左パネルより構造仕様の指定や必要図書のアップロードをお願いいたします。\n";
+        
+        // 依頼別の案内を追加
+        if ($proj_info) {
+            if ($proj_info['req_permit'] == 1 || $proj_info['req_wall'] == 1) {
+                $chat_message .= "・構造計算: 意匠CADデータ（平面・立面・配置・矩計）および確認申請書、地盤調査報告書などが必要です。\n";
+            }
+            if ($proj_info['req_skin'] == 1) {
+                $chat_message .= "・外皮計算: 断熱材やサッシの仕様書、設備仕様書（換気・エアコン等）をアップロードしてください。\n";
+            }
+            if ($proj_info['req_sky'] == 1) {
+                $chat_message .= "・天空率計算: 道路の資料（座標、測量図、道路台帳等）や真北の資料をアップロードしてください。\n";
+            }
+        }
+        
+        $chat_message .= "\nご不明な点がございましたら、このチャットでお気軽にご連絡ください。\nよろしくお願いいたします。";
 
         // 管理者(ID=1)からのメッセージとして送信
         $stmtSendMsg = $pdo->prepare("
