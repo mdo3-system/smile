@@ -75,12 +75,6 @@ $status_labels = [
         </div>
     </div>
 
-    <?php if ($_SESSION['role'] === 'admin'): ?>
-    <div style="margin-bottom: 20px; display:flex; justify-content: flex-end; gap: 10px;">
-        <a href="google_auth.php" target="_blank" class="btn" style="background:#4285F4;">☁ Google Drive 連携(認証)</a>
-    </div>
-    <?php endif; ?>
-
     <?php if ($_SESSION['role'] === 'client'): ?>
     <div style="margin-bottom: 20px; text-align: right;">
         <a href="new_request.php" class="btn" style="background:#28a745;">➕ 新規見積・計算依頼</a>

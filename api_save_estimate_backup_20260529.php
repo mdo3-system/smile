@@ -57,25 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        // 1.5. 管理者が見積を作成した際、画面上のチェック状態に合わせて projects テーブルの依頼フラグも更新する
-        $req_permit = isset($_POST['req_permit']) ? intval($_POST['req_permit']) : 0;
-        $req_wall   = isset($_POST['req_wall']) ? intval($_POST['req_wall']) : 0;
-        $req_skin   = isset($_POST['req_skin']) ? intval($_POST['req_skin']) : 0;
-        $req_sky    = isset($_POST['req_sky']) ? intval($_POST['req_sky']) : 0;
-        
-        $stmtUpdateProjFlags = $pdo->prepare("
-            UPDATE projects 
-            SET req_permit = :rp, req_wall = :rw, req_skin = :rsk, req_sky = :rsky
-            WHERE id = :pid
-        ");
-        $stmtUpdateProjFlags->execute([
-            'rp' => $req_permit,
-            'rw' => $req_wall,
-            'rsk' => $req_skin,
-            'rsky' => $req_sky,
-            'pid' => $project_id
-        ]);
-
         // 2. Google Driveのフォルダを取得または作成
         $project_folder_id = get_or_create_project_drive_folder($pdo, $project_id);
 
