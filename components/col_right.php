@@ -1,4 +1,4 @@
-﻿<div class="column col-right" style="padding: 15px;">
+<div class="column col-right" style="padding: 15px;">
             <?php if ($is_admin && count($delivered_orders) > 0): ?>
                 <div class="box" style="background:#fff3cd; border: 1px solid #ffeeba; margin-bottom:15px;">
                     <h3 style="margin-top:0; color:#856404; font-size:13px;">🔔 納品確認エリア（成果物の承認待ち）</h3>
@@ -121,7 +121,6 @@
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
-                    <?php if ($is_admin): ?>
                 <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
                     <strong>📂 Drive連携:</strong>
                     <?php if (file_exists(__DIR__ . '/token.json')): ?>
@@ -304,3 +303,4 @@
             </div>
             <?php endif; ?>
         </div>
+

@@ -166,12 +166,6 @@ $chat_messages = $stmtMsgs->fetchAll();
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
         <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
         <div style="display:flex; align-items:center; gap:15px;">
-            
-                    <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">
-                        <?= file_exists(__DIR__ . '/token.json') ? '認証更新' : '連携ログイン' ?>
-                    </a>
-                </div>
-            <?php endif; ?>
             <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>
     </div>
