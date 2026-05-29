@@ -659,11 +659,13 @@ $chat_messages = $stmtMsgs->fetchAll();
             <?php endif; ?>
 
             <?php if ($project_info['status'] === 'quote_req' || $project_info['status'] === 'primary_prep'): ?>
-            <!-- ▼▼▼ 依頼主 詳細仕様指定・図書アップロード ▼▼▼ -->
-            <div class="box" style="background:#f8fafc; border-color:#cbd5e1; margin-top:15px;">
-                <h3 style="margin-top:0; font-size:14px; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">
-                    📤 設計開始依頼（必要図書の提出と詳細仕様の指定）
-                </h3>
+            <!-- ▼▼▼ 依頼主 詳細仕様指定・図書アップロード（モーダル） ▼▼▼ -->
+            <div id="designModal" class="modal-overlay">
+                <div class="modal-box" style="max-width:800px; position:relative; background:#f8fafc;">
+                    <button type="button" onclick="closeDesignModal()" style="position:absolute; right:15px; top:15px; background:none; border:none; font-size:24px; cursor:pointer; color:#64748b;">&times;</button>
+                    <h3 class="modal-title" style="margin-top:0; font-size:16px; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">
+                        📤 設計開始依頼（必要図書の提出と詳細仕様の指定）
+                    </h3>
                 
                 <?php
                 $upload_mode = $project_info['upload_mode'] ?? 'individual';
@@ -913,10 +915,16 @@ $chat_messages = $stmtMsgs->fetchAll();
                         document.getElementById('mode_combined').style.display = isCombined ? 'block' : 'none';
                         document.getElementById('mode_individual').style.display = isCombined ? 'none' : 'block';
                     }
+                    function openDesignModal() {
+                        document.getElementById('designModal').classList.add('active');
+                    }
+                    function closeDesignModal() {
+                        document.getElementById('designModal').classList.remove('active');
+                    }
                 </script>
+                </div>
             </div>
-            
-            <!-- ▲▲▲ 依頼主 詳細仕様指定・図書アップロード ▲▲▲ -->
+            <!-- ▲▲▲ 依頼主 詳細仕様指定・図書アップロード（モーダル） ▲▲▲ -->
             <?php endif; ?>
 
             <?php if ($is_admin): ?>
