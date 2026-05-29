@@ -17,4 +17,6 @@
 // 1.0.15: Implement new request flow (Pattern A), register page, and redesign dashboard UI
 // 1.0.16: Refine new request flow (Estimate vs Design request separation) and schedule criteria
 // 1.0.17: Fix simulator visibility and relocate Google Drive auth button
-window.APP_VERSION = '1.0.17';
+// 1.0.18: Update version number
+const APP_VERSION = '1.0.18';
+const APP_LAST_UPDATED = '2026-05-29';
