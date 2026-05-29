@@ -1447,12 +1447,16 @@ $chat_messages = $stmtMsgs->fetchAll();
                                     $uploaded_file_names[] = $f['file_name'];
                                 }
                             }
-                            $stmtAllCenter = $pdo->prepare("SELECT file_name FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY created_at DESC");
-                            $stmtAllCenter->execute(['pid' => $project_id]);
-                            while ($row = $stmtAllCenter->fetch(PDO::FETCH_ASSOC)) { $uploaded_file_names[] = $row['file_name']; }
-                            $uploaded_file_names = array_unique($uploaded_file_names);
-                            foreach ($uploaded_file_names as $fname) {
-                                echo '<option value="' . htmlspecialchars($fname, ENT_QUOTES) . '">📎 ' . htmlspecialchars($fname, ENT_QUOTES) . '</option>';
+                            try {
+                                $stmtAllCenter = $pdo->prepare("SELECT file_name FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY id DESC");
+                                $stmtAllCenter->execute(['pid' => $project_id]);
+                                while ($row = $stmtAllCenter->fetch(PDO::FETCH_ASSOC)) { $uploaded_file_names[] = $row['file_name']; }
+                                $uploaded_file_names = array_unique($uploaded_file_names);
+                                foreach ($uploaded_file_names as $fname) {
+                                    echo '<option value="' . htmlspecialchars($fname, ENT_QUOTES) . '">📎 ' . htmlspecialchars($fname, ENT_QUOTES) . '</option>';
+                                }
+                            } catch (Exception $e) {
+                                echo '<option value="">(ファイルの読み込みに失敗しました)</option>';
                             }
                             ?>
                         </select>
