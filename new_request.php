@@ -99,6 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $pdo->commit();
+            
+            // 管理者へメール通知
+            $subject = "【新規案件】新しい見積依頼がありました: {$project_name}";
+            $body = "依頼主から新しい見積依頼（案件名: {$project_name}）が届きました。\n\n";
+            $body .= "以下のURLよりダッシュボードにログインして確認し、見積りを作成してください。\n";
+            $body .= "https://thanks.work/system/project_detail.php?id={$new_project_id}\n";
+            sendSystemEmail('info@thanks.work', $subject, $body);
+
             header("Location: index.php");
             exit;
 

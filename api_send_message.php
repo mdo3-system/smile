@@ -114,6 +114,17 @@ try {
             $body .= "※本メールは送信専用です。";
             sendSystemEmail($to_email, $subject, $body);
         }
+    } elseif ($_SESSION['role'] === 'client') {
+        // 依頼主が送信した場合は管理者にメール通知
+        $stmtProj = $pdo->prepare("SELECT project_name FROM projects WHERE id = :pid");
+        $stmtProj->execute(['pid' => $project_id]);
+        $project_name = $stmtProj->fetchColumn();
+
+        $subject = "【新着チャット】案件「{$project_name}」に依頼主からメッセージがありました";
+        $body = "案件「{$project_name}」にて、依頼主から新着メッセージが届きました。\n\n";
+        $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
+        $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n";
+        sendSystemEmail('info@thanks.work', $subject, $body);
     }
 
     /*

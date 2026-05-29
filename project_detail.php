@@ -313,6 +313,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'sid' => $_SESSION['user_id'],
                     'msg' => "【通知】構造仕様の指定と必要図書の提出が完了し、設計開始が依頼されました。一次回答期日の設定をお願いします。"
                 ]);
+
+                // 管理者へメール通知
+                $project_name = $project_info['project_name'] ?? '案件名未定';
+                $subject = "【設計依頼】案件「{$project_name}」の設計開始が依頼されました";
+                $body = "案件「{$project_name}」にて、依頼主から構造仕様の指定と必要図書の提出が完了し、設計開始が依頼されました。\n\n";
+                $body .= "以下のURLよりダッシュボードにログインし、図書を確認して一次回答期日を設定してください。\n";
+                $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n";
+                sendSystemEmail('info@thanks.work', $subject, $body);
             }
 
             $pdo->commit();
@@ -1441,10 +1449,10 @@ $chat_messages = $stmtMsgs->fetchAll();
                     <!-- 計算タイプの選択 -->
                     <div>
                         <strong>計算タイプ（複数選択可）</strong><br>
-                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_permit" onchange="toggleEstContainers(); calcClientEstimate();" checked> 許容応力度計算</label>
-                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_wall" onchange="toggleEstContainers(); calcClientEstimate();"> 性能表示壁量計算（性能表示のみ）</label>
-                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_skin" onchange="toggleEstContainers(); calcClientEstimate();"> 外皮計算（一次エネ計算セット）</label>
-                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_sky" onchange="toggleEstContainers(); calcClientEstimate();"> 天空率計算</label>
+                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_permit" onchange="toggleEstContainers(); calcClientEstimate();" <?= ($project_info['req_permit'] == 1) ? 'checked' : '' ?>> 許容応力度計算</label>
+                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_wall" onchange="toggleEstContainers(); calcClientEstimate();" <?= ($project_info['req_wall'] == 1) ? 'checked' : '' ?>> 性能表示壁量計算（性能表示のみ）</label>
+                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_skin" onchange="toggleEstContainers(); calcClientEstimate();" <?= ($project_info['req_skin'] == 1) ? 'checked' : '' ?>> 外皮計算（一次エネ計算セット）</label>
+                        <label style="display:block; margin:2px 0;"><input type="checkbox" id="est_active_sky" onchange="toggleEstContainers(); calcClientEstimate();" <?= ($project_info['req_sky'] == 1) ? 'checked' : '' ?>> 天空率計算</label>
                     </div>
 
                     <!-- 1. 許容応力度計算用フォーム -->
