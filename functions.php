@@ -63,7 +63,22 @@ function addMonths($dateStr, $months) {
 
 
 // ==========================================
-// 3. UI（HTML要素）描画用パーツ関数
+// 3. Email送信ロジック
+// ==========================================
+function sendSystemEmail($to, $subject, $body) {
+    if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    mb_language("Japanese");
+    mb_internal_encoding("UTF-8");
+    $headers = "From: system@antigravity-jp.net\r\n";
+    $headers .= "Reply-To: no-reply@antigravity-jp.net\r\n";
+    return mb_send_mail($to, $subject, $body, $headers);
+}
+
+
+// ==========================================
+// 4. UI（HTML要素）描画用パーツ関数
 // ==========================================
 function renderOptions($optionsArray, $currentValue) {
     $sel_empty = ($currentValue === '') ? 'selected' : ''; 

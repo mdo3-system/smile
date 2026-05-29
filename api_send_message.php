@@ -69,6 +69,12 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
 }
 
 try {
+    // 対象ファイルの指定があれば先頭にタグを付ける
+    $target_file = trim($_POST['target_file'] ?? '');
+    if ($target_file !== '') {
+        $message_text = "【" . $target_file . " について】\n" . $message_text;
+    }
+
     $stmt = $pdo->prepare("
         INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) 
         VALUES (:pid, :sid, 'client_admin', :msg, :fpath, :ftype)
@@ -81,6 +87,34 @@ try {
         'ftype' => $file_type
     ]);
     $new_id = $pdo->lastInsertId();
+
+    // メール通知 (管理者が送信した場合、または依頼者が送信した場合にも管理者に送る場合は追加可能)
+    if ($_SESSION['role'] === 'admin') {
+        $stmtNotify = $pdo->prepare("SELECT message_text FROM messages WHERE project_id = :pid AND message_text LIKE '%【見積完了時の通知先（SMS/Email）】%' ORDER BY id ASC LIMIT 1");
+        $stmtNotify->execute(['pid' => $project_id]);
+        $notifyMsg = $stmtNotify->fetchColumn();
+        $to_email = '';
+        if ($notifyMsg) {
+            if (preg_match('/【見積完了時の通知先（SMS\/Email）】\n([^\n]+)/', $notifyMsg, $matches)) {
+                $candidate = trim($matches[1]);
+                if (filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                    $to_email = $candidate;
+                }
+            }
+        }
+        if ($to_email) {
+            $stmtProj = $pdo->prepare("SELECT project_name FROM projects WHERE id = :pid");
+            $stmtProj->execute(['pid' => $project_id]);
+            $project_name = $stmtProj->fetchColumn();
+
+            $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
+            $body = "案件「{$project_name}」にて、管理者から新着メッセージが届きました。\n\n";
+            $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
+            $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n\n";
+            $body .= "※本メールは送信専用です。";
+            sendSystemEmail($to_email, $subject, $body);
+        }
+    }
 
     /*
     // SMS通知（クールダウン付き）
