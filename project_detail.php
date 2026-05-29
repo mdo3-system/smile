@@ -1458,25 +1458,23 @@ $chat_messages = $stmtMsgs->fetchAll();
             <div style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;">
                 <div style="font-size:11px; font-weight:bold; color:#c0392b; margin-bottom:10px;">🔒 以下は管理者のみに表示されます</div>
                 
-                <!-- Google Drive 連携状況 -->
-                <div style="background:#f8f9fa; border:1px solid #ddd; padding:10px; border-radius:5px; margin-bottom:15px; font-size:11px; display:flex; align-items:center; justify-content:between;">
-                    <div>
-                        <strong>📂 Googleドライブ連携:</strong>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
+                    
+                    <!-- Google Drive 連携状況（目立つ位置へ移動） -->
+                    <div style="background:#e8f5e9; border:1px solid #28a745; padding:5px 10px; border-radius:5px; font-size:11px; display:flex; align-items:center; gap:10px;">
+                        <strong>📂 Drive連携:</strong>
                         <?php if (file_exists(__DIR__ . '/token.json')): ?>
-                            <span style="color:#28a745; font-weight:bold;">🟢 連携完了</span>
+                            <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
                         <?php else: ?>
-                            <span style="color:#dc3545; font-weight:bold;">🔴 未連携（ファイルの送受信ができません）</span>
+                            <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
                         <?php endif; ?>
-                    </div>
-                    <div>
-                        <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#007bff; padding:3px 8px; border-radius:4px; text-decoration:none; margin-left:10px;">
-                            <?= file_exists(__DIR__ . '/token.json') ? '認証を更新する' : 'Google連携ログイン' ?>
+                        <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">
+                            <?= file_exists(__DIR__ . '/token.json') ? '認証更新' : '連携ログイン' ?>
                         </a>
                     </div>
                 </div>
-                
-                <?php if ($project_info['status'] === 'quote_req'): ?>
-                <h2 class="section-title" style="background:#28a745;">💰 自動見積シミュレーター</h2>
+
                 <div class="box" style="background:#e8f5e9; font-size:11px; display:flex; flex-direction:column; gap:10px;">
                     <!-- 計算タイプの選択 -->
                     <div>
@@ -1647,7 +1645,6 @@ $chat_messages = $stmtMsgs->fetchAll();
                         <button type="button" onclick="sendClientEstimate()" style="width:100%; background:#28a745; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">チャットに見積を送信</button>
                     </div>
                 </div>
-                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
