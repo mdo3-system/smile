@@ -860,10 +860,10 @@ $chat_messages = $stmtMsgs->fetchAll();
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
                     
                     <div style="margin-bottom:15px; background:#fff; padding:15px; border:2px solid #ef4444; border-radius:6px;">
-                        <div style="font-size:13px; font-weight:bold; color:#b91c1c; margin-bottom:8px;">⚠️ 見積時からの図面変更の有無（必須）</div>
+                        <div style="font-size:13px; font-weight:bold; color:#b91c1c; margin-bottom:8px;">⚠️ 見積時からの図面変更の有無</div>
                         <div style="display:flex; gap:15px; font-size:12px; margin-bottom:10px;">
-                            <label><input type="radio" name="drawing_changed" value="no" required> 変更なし</label>
-                            <label><input type="radio" name="drawing_changed" value="yes" required> 変更あり</label>
+                            <label><input type="radio" name="drawing_changed" value="no"> 変更なし</label>
+                            <label><input type="radio" name="drawing_changed" value="yes"> 変更あり</label>
                         </div>
                         <textarea name="drawing_change_notes" placeholder="変更ありの場合は、変更箇所を簡単にご記入ください。" style="width:100%; padding:8px; font-size:12px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
                     </div>
@@ -893,18 +893,18 @@ $chat_messages = $stmtMsgs->fetchAll();
                             <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">A. 共通図書</div>
                             <div style="display:grid; gap:10px;">
                                 <div>
-                                    <div style="font-size:11px; font-weight:bold;">意匠CADデータ (平面・立面・配置・矩計を含む) <span style="color:#ef4444;">※必須</span></div>
-                                    <input type="file" name="upload_files[cad_design_all]" style="font-size:11px; width:100%;">
+                                    <div style="font-size:11px; font-weight:bold;">意匠CADデータ (平面・立面・配置・矩計を含む) <span style="color:#ef4444;">※必須（複数選択可）</span></div>
+                                    <input type="file" name="upload_files[cad_design_all][]" multiple style="font-size:11px; width:100%;">
                                     <?php if(isset($files_by_cat['cad_design_all'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['cad_design_all']['file_name']).'</div>'; ?>
                                 </div>
                                 <div>
-                                    <div style="font-size:11px; font-weight:bold;">確認申請書 (2面〜5面)</div>
-                                    <input type="file" name="upload_files[app_doc]" style="font-size:11px; width:100%;">
+                                    <div style="font-size:11px; font-weight:bold;">確認申請書 (2面〜5面) <span style="color:#666;">（複数選択可）</span></div>
+                                    <input type="file" name="upload_files[app_doc][]" multiple style="font-size:11px; width:100%;">
                                     <?php if(isset($files_by_cat['app_doc'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['app_doc']['file_name']).'</div>'; ?>
                                 </div>
                                 <div>
-                                    <div style="font-size:11px; font-weight:bold;">求積図</div>
-                                    <input type="file" name="upload_files[pdf_area_calc]" style="font-size:11px; width:100%;">
+                                    <div style="font-size:11px; font-weight:bold;">求積図 <span style="color:#666;">（複数選択可）</span></div>
+                                    <input type="file" name="upload_files[pdf_area_calc][]" multiple style="font-size:11px; width:100%;">
                                     <?php if(isset($files_by_cat['pdf_area_calc'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['pdf_area_calc']['file_name']).'</div>'; ?>
                                 </div>
                             </div>
@@ -1104,12 +1104,8 @@ $chat_messages = $stmtMsgs->fetchAll();
                     <input type="hidden" name="action" id="form_action" value="">
                     
                     <div style="display:flex; gap:10px; margin-top:20px;">
-                        <button type="submit" onclick="document.getElementById('form_action').value='save_client_specs_draft'; document.querySelectorAll('input[required], textarea[required], select[required]').forEach(e => e.removeAttribute('required'));" style="flex:1; background:#f8fafc; color:#475569; border:1px solid #cbd5e1; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                            💾 一時保存する（適宜アップロード用）
-                        </button>
-                        
-                        <button type="submit" onclick="document.getElementById('form_action').value='request_design_start'; return confirm('必要図書・仕様を提出し、設計開始を依頼します。よろしいですか？');" style="flex:2; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(16,185,129,0.3);">
-                            🚀 全て揃ったので設計開始を依頼する
+                        <button type="submit" onclick="document.getElementById('form_action').value='save_client_specs_draft';" style="width:100%; background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color:white; border:none; padding:14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(59,130,246,0.3);">
+                            💾 図書・仕様を保存 / アップロードする
                         </button>
                     </div>
                 </form>
@@ -2053,17 +2049,23 @@ SMS送付する場合がございますので、ご依頼いただける際は�
         const permit_active = document.getElementById('est_active_permit')?.checked || false;
         const wall_active = document.getElementById('est_active_wall')?.checked || false;
         const skin_active = document.getElementById('est_active_skin')?.checked || false;
+        const sky_active = document.getElementById('est_active_sky')?.checked || false;
         
         if (permit_active) {
-            base_val = parseInt(document.getElementById('est_base_permit').value) || 0;
-            area_val = parseFloat(document.getElementById('est_area_permit').value) || 0;
-            grade_val = parseInt(document.getElementById('est_grade_permit').value) || 0;
-        } else if (wall_active) {
-            base_val = parseInt(document.getElementById('est_base_wall').value) || 0;
-            area_val = parseFloat(document.getElementById('est_area_wall').value) || 0;
-        } else if (skin_active) {
-            base_val = parseInt(document.getElementById('est_base_skin').value) || 0;
-            area_val = parseFloat(document.getElementById('est_area_skin').value) || 0;
+            base_val += parseInt(document.getElementById('est_base_permit').value) || 0;
+            area_val = Math.max(area_val, parseFloat(document.getElementById('est_area_permit').value) || 0);
+            grade_val += parseInt(document.getElementById('est_grade_permit').value) || 0;
+        }
+        if (wall_active) {
+            base_val += parseInt(document.getElementById('est_base_wall').value) || 0;
+            area_val = Math.max(area_val, parseFloat(document.getElementById('est_area_wall').value) || 0);
+        }
+        if (skin_active) {
+            base_val += parseInt(document.getElementById('est_base_skin').value) || 0;
+            area_val = Math.max(area_val, parseFloat(document.getElementById('est_area_skin').value) || 0);
+        }
+        if (sky_active) {
+            base_val += (document.getElementById('est_road_sky').checked ? 50000 : 0) + (document.getElementById('est_north_sky').checked ? 50000 : 0);
         }
         
         const formData = new FormData();
