@@ -19,5 +19,6 @@
 // 1.0.17: Fix simulator visibility and relocate Google Drive auth button
 // 1.0.18: Update version number
 // 1.0.19: 見積書PDFのBillVector風レイアウト改修、見積履歴機能の追加、空白出力によるKaTeXエラーの修正
-const APP_VERSION = '1.0.19';
+// 1.0.20: ファイル先頭のBOM(Byte Order Mark)を除去し、Quirks Mode問題を完全解決
+const APP_VERSION = '1.0.20';
 const APP_LAST_UPDATED = '2026-05-29';
