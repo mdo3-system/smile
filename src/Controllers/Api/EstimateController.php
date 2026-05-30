@@ -60,14 +60,17 @@ class EstimateController
             $service = $this->container->getEstimateCalculatorService();
             $success = $service->saveEstimate((int)$projectId, $_POST, $pdfDriveId);
 
+            $debug = ob_get_clean();
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => $success,
-                'drive_file_id' => $pdfDriveId
+                'drive_file_id' => $pdfDriveId,
+                'debug' => $debug
             ]);
         } catch (\Exception $e) {
+            $debug = ob_get_clean();
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'debug' => $debug]);
         }
     }
 }

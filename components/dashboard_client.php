@@ -13,7 +13,35 @@
                 <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #ccc; padding-bottom:5px;">基本情報</h3>
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
-                    <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($project_info['status'], ENT_QUOTES) ?></span>
+                    <?php
+                        $status_labels = [
+                            'quote_req'      => '見積依頼',
+                            'contracted'     => '受注済',
+                            'primary_prep'   => '一次回答準備中',
+                            'structural_dwg' => '構造図作成中',
+                            'submission'     => '提出済・確認中',
+                            'correction'     => '補正対応中',
+                            'completed'      => '完了'
+                        ];
+                        $status_ja = $status_labels[$project_info['status']] ?? $project_info['status'];
+                    ?>
+                    <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span>
+                </div>
+            </div>
+
+            <div class="box">
+                <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #ccc; padding-bottom:5px;">📋 ご依頼内容</h3>
+                <div style="font-size:13px; line-height:1.6;">
+                    <?php if ($project_info['req_permit'] ?? 0): ?><div>・確認申請書作成</div><?php endif; ?>
+                    <?php if ($project_info['req_wall'] ?? 0): ?><div>・壁量計算書作成</div><?php endif; ?>
+                    <?php if ($project_info['req_skin'] ?? 0): ?><div>・外皮計算書作成</div><?php endif; ?>
+                    <?php if ($project_info['req_sky'] ?? 0): ?><div>・天空率計算書作成</div><?php endif; ?>
+                    <?php if ($project_info['req_opt_kisohari'] ?? 0): ?><div>・【オプション】基礎梁計算</div><?php endif; ?>
+                    <?php 
+                        if (!($project_info['req_permit'] ?? 0) && !($project_info['req_wall'] ?? 0) && !($project_info['req_skin'] ?? 0) && !($project_info['req_sky'] ?? 0) && !($project_info['req_opt_kisohari'] ?? 0)) {
+                            echo "<div>・構造計算等の基本業務</div>";
+                        }
+                    ?>
                 </div>
             </div>
 
@@ -107,28 +135,86 @@
         <!-- 右パネル：チャット -->
         <div class="column col-right" style="flex: 1;">
             <h2 class="section-title" style="background:#17a2b8;">💬 メッセージ</h2>
-            <div class="box">
-                <div class="chat-container">
-                    <?php foreach ($chat_messages as $msg): ?>
-                        <div class="chat-msg">
-                            <?php 
-                                $isAdminMsg = ($msg['sender_id'] == 1);
-                                $name = $isAdminMsg ? 'サポート担当者' : 'あなた';
-                                $color = $isAdminMsg ? '#0056b3' : '#28a745';
-                            ?>
-                            <div style="font-weight:bold; color:<?= $color ?>; margin-bottom:3px;"><?= $name ?></div>
-                            <div style="white-space:pre-wrap;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+            <!-- チャットエリア (LINEスタイル) -->
+            <div class="chat-wrapper">
+                <div class="chat-messages" id="chatMessages">
+                    <?php foreach ($chat_messages as $msg):
+                        $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
+                        $rowClass = $isMe ? 'from-me' : '';
+                        $bubbleClass = ($msg['sender_id'] == 1) ? 'bubble-admin' : 'bubble-client';
+                        $avatarClass = ($msg['sender_id'] == 1) ? 'admin-avatar' : 'client-avatar';
+                        $avatarIcon  = ($msg['sender_id'] == 1) ? '👷' : '👤';
+                        $senderName  = ($msg['sender_id'] == 1) ? 'サポート担当者' : 'あなた';
+                        $timeStr     = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
+                    ?>
+                        <div class="chat-bubble-row <?= $rowClass ?>" data-msg-id="<?= $msg['id'] ?>">
+                            <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
+                            <div class="chat-content">
+                                <?php if (!$isMe): ?>
+                                <div class="chat-name"><?= $senderName ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($msg['message_text'])): ?>
+                                <div class="chat-bubble <?= $bubbleClass ?>"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($msg['file_path'])): ?>
+                                    <?php
+                                        $ftype = $msg['file_type'] ?? '';
+                                        $fpath = $msg['file_path'];
+                                        $isGdrive = (strlen($fpath) > 15 && strpos($fpath, '/') === false && strpos($fpath, 'uploads/') !== 0);
+                                        $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
+                                        $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w200' : '';
+                                    ?>
+                                    <?php if ($ftype === 'image' && $isGdrive): ?>
+                                        <a href="<?= $furl ?>" target="_blank">
+                                            <img src="<?= $thumbUrl ?>" class="chat-image-thumb" alt="添付画像">
+                                        </a>
+                                    <?php elseif ($ftype === 'pdf' || !empty($fpath)): ?>
+                                        <a href="<?= $furl ?>" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                <div class="chat-time"><?= $timeStr ?></div>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                     <?php if (empty($chat_messages)): ?>
-                        <span style="color:#999; font-size:12px;">メッセージはありません。</span>
+                        <div style="text-align:center; color:#aaa; font-size:12px; margin-top:40px;">メッセージはまだありません</div>
                     <?php endif; ?>
                 </div>
-                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:10px;">
-                    <input type="hidden" name="action" value="send_message">
-                    <textarea name="message_text" placeholder="メッセージを入力してください..." style="width:100%; height:60px; margin-bottom:5px; font-size:12px; box-sizing:border-box; padding:8px; border:1px solid #ccc; border-radius:4px;" required></textarea>
-                    <button type="submit" style="width:100%; background:#17a2b8; color:white; border:none; padding:8px; cursor:pointer; font-size:12px; font-weight:bold; border-radius:4px;">送信</button>
-                </form>
+
+                <!-- 入力エリア -->
+                <div class="chat-input-area">
+                    <div id="filePreview" class="chat-file-preview"></div>
+                    <div style="margin-bottom:8px;">
+                        <select id="chatTargetFile" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
+                            <option value="">-- 対象ファイル（全体へのメッセージ） --</option>
+                            <?php
+                            $uploaded_file_names = [];
+                            foreach ($files_by_cat as $cat => $files) {
+                                foreach ($files as $f) {
+                                    $uploaded_file_names[] = $f['file_name'];
+                                }
+                            }
+                            try {
+                                $stmtAllCenter = $pdo->prepare("SELECT file_name FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY id DESC");
+                                $stmtAllCenter->execute(['pid' => $project_id]);
+                                while ($row = $stmtAllCenter->fetch(PDO::FETCH_ASSOC)) { $uploaded_file_names[] = $row['file_name']; }
+                                $uploaded_file_names = array_unique($uploaded_file_names);
+                                foreach ($uploaded_file_names as $fname) {
+                                    echo '<option value="' . htmlspecialchars($fname, ENT_QUOTES) . '">📎 ' . htmlspecialchars($fname, ENT_QUOTES) . '</option>';
+                                }
+                            } catch (Exception $e) {}
+                            ?>
+                        </select>
+                    </div>
+                    <div class="chat-input-row">
+                        <label class="chat-attach-btn" title="ファイルを添付">
+                            📎
+                            <input type="file" id="chatFileInput" accept="image/*,.pdf" style="display:none;" onchange="previewFile(this)">
+                        </label>
+                        <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" onkeydown="handleKey(event)"></textarea>
+                        <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>
+                    </div>
+                </div>
             </div>
         </div>
         
