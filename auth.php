@@ -58,4 +58,3 @@ function check_auth($allowed_roles = []) {
         die("アクセス権限がありません。<br><a href='logout.php'>別のアカウントでログインする</a>");
     }
 }
-?>

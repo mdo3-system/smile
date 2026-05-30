@@ -76,76 +76,58 @@ function generate_estimate_pdf($project_id, $pdo) {
             $unit = htmlspecialchars($item['unit'] ?? '式', ENT_QUOTES);
             $price = intval($item['price'] ?? 0);
             $amount = intval($item['amount'] ?? 0);
+            $is_active = isset($item['is_active']) ? $item['is_active'] : ($amount > 0);
             
-            $qty_disp = $qty . ' ' . $unit;
+            $qty_disp = $is_active ? ($qty . ' ' . $unit) : '-';
+            $price_disp = '¥' . number_format($price);
+            $amount_disp = $is_active ? ('¥' . number_format($amount)) : '対象外';
+            
+            // 対象外の場合はグレーアウト
+            $color = $is_active ? '#333333' : '#999999';
             
             $table_rows .= '
-                <tr>
-                    <td style="border: 1px solid #000000; text-align: left; padding: 6px;"> ' . $name . '</td>
-                    <td style="border: 1px solid #000000; text-align: center; padding: 6px; width: 15%;">' . $qty_disp . '</td>
-                    <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($price) . '</td>
-                    <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($amount) . '</td>
-                </tr>
-            ';
-        }
-    } else {
-        // フォールバック（既存の古い見積もりデータ用）
-        $table_rows .= '
-            <tr>
-                <td style="border: 1px solid #000000; text-align: left; padding: 6px;"> 構造計算 基本料金（面積含む）</td>
-                <td style="border: 1px solid #000000; text-align: center; padding: 6px; width: 15%;">1 式</td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($data['base_price']) . '</td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($data['base_price']) . '</td>
-            </tr>
-        ';
-        if ($data['grade_price'] > 0) {
-            $table_rows .= '
-                <tr>
-                    <td style="border: 1px solid #000000; text-align: left; padding: 6px;"> 目標等級 加算</td>
-                    <td style="border: 1px solid #000000; text-align: center; padding: 6px; width: 15%;">1 式</td>
-                    <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($data['grade_price']) . '</td>
-                    <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($data['grade_price']) . '</td>
-                </tr>
-            ';
-        }
-        $shape_extra = $total_price - $data['base_price'] - $data['grade_price'];
-        if ($shape_extra > 0) {
-            $table_rows .= '
-                <tr>
-                    <td style="border: 1px solid #000000; text-align: left; padding: 6px;"> 形状・その他 加算等</td>
-                    <td style="border: 1px solid #000000; text-align: center; padding: 6px; width: 15%;">1 式</td>
-                    <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($shape_extra) . '</td>
-                    <td style="border: 1px solid #000000; text-align: right; padding: 6px; width: 20%;">¥' . number_format($shape_extra) . '</td>
+                <tr style="color: ' . $color . ';">
+                    <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> ' . $name . '</td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">' . $qty_disp . '</td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">' . $price_disp . '</td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">' . $amount_disp . '</td>
                 </tr>
             ';
         }
     }
     
-    // HTMLテンプレートの構築
+    // HTMLテンプレートの構築 (BillVector風)
     $html = '
     <div style="font-family: kozminproregular; color: #333333;">
-        <table cellpadding="0" cellspacing="0" style="width: 100%; border: none;">
-            <tr>
-                <td style="width: 50%;"></td>
-                <td style="width: 50%; text-align: right; font-size: 9pt; color: #555555;">発行日: ' . $date_str . '</td>
-            </tr>
-        </table>
+        <h1 style="text-align: center; font-size: 24pt; font-weight: normal; letter-spacing: 8px; margin-top: 10px; margin-bottom: 30px;">御 見 積 書</h1>
         
-        <h1 style="text-align: center; font-size: 22pt; font-weight: normal; letter-spacing: 6px; margin-top: 10px; margin-bottom: 25px; border-bottom: 1px solid #000000; padding-bottom: 10px;">御見積書</h1>
-        
-        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; margin-bottom: 20px;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 20px;">
             <tr>
-                <td style="width: 55%; vertical-align: top; font-size: 12pt; line-height: 1.6;">
-                    <span style="font-size: 14pt; font-weight: bold; border-bottom: 1px solid #000000; display: inline-block; padding-bottom: 2px;">
-                        ' . ($company_name ? $company_name . '<br>' : '') . '
-                        ' . $contact_name . ' 様
-                    </span>
-                    <p style="font-size: 9.5pt; margin-top: 12px; color: #555555;">
-                        下記の通り、御見積申し上げます。
+                <td style="width: 50%; vertical-align: top; font-size: 11pt; line-height: 1.6;">
+                    <div style="border-bottom: 1px solid #000000; padding-bottom: 5px; margin-bottom: 10px;">
+                        <span style="font-size: 16pt;">' . ($company_name ? $company_name . '<br>' : '') . '</span>
+                        <span style="font-size: 16pt;">' . $contact_name . ' 様</span>
+                    </div>
+                    <p style="font-size: 10pt; margin-top: 10px;">
+                        下記の通り、御見積申し上げます。<br>
+                        <br>
+                        <strong>件名:</strong> ' . $project_name . ' 新築工事 設計等業務
                     </p>
+                    
+                    <div style="margin-top: 20px;">
+                        <table cellpadding="0" cellspacing="0" style="width: 90%;">
+                            <tr>
+                                <td style="font-size: 11pt; border-bottom: 3px solid #000000; padding-bottom: 5px; width: 100%;">
+                                    御見積金額 <span style="font-size: 18pt; font-weight: bold; margin-left: 10px;">¥' . number_format($grand_total) . '</span> <span style="font-size: 10pt;">(税込)</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </td>
-                <td style="width: 45%; text-align: right; font-size: 9.5pt; line-height: 1.6; vertical-align: top;">
-                    <strong>構造設計サポート</strong><br>
+                
+                <td style="width: 50%; text-align: right; font-size: 10pt; line-height: 1.6; vertical-align: top;">
+                    <div style="margin-bottom: 10px;">発行日: ' . $date_str . '</div>
+                    <div style="margin-bottom: 5px; font-size: 12pt; font-weight: bold;">構造設計サポート</div>
                     担当：菅原 弘貴<br>
                     〒176-0012<br>
                     東京都練馬区豊玉北5丁目<br>
@@ -155,47 +137,45 @@ function generate_estimate_pdf($project_id, $pdo) {
             </tr>
         </table>
         
-        <div style="margin-top: 25px; margin-bottom: 20px; border-bottom: 2px solid #000000; padding-bottom: 8px;">
-            <table cellpadding="0" cellspacing="0" style="width: 100%;">
-                <tr>
-                    <td style="width: 55%; font-size: 11pt; font-weight: bold; vertical-align: bottom;">件名: ' . $project_name . ' 新築工事 設計等業務</td>
-                    <td style="width: 45%; text-align: right; font-size: 14pt; font-weight: bold; vertical-align: bottom;">御見積合計金額: ¥' . number_format($grand_total) . ' <span style="font-size: 10pt; font-weight: normal;">(税込)</span></td>
-                </tr>
-            </table>
-        </div>
-        
-        <table cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9.5pt;">
+        <table cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10pt;">
             <thead>
-                <tr style="background-color: #f2f2f2; font-weight: bold;">
-                    <th style="border: 1px solid #000000; text-align: center; width: 45%;">摘要・内訳項目</th>
-                    <th style="border: 1px solid #000000; text-align: center; width: 15%;">数量</th>
-                    <th style="border: 1px solid #000000; text-align: center; width: 20%;">単価</th>
-                    <th style="border: 1px solid #000000; text-align: center; width: 20%;">金額</th>
+                <tr style="background-color: #f0f0f0; border-top: 2px solid #000000; border-bottom: 1px solid #000000;">
+                    <th style="text-align: center; width: 45%; padding: 8px;">品目名</th>
+                    <th style="text-align: center; width: 15%; padding: 8px;">数量</th>
+                    <th style="text-align: center; width: 20%; padding: 8px;">単価</th>
+                    <th style="text-align: center; width: 20%; padding: 8px;">金額</th>
                 </tr>
             </thead>
             <tbody>
                 ' . $table_rows . '
                 <tr>
-                    <td colspan="3" style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #fafafa;">小計 (税抜)</td>
-                    <td style="border: 1px solid #000000; text-align: right; font-weight: bold; background-color: #fafafa;">¥' . number_format($total_price) . '</td>
+                    <td colspan="4" style="border-top: 1px solid #000000;"></td>
                 </tr>
                 <tr>
-                    <td colspan="3" style="border: 1px solid #000000; text-align: center; background-color: #fafafa;">消費税 (10%)</td>
-                    <td style="border: 1px solid #000000; text-align: right; background-color: #fafafa;">¥' . number_format($tax) . '</td>
+                    <td colspan="2" style="border: none;"></td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px;">小計</td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px;">¥' . number_format($total_price) . '</td>
                 </tr>
-                <tr style="background-color: #f5f5f5; font-weight: bold;">
-                    <td colspan="3" style="border: 1px solid #000000; text-align: center; font-size: 10.5pt;">合計 (税込)</td>
-                    <td style="border: 1px solid #000000; text-align: right; color: #d32f2f; font-size: 10.5pt;">¥' . number_format($grand_total) . '</td>
+                <tr>
+                    <td colspan="2" style="border: none;"></td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px;">消費税 (10%)</td>
+                    <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px;">¥' . number_format($tax) . '</td>
+                </tr>
+                <tr style="font-weight: bold;">
+                    <td colspan="2" style="border: none;"></td>
+                    <td style="border-bottom: 2px solid #000000; text-align: right; padding: 8px; font-size: 11pt;">合計</td>
+                    <td style="border-bottom: 2px solid #000000; text-align: right; padding: 8px; font-size: 11pt;">¥' . number_format($grand_total) . '</td>
                 </tr>
             </tbody>
         </table>
         
-        <div style="margin-top: 30px; font-size: 8.5pt; color: #555555; line-height: 1.7; border: 1px solid #cccccc; padding: 12px; background-color: #fafafa; border-radius: 4px;">
-            <strong>【備考】</strong><br>
+        <div style="margin-top: 30px; font-size: 9pt; color: #333333; line-height: 1.6;">
+            <strong>【備考・スケジュールについて】</strong><br>
             ・本見積もりは意匠図を元に算出した概算です。詳細なモデル作成後に仕様変更等があった場合は変動する場合があります。<br>
-            ・ご依頼の際は、意匠図CADデータ（JWW/DXF等）、確認申請書2面〜5面、地盤調査報告書等をご提供ください。<br>
+            ・<span style="text-decoration: underline;">一次回答は必要図書がすべて揃ってから7～15営業日</span>、以降の質疑・修正対応は〇日後となります。具体的な日程は図書受領後に決定いたします。<br>
             ・意匠図の大幅な変更等に伴う追加計算は、別途費用が発生する場合がございます。<br>
-            ・業務の流れとして、一次回答チェック後に見積額の50%のご入金をお願いしております。
+            ・業務の流れとして、一次回答チェック後に見積額の50%のご入金をお願いしております。<br>
+            ・<span style="font-weight: bold; color: #d32f2f;">本見積もりの設計に関して、私は設計者（建築士法に基づく設計者）にはならないことを明記いたします。</span>
         </div>
     </div>
     ';

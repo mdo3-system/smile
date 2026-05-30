@@ -1,5 +1,4 @@
 // project_detail.js
-// Extracted from project_detail.php for SRP and maintainability
 
 // ===== チャット自動スクロール =====
 function scrollToBottom() {
@@ -17,7 +16,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // ===== メッセージバブルHTML生成 =====
 function buildBubble(msg) {
     const isMe = (msg.sender_id == window.APP_CURRENT_USER_ID);
-    const isAdminMsg = (msg.sender_id == 1); // 1 = Admin typically
+    const isAdminMsg = (msg.sender_id == 1);
     const rowClass = isMe ? 'from-me' : '';
     const bubbleClass = isAdminMsg ? 'bubble-admin' : 'bubble-client';
     const avatarClass = isAdminMsg ? 'admin-avatar' : 'client-avatar';
@@ -95,10 +94,10 @@ function sendMessage(text) {
         sendBtn.textContent = '...';
     }
 
-    // Using traditional project_detail.php POST endpoint (could also be api_send_message.php)
-    fetch('project_detail.php?id=' + window.APP_PROJECT_ID, { method: 'POST', body: formData })
-        .then(r => {
-            if(r.ok) {
+    fetch('api_send_message.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
                 if (textarea) textarea.value = '';
                 if (fileInput) fileInput.value = '';
                 const preview = document.getElementById('filePreview');
@@ -164,23 +163,135 @@ function toggleEstContainers() {
     }
 }
 
+// ヘルパー: 全アイテムをestimateItemsに追加する。checkedかどうかに応じてamountを変える
+function pushEstimateItem(name, qty, unit, price, isActive) {
+    let amount = isActive ? price * qty : 0;
+    estimateItems.push({ name: name, qty: qty, unit: unit, price: price, amount: amount, is_active: isActive });
+    return amount;
+}
+
 function calcClientEstimate() {
     currentEstimate = 0;
     estimateItems = [];
     
     const el_permit = document.getElementById('est_active_permit');
     const permit_active = el_permit ? el_permit.checked : false;
-    // ... [Original calculator code omitted for brevity but keeping core vars] ...
+    const el_wall = document.getElementById('est_active_wall');
+    const wall_active = el_wall ? el_wall.checked : false;
+    const el_skin = document.getElementById('est_active_skin');
+    const skin_active = el_skin ? el_skin.checked : false;
+    const el_sky = document.getElementById('est_active_sky');
+    const sky_active = el_sky ? el_sky.checked : false;
     
-    // (Full logic will run exactly as before but maintained here)
+    // 1. 許容応力度計算
     if (permit_active) {
         let base = parseInt(document.getElementById('est_base_permit').value) || 0;
         let area = parseFloat(document.getElementById('est_area_permit').value) || 0;
-        let area_extra = area > 150 ? Math.ceil(area - 150) * 600 : 0;
-        let subtotal = base + area_extra;
-        currentEstimate += subtotal;
-        estimateItems.push({ name: "許容応力度計算 基本料金", qty: 1, unit: "式", price: base, amount: base });
-        if (area_extra > 0) estimateItems.push({ name: "面積割増", qty: Math.ceil(area-150), unit: "㎡", price: 600, amount: area_extra });
+        let area_qty = area > 150 ? Math.ceil(area - 150) : 0;
+        let base_with_area = base + (area_qty * 600);
+        
+        currentEstimate += pushEstimateItem("許容応力度計算 基本料金", 1, "式", base, true);
+        currentEstimate += pushEstimateItem("許容応力度計算 構造床面積割増 (150㎡超)", area_qty, "㎡", 600, area_qty > 0);
+        
+        // 形状加算 (基本料金+面積割増に乗算)
+        document.querySelectorAll('.est_mult_permit').forEach(cb => {
+            let labelText = cb.parentElement.innerText.trim(); // e.g. "準耐火/耐火構造 (+20%)"
+            let rate = parseFloat(cb.value);
+            let opt_price = Math.round(base_with_area * rate);
+            currentEstimate += pushEstimateItem(labelText, 1, "式", opt_price, cb.checked);
+        });
+
+        let grade = parseInt(document.getElementById('est_grade_permit').value) || 0;
+        let kanamono = parseInt(document.getElementById('est_kanamono_permit').value) || 0;
+        let special = parseInt(document.getElementById('est_special_permit').value) || 0;
+        
+        // 全部の等級をリストアップしたいが、selectなので選ばれたものだけが確定。他もリストアップするか？
+        // Selectは選択されたもの以外は「0円」などのオプションなので、選択されたものだけを表示でOKとする。
+        // もし全部見せたいなら固定でリストアップする必要がある。
+        // "等級加算なし" でも行としては出す
+        let gradeName = "許容応力度計算 目標等級加算";
+        if(grade == 40000) gradeName = "許容応力度計算 目標等級加算 (耐震3/耐風2等)";
+        if(grade == 20000) gradeName = "許容応力度計算 目標等級加算 (耐震2)";
+        currentEstimate += pushEstimateItem(gradeName, 1, "式", grade, grade > 0);
+
+        currentEstimate += pushEstimateItem("許容応力度計算 金物工法割増", kanamono > 0 ? kanamono : 1, "階", 15000, kanamono > 0);
+        currentEstimate += pushEstimateItem("許容応力度計算 特殊箇所割増", special > 0 ? special : 1, "箇所", 15000, special > 0);
+    }
+    
+    // 2. 性能表示壁量計算
+    if (wall_active) {
+        let base = parseInt(document.getElementById('est_base_wall').value) || 0;
+        let area = parseFloat(document.getElementById('est_area_wall').value) || 0;
+        let area_qty = area > 150 ? Math.ceil(area - 150) : 0;
+        let base_with_area = base + (area_qty * 500);
+        
+        currentEstimate += pushEstimateItem("性能表示壁量計算 基本料金", 1, "式", base, true);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 構造床面積割増 (150㎡超)", area_qty, "㎡", 500, area_qty > 0);
+        
+        document.querySelectorAll('.est_mult_wall').forEach(cb => {
+            let labelText = cb.parentElement.innerText.trim();
+            let rate = parseFloat(cb.value);
+            let opt_price = Math.round(base_with_area * rate);
+            currentEstimate += pushEstimateItem("性能表示壁量計算 " + labelText, 1, "式", opt_price, cb.checked);
+        });
+
+        let dwg = parseInt(document.getElementById('est_dwg_wall').value) || 0;
+        let jintsu = parseInt(document.getElementById('est_jintsu_wall').value) || 0;
+        
+        currentEstimate += pushEstimateItem("性能表示壁量計算 構造図(基礎伏図)作成", 1, "式", dwg, dwg > 0);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 人通孔箇所数割増", 1, "式", jintsu, jintsu > 0);
+        
+        let kisohari = document.getElementById('est_kisohari_wall').checked;
+        let kisohari_price = 20000 + (area > 150 ? Math.ceil(area - 150) * 500 : 0);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 基礎梁許容応力度計算", 1, "式", kisohari_price, kisohari);
+    }
+    
+    // 3. 外皮計算
+    if (skin_active) {
+        let base = parseInt(document.getElementById('est_base_skin').value) || 0;
+        let area = parseFloat(document.getElementById('est_area_skin').value) || 0;
+        let area_qty = area > 100 ? Math.ceil(area - 100) : 0;
+        let base_with_area = base + (area_qty * 500);
+        
+        currentEstimate += pushEstimateItem("外皮計算 基本料金", 1, "式", base, true);
+        currentEstimate += pushEstimateItem("外皮計算 外皮床面積割増 (100㎡超)", area_qty, "㎡", 500, area_qty > 0);
+        
+        document.querySelectorAll('.est_mult_skin').forEach(cb => {
+            let labelText = cb.parentElement.innerText.trim();
+            let rate = parseFloat(cb.value);
+            let opt_price = Math.round(base_with_area * rate);
+            currentEstimate += pushEstimateItem("外皮計算 " + labelText, 1, "式", opt_price, cb.checked);
+        });
+        
+        let kisotachi = parseInt(document.getElementById('est_kisotachi_skin').value) || 0;
+        currentEstimate += pushEstimateItem("外皮計算 基礎立上り400超割増", kisotachi > 0 ? kisotachi : 1, "箇所", 15000, kisotachi > 0);
+        
+        let setsumei = document.getElementById('est_setsumei_skin').checked;
+        currentEstimate += pushEstimateItem("外皮計算 設計内容説明書を作成する", 1, "式", 15000, setsumei);
+        
+        currentEstimate += pushEstimateItem("一次消費エネルギー量計算", 1, "式", 15000, true);
+    }
+    
+    // 4. 天空率計算
+    if (sky_active) {
+        let road = document.getElementById('est_road_sky').checked;
+        let north = document.getElementById('est_north_sky').checked;
+        currentEstimate += pushEstimateItem("天空率 道路斜線", 1, "式", 50000, road);
+        currentEstimate += pushEstimateItem("天空率 北側斜線", 1, "式", 50000, north);
+        
+        let extra = parseInt(document.getElementById('est_extra_sky').value) || 0;
+        currentEstimate += pushEstimateItem("天空率 追加斜線面検討", extra > 0 ? extra : 1, "面", 25000, extra > 0);
+        
+        let site_area = parseFloat(document.getElementById('est_site_area_sky').value) || 0;
+        let site_area_qty = site_area > 150 ? Math.ceil(site_area - 150) : 0;
+        currentEstimate += pushEstimateItem("天空率 敷地面積割増 (150㎡超)", site_area_qty > 0 ? site_area_qty : 1, "㎡", 200, site_area_qty > 0);
+        
+        let building_area = parseFloat(document.getElementById('est_building_area_sky').value) || 0;
+        let building_area_qty = building_area > 150 ? Math.ceil(building_area - 150) : 0;
+        currentEstimate += pushEstimateItem("天空率 建物床面積割増 (150㎡超)", building_area_qty > 0 ? building_area_qty : 1, "㎡", 200, building_area_qty > 0);
+        
+        let detail = document.getElementById('est_detail_sky').checked;
+        currentEstimate += pushEstimateItem("天空率 詳細モデル検討", 1, "式", 15000, detail);
     }
     
     currentTax = Math.round(currentEstimate * 0.1);
@@ -194,25 +305,6 @@ function calcClientEstimate() {
     
     const elGrand = document.getElementById('est_grand_total_disp');
     if (elGrand) elGrand.innerText = currentTotal.toLocaleString();
-}
-
-function sendClientEstimate() {
-    calcClientEstimate();
-    if (currentEstimate === 0) {
-        alert('計算する対象を選択してください。');
-        return;
-    }
-    
-    let msg = "【概算お見積り内訳】\n";
-    estimateItems.forEach(item => {
-        msg += `・${item.name} x ${item.qty}${item.unit} : ${item.amount.toLocaleString()}円\n`;
-    });
-    msg += `\n税抜金額: ${currentEstimate.toLocaleString()}円\n`;
-    msg += `消費税: ${currentTax.toLocaleString()}円\n`;
-    msg += `税込合計: ${currentTotal.toLocaleString()}円\n\n`;
-    msg += "よろしければ正式にご依頼ください。";
-    
-    sendMessage(msg);
 }
 
 function saveAndPrintEstimate() {
@@ -237,9 +329,27 @@ function saveAndPrintEstimate() {
         .then(r => r.json())
         .then(data => {
             if (data.success && data.drive_file_id) {
-                alert('お見積書PDFが作成されました。');
-                window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
-                location.reload();
+                // 発行成功時にチャットへも自動送信するロジック
+                let msg = "【お見積書が発行されました】\n";
+                msg += `税抜金額: ${currentEstimate.toLocaleString()}円\n`;
+                msg += `消費税: ${currentTax.toLocaleString()}円\n`;
+                msg += `税込合計: ${currentTotal.toLocaleString()}円\n\n`;
+                msg += "詳細は添付のPDFまたは以下のリンクからご確認ください。\n";
+                msg += `https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk\n\n`;
+                msg += "よろしければ正式にご依頼ください。";
+
+                // sendMessageを使ってチャットへ投稿（APIへPOST）
+                const chatData = new FormData();
+                chatData.append('project_id', window.APP_PROJECT_ID);
+                chatData.append('message_text', msg);
+
+                return fetch('api_send_message.php', { method: 'POST', body: chatData })
+                    .then(chatRes => chatRes.json())
+                    .then(() => {
+                        alert('お見積書PDFが作成され、チャットへ送信されました。');
+                        window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
+                        location.reload();
+                    });
             } else {
                 alert('見積保存に失敗しました');
             }

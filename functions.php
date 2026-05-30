@@ -116,4 +116,3 @@ function renderFileSlot($c_key, $c_label, $latest_files, $project_id) {
     echo '<button type="button" onclick="document.getElementById(\'btn_f_'.$c_key.'\').click();" class="btn-upload-sm">UP/更新</button>';
     echo '</form></div></div>';
 }
-?>

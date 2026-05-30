@@ -19,4 +19,3 @@ try {
 } catch (\PDOException $e) {
     die("データベース接続失敗: " . $e->getMessage());
 }
-?>

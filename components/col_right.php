@@ -121,13 +121,14 @@
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
-                <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
-                    <strong>📂 Drive連携:</strong>
-                    <?php if (file_exists(__DIR__ . '/token.json')): ?>
-                        <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
-                    <?php else: ?>
-                        <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
-                    <?php endif; ?>
+                    <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
+                        <strong>📂 Drive連携:</strong>
+                        <?php if (file_exists(__DIR__ . '/../token.json')): ?>
+                            <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
+                        <?php else: ?>
+                            <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="box" style="background:#e8f5e9; font-size:11px; display:flex; flex-direction:column; gap:10px;">
@@ -297,7 +298,6 @@
                             <button type="button" onclick="calcClientEstimate()" style="flex:1; background:#fff; border:1px solid #28a745; color:#28a745; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">再計算</button>
                             <button type="button" id="pdf_issue_btn" onclick="saveAndPrintEstimate()" style="flex:2; background:#ff9800; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">印刷用PDFを発行</button>
                         </div>
-                        <button type="button" onclick="sendClientEstimate()" style="width:100%; background:#28a745; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">チャットに見積を送信</button>
                     </div>
                 </div>
             </div>

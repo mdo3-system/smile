@@ -99,10 +99,33 @@
             <div class="box" style="background:#e8f5e9; border-color:#c8e6c9;">
                 <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">最新の見積書PDF</h3>
                 <div style="font-size:12px; color:#666; margin-bottom:10px;">シミュレーターで作成された見積書をPDFとして表示・印刷できます。</div>
-                <?php if (!empty($pdf_drive_id)): ?>
-                    <a href="https://drive.google.com/file/d/<?= htmlspecialchars($pdf_drive_id, ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="display:block; text-align:center; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; text-decoration:none; font-size:12px; cursor:pointer; line-height:2.2;">
-                        📄 最新の見積書を開く（PDF）
+                <?php 
+                // messagesテーブルから過去の見積もりPDF履歴を取得
+                $stmtEstHist = $pdo->prepare("SELECT file_path, created_at FROM messages WHERE project_id = :pid AND file_type = 'pdf' AND sender_id = 1 ORDER BY created_at DESC");
+                $stmtEstHist->execute(['pid' => $project_id]);
+                $estimate_history = $stmtEstHist->fetchAll();
+                
+                if (count($estimate_history) > 0): 
+                    $latest = $estimate_history[0];
+                ?>
+                    <a href="https://drive.google.com/file/d/<?= htmlspecialchars($latest['file_path'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="display:block; text-align:center; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; text-decoration:none; font-size:12px; cursor:pointer; line-height:2.2; margin-bottom:10px;">
+                        📄 最新の見積書を開く（<?= date('m/d H:i', strtotime($latest['created_at'])) ?> 発行）
                     </a>
+                    
+                    <?php if (count($estimate_history) > 1): ?>
+                        <div style="font-size:11px; margin-top:10px; border-top:1px dashed #c8e6c9; padding-top:5px;">
+                            <strong>🕒 過去の履歴（再発行分）</strong>
+                            <ul style="margin:5px 0 0 0; padding-left:20px; color:#555;">
+                            <?php for ($i = 1; $i < count($estimate_history); $i++): $hist = $estimate_history[$i]; ?>
+                                <li style="margin-bottom:3px;">
+                                    <a href="https://drive.google.com/file/d/<?= htmlspecialchars($hist['file_path'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="color:#2e7d32; text-decoration:none;">
+                                        📄 <?= date('Y/m/d H:i', strtotime($hist['created_at'])) ?> 発行分
+                                    </a>
+                                </li>
+                            <?php endfor; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
                 <?php else: ?>
                     <button style="width:100%; background:#777777; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:not-allowed;" disabled>
                         📄 見積書未発行
