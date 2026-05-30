@@ -49,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $order_id = intval($_POST['order_id']);
         $pdo->beginTransaction();
         try {
-            // 1. 発注ステータスを completed に更新
-            $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed' WHERE id = :id");
+            // 1. 発注ステータスを completed に更新し、納品完了日を記録
+            $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :id");
             $stmt->execute(['id' => $order_id]);
 
             // 2. 案件ステータスを「提出済・確認中 (submission)」に更新

@@ -61,6 +61,7 @@ $status_labels = [
         <h1>💼 案件ダッシュボード</h1>
         <div style="display:flex; align-items:center; gap:15px;">
             <?php if ($_SESSION['role'] === 'admin'): ?>
+                <a href="admin_sales.php" style="font-weight:bold; color:white; background:#e67e22; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📊 経理・売上管理</a>
                 <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
                     <strong>📂 Drive連携:</strong>
                     <?php if (file_exists(__DIR__ . '/token.json')): ?>
