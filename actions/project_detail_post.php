@@ -9,16 +9,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'order_subcontractor') {
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare("INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount, status) VALUES (:pid, :sub_id, :task, :amount, 'requested')");
+            // 納期計算: 依頼日+3営業日 (簡易的に+3 day)
+            // TODO: functions.php の営業日計算関数を使うのが理想だが、ここでは一旦直接+3 day
+            $due_date = date('Y-m-d', strtotime('+3 weekdays'));
+
+            $stmt = $pdo->prepare("INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount, status, due_date, order_type, floor_area, opt_kiso, opt_yuka) VALUES (:pid, :sub_id, :task, :amount, 'requested', :due, :type, :area, :kiso, :yuka)");
             $stmt->execute([
                 'pid' => $project_id,
                 'sub_id' => $_POST['subcontractor_id'],
                 'task' => $_POST['task_title'],
-                'amount' => $_POST['order_amount']
+                'amount' => $_POST['order_amount'],
+                'due' => $due_date,
+                'type' => $_POST['order_type'] ?? 'design',
+                'area' => $_POST['floor_area'] ?? 0,
+                'kiso' => isset($_POST['opt_kiso']) ? 1 : 0,
+                'yuka' => isset($_POST['opt_yuka']) ? 1 : 0
             ]);
 
-            // 案件のステータスを「構造図作成中 (structural_dwg)」へ自動更新
-            $projectRepo->updateStatus($project_id, 'structural_dwg');
+            // 案件のステータスを自動更新 (発注種類に応じて)
+            $order_type = $_POST['order_type'] ?? 'design';
+            if ($order_type === 'design') {
+                // 意匠図作図依頼の場合は「構造仕様ヒアリング・確認・作図」などのステータスへ
+                $projectRepo->updateStatus($project_id, 'primary_prep');
+            } else {
+                // 構造図作図依頼の場合は「構造図作成中」
+                $projectRepo->updateStatus($project_id, 'structural_dwg');
+            }
 
             $pdo->commit();
         } catch (Exception $e) {

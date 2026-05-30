@@ -616,32 +616,87 @@
             <!-- 管理者専用：協力業者への発注 -->
             <h2 class="section-title" style="background:#e67e22;">🤝 協力業者への発注・タスク管理</h2>
             <div class="box" style="background:#fff9f0;">
-                <div style="font-size:11px; margin-bottom:5px;"><strong>自動発注額算出</strong></div>
-                <div style="display:flex; gap:5px;">
-                    <input type="number" id="sub_area" placeholder="面積(㎡)" style="width:60px; font-size:12px;">
-                    <button type="button" onclick="calcSubcontractorEstimate()" style="font-size:11px; padding:2px 5px;">算出</button>
-                </div>
-                <div id="sub_calc_result" style="margin-bottom:10px;"></div>
-                <script>
-                function calcSubcontractorEstimate() {
-                    const area = parseFloat(document.getElementById('sub_area').value) || 0;
-                    if (area <= 0) return;
-                    const total = 30000 + Math.round(area * 500);
-                    document.getElementById('sub_calc_result').innerHTML = 
-                        '<span style="color:#28a745;font-size:12px;font-weight:bold;">推奨発注額: ' + total.toLocaleString() + '円</span>';
-                    document.querySelector('input[name="order_amount"]').value = total;
-                }
-                </script>
-                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:10px;">
+                <div style="font-size:11px; margin-bottom:5px;"><strong>自動発注額算出・発注</strong></div>
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
                     <input type="hidden" name="action" value="order_subcontractor">
-                    <select name="subcontractor_id" style="width:100%; margin-bottom:5px; font-size:12px;">
+                    
+                    <div style="margin-bottom:5px;">
+                        <label style="font-size:11px;">
+                            <input type="radio" name="order_type" value="design" checked onchange="calcSubcontractorEstimate()"> 構造用・外皮用意匠図作図
+                        </label><br>
+                        <label style="font-size:11px;">
+                            <input type="radio" name="order_type" value="structure" onchange="calcSubcontractorEstimate()"> 構造図作図
+                        </label>
+                    </div>
+
+                    <div style="display:flex; gap:5px; align-items:center; margin-bottom:5px;">
+                        <input type="number" id="sub_area" name="floor_area" placeholder="床面積(㎡)" style="width:70px; font-size:12px;" oninput="calcSubcontractorEstimate()" step="0.01">
+                        <span style="font-size:11px;">㎡</span>
+                    </div>
+
+                    <div id="struct_options" style="display:none; margin-bottom:5px; font-size:11px; border:1px solid #ccc; padding:5px; background:#fff;">
+                        <label><input type="checkbox" name="opt_kiso" id="opt_kiso" onchange="calcSubcontractorEstimate()"> 基礎伏図 凡例・断面図 (+1,000円)</label><br>
+                        <label><input type="checkbox" name="opt_yuka" id="opt_yuka" onchange="calcSubcontractorEstimate()"> 床小屋伏図 凡例 (+1,000円)</label>
+                    </div>
+
+                    <div id="sub_calc_result" style="margin-bottom:10px;"></div>
+                    
+                    <script>
+                    function calcSubcontractorEstimate() {
+                        const type = document.querySelector('input[name="order_type"]:checked').value;
+                        const area = parseFloat(document.getElementById('sub_area').value) || 0;
+                        const structOpts = document.getElementById('struct_options');
+                        
+                        let unitPrice = 0;
+                        let total = 0;
+                        let taskTitle = "";
+                        
+                        if (type === 'design') {
+                            structOpts.style.display = 'none';
+                            taskTitle = "構造用・外皮用意匠図作図";
+                            if (area > 0 && area <= 100) unitPrice = 50;
+                            else if (area > 100 && area <= 200) unitPrice = 40;
+                            else if (area > 200) unitPrice = 30;
+                            total = area * unitPrice;
+                        } else {
+                            structOpts.style.display = 'block';
+                            taskTitle = "構造図作図";
+                            if (area > 0 && area <= 100) unitPrice = 60;
+                            else if (area > 100 && area <= 200) unitPrice = 50;
+                            else if (area > 200 && area <= 300) unitPrice = 40;
+                            else if (area > 300) unitPrice = 40; // 300以上は同じ
+                            total = area * unitPrice;
+                            
+                            if (document.getElementById('opt_kiso').checked) total += 1000;
+                            if (document.getElementById('opt_yuka').checked) total += 1000;
+                        }
+                        
+                        // 金額の丸め処理 (切り捨て)
+                        total = Math.floor(total);
+
+                        if (area > 0) {
+                            document.getElementById('sub_calc_result').innerHTML = 
+                                '<span style="color:#28a745;font-size:12px;font-weight:bold;">算出額: ' + total.toLocaleString() + '円</span>';
+                        } else {
+                            document.getElementById('sub_calc_result').innerHTML = '';
+                        }
+                        
+                        document.querySelector('input[name="order_amount"]').value = total;
+                        document.querySelector('input[name="task_title"]').value = taskTitle;
+                    }
+                    </script>
+
+                    <select name="subcontractor_id" style="width:100%; margin-bottom:5px; font-size:12px;" required>
+                        <option value="">発注先を選択</option>
                         <?php foreach($subcontractors as $sub): ?>
                             <option value="<?= $sub['id'] ?>"><?= htmlspecialchars($sub['contact_name'], ENT_QUOTES) ?> 様</option>
                         <?php endforeach; ?>
                     </select>
-                    <input type="text" name="task_title" placeholder="依頼内容（例：構造図作図）" style="width:100%; margin-bottom:5px; font-size:12px;">
-                    <input type="number" name="order_amount" placeholder="金額(税込)" style="width:100%; margin-bottom:5px; font-size:12px;">
-                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:5px; font-size:12px; cursor:pointer; border-radius:3px;">発注を確定・送信</button>
+                    
+                    <input type="text" name="task_title" placeholder="依頼内容（自動入力）" style="width:100%; margin-bottom:5px; font-size:12px;" readonly required>
+                    <input type="number" name="order_amount" placeholder="金額(税込) 自動入力" style="width:100%; margin-bottom:5px; font-size:12px;" readonly required>
+                    
+                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:5px; font-size:12px; cursor:pointer; border-radius:3px;" onclick="return confirm('発注してよろしいですか？（納期は3日後に自動設定されます）')">発注を確定・送信</button>
                 </form>
             </div>
 
