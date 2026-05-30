@@ -19,6 +19,8 @@
 // 1.0.17: Fix simulator visibility and relocate Google Drive auth button
 // 1.0.18: Update version number
 // 1.0.19: 見積書PDFのBillVector風レイアウト改修、見積履歴機能の追加、空白出力によるKaTeXエラーの修正
-// 1.0.20: ファイル先頭のBOM(Byte Order Mark)を除去し、Quirks Mode問題を完全解決
-const APP_VERSION = '1.0.20';
+// 1.0.20: 各種PHPファイルのBOMおよび先頭空白文字を除去し、Quirks Modeの不具合を完全に解消
+// 1.0.21: new_request.phpの許容応力度計算オプション位置を壁量計算の下へ移動、右パネルの自動見積シミュレーターのレイアウト修正
+
+window.APP_VERSION = "1.0.21";
 const APP_LAST_UPDATED = '2026-05-29';

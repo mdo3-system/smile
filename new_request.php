@@ -348,18 +348,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
                             <input type="checkbox" name="req_wall" value="1" id="req_wall" class="calc-type-chk"> （性能表示）壁量計算（※基準法の計算もカバーされます）
                         </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" name="req_skin" value="1" id="req_skin" class="calc-type-chk"> 外皮計算（一次エネ計算セット）
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" name="req_sky" value="1" id="req_sky" class="calc-type-chk"> 天空率（道路斜線・北側斜線）
-                        </label>
-                        <div style="margin-top: 5px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                        <div style="margin-left: 28px; padding-top: 5px; border-top: 1px dashed var(--border-color);">
                             <strong style="font-size: 12px; color: var(--text-muted);">追加オプション：</strong><br>
                             <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; margin-top: 5px; font-weight: 600;">
                                 <input type="checkbox" name="req_opt_kisohari" value="1" id="req_opt_kisohari"> 基礎・横架材の許容応力度計算
                             </label>
                         </div>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin-top: 5px;">
+                            <input type="checkbox" name="req_skin" value="1" id="req_skin" class="calc-type-chk"> 外皮計算（一次エネ計算セット）
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" name="req_sky" value="1" id="req_sky" class="calc-type-chk"> 天空率（道路斜線・北側斜線）
+                        </label>
                     </div>
                 </div>
 

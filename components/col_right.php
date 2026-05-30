@@ -119,19 +119,19 @@
             <div style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;">
                 <div style="font-size:11px; font-weight:bold; color:#c0392b; margin-bottom:10px;">🔒 以下は管理者のみに表示されます</div>
                 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
-                    <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
-                        <strong>📂 Drive連携:</strong>
-                        <?php if (file_exists(__DIR__ . '/../token.json')): ?>
-                            <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
-                        <?php else: ?>
-                            <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
-                        <?php endif; ?>
+                <div class="box" style="background:#e8f5e9; font-size:11px; display:flex; flex-direction:column; gap:10px; border: 2px solid #28a745;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #c8e6c9; padding-bottom:10px; margin-bottom:5px;">
+                        <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
+                        <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
+                            <strong>📂 Drive連携:</strong>
+                            <?php if (file_exists(__DIR__ . '/../token.json')): ?>
+                                <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
+                            <?php else: ?>
+                                <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                </div>
 
-                <div class="box" style="background:#e8f5e9; font-size:11px; display:flex; flex-direction:column; gap:10px;">
                     <!-- 計算タイプの選択 -->
                     <div>
                         <strong>計算タイプ（複数選択可）</strong><br>
