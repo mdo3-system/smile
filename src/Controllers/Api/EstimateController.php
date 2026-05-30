@@ -22,9 +22,9 @@ class EstimateController
 
         try {
             // PDF Generation and Drive upload logic
-            require_once __DIR__ . '/../../../../google_drive_client.php';
-            require_once __DIR__ . '/../../../../estimate_pdf_generator.php';
-            require_once __DIR__ . '/../../../../db_connect.php'; // get $pdo
+            require_once __DIR__ . '/../../../google_drive_client.php';
+            require_once __DIR__ . '/../../../estimate_pdf_generator.php';
+            require_once __DIR__ . '/../../../db_connect.php'; // get $pdo
 
             // Ensure DB schema has the correct columns
             try {
