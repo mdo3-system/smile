@@ -37,9 +37,16 @@ class EstimateController
                 $pdo->exec("ALTER TABLE estimates ADD COLUMN pdf_drive_file_id VARCHAR(255) NULL");
             } catch (\Exception $e) { /* ignore */ }
 
+            // 1. まず見積もりデータをDBに保存（この時点ではDrive IDは無し）
+            $service = $this->container->getEstimateCalculatorService();
+            $success = $service->saveEstimate((int)$projectId, $_POST, null);
+
+            if (!$success) {
+                throw new \Exception("見積もりデータの保存に失敗しました。");
+            }
+
+            // 2. Driveフォルダの確保とPDFの生成 (生成処理内部で最新の見積もりレコードを参照する)
             $project_folder_id = get_or_create_project_drive_folder($pdo, $projectId);
-            
-            // PDFを一時生成
             $temp_pdf_path = generate_estimate_pdf($projectId, $pdo);
             
             // 案件名を取得してファイル名を設定
@@ -49,7 +56,7 @@ class EstimateController
             $proj_name = $proj_info ? $proj_info['project_name'] : $projectId;
             $pdf_filename = '御見積書_' . $proj_name . '.pdf';
             
-            // Google Driveにアップロード
+            // 3. Google Driveにアップロード
             $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
             
             // 一時生成したローカルのPDFを削除
@@ -57,8 +64,9 @@ class EstimateController
                 unlink($temp_pdf_path);
             }
 
-            $service = $this->container->getEstimateCalculatorService();
-            $success = $service->saveEstimate((int)$projectId, $_POST, $pdfDriveId);
+            // 4. 保存した最新の見積もりレコードにDrive IDを追記
+            $stmtUpdate = $pdo->prepare("UPDATE estimates SET pdf_drive_file_id = :did WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+            $stmtUpdate->execute(['did' => $pdfDriveId, 'pid' => $projectId]);
 
             $debug = ob_get_clean();
             header('Content-Type: application/json');
