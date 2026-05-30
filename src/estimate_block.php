@@ -1,4 +1,4 @@
-            <?php if ($is_admin && $project['status'] === 'quote_req'): ?>
+<?php if ($is_admin && $project['status'] === 'quote_req'): ?>
             <h2 class="section-title" style="background:#28a745; margin-top:20px;">💰 依頼主宛 自動見積シミュレーター</h2>
             <div class="box" style="background:#e8f5e9;">
                 <div style="font-size:12px; margin-bottom:10px;">
