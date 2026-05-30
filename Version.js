@@ -18,5 +18,6 @@
 // 1.0.16: Refine new request flow (Estimate vs Design request separation) and schedule criteria
 // 1.0.17: Fix simulator visibility and relocate Google Drive auth button
 // 1.0.18: Update version number
-const APP_VERSION = '1.0.18';
+// 1.0.19: 見積書PDFのBillVector風レイアウト改修、見積履歴機能の追加、空白出力によるKaTeXエラーの修正
+const APP_VERSION = '1.0.19';
 const APP_LAST_UPDATED = '2026-05-29';
