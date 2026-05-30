@@ -170,18 +170,11 @@ $chat_messages = $stmtMsgs->fetchAll();
         </div>
     </div>
 
-    <div class="container">
-        <!-- 左パネル：依頼主と案件情報 -->
-        <?php require __DIR__ . '/components/col_left.php'; ?>
-
-
-
-        <!-- 中央パネル：成果物一覧 -->
-        <?php require __DIR__ . '/components/col_center.php'; ?>
-
-        <!-- 右パネル：チャット・管理ツール -->
-        <?php require __DIR__ . '/components/col_right.php'; ?>
-    </div>
+        <?php if ($is_admin): ?>
+            <?php require __DIR__ . '/components/dashboard_admin.php'; ?>
+        <?php else: ?>
+            <?php require __DIR__ . '/components/dashboard_client.php'; ?>
+        <?php endif; ?>
 
     <!-- ===== 定型文モーダル ===== -->
     <div class="modal-overlay" id="greetingModal">
