@@ -10,15 +10,26 @@ require_once __DIR__ . '/vendor/autoload.php';
  */
 function generate_estimate_pdf($project_id, $pdo) {
     // 案件情報と見積もり情報を取得
+    // 案件情報を取得
     $stmt = $pdo->prepare("
-        SELECT p.project_name, u.company_name, u.contact_name, e.* 
+        SELECT p.project_name, u.company_name, u.contact_name 
         FROM projects p 
         JOIN users u ON p.client_id = u.id 
-        LEFT JOIN estimates e ON p.id = e.project_id
         WHERE p.id = :pid
     ");
     $stmt->execute(['pid' => $project_id]);
-    $data = $stmt->fetch();
+    $project_data = $stmt->fetch();
+    
+    // 最新の見積もり情報を取得
+    $stmtEst = $pdo->prepare("SELECT * FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+    $stmtEst->execute(['pid' => $project_id]);
+    $estimate_data = $stmtEst->fetch();
+    
+    if ($project_data && $estimate_data) {
+        $data = array_merge($project_data, $estimate_data);
+    } else {
+        $data = $project_data;
+    }
     
     if (!$data) {
         throw new Exception("案件情報の取得に失敗しました。");

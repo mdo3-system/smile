@@ -1,6 +1,6 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // JSON破損を防ぐため出力はオフ
 
 // Debug logging
 function logDebug($msg) {

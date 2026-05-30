@@ -231,7 +231,7 @@ function get_or_create_project_drive_folder($pdo, $project_id) {
     }
     
     // 案件のDBにフォルダIDを保存
-    $stmtUpdateProject = $pdo->prepare("UPDATE projects SET drive_folder_id = :fid, updated_at = NOW() WHERE id = :pid");
+    $stmtUpdateProject = $pdo->prepare("UPDATE projects SET drive_folder_id = :fid WHERE id = :pid");
     $stmtUpdateProject->execute(['fid' => $project_folder_id, 'pid' => $project_id]);
     
     return $project_folder_id;
