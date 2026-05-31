@@ -202,24 +202,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $projectRepo->updateUploadMode($project_id, $upload_mode);
 
             // Save JSON specs
+            // Save JSON specs from the new form
             $wood_details = [
-                'foundation' => ['type' => $_POST['wood_dodai_type'] ?? '', 'size' => $_POST['wood_dodai_size'] ?? '', 'other' => $_POST['wood_dodai_other'] ?? ''],
-                'column'     => ['type' => $_POST['wood_hashira_type'] ?? '', 'size' => $_POST['wood_hashira_size'] ?? '', 'other' => $_POST['wood_hashira_other'] ?? ''],
-                'beam'       => ['type' => $_POST['wood_hari_type'] ?? '', 'size' => $_POST['wood_hari_size'] ?? '', 'other' => $_POST['wood_hari_other'] ?? ''],
-                'obiki'      => ['type' => $_POST['wood_obiki_type'] ?? '', 'size' => $_POST['wood_obiki_size'] ?? '', 'other' => $_POST['wood_obiki_other'] ?? ''],
-                'koyatsuka'  => ['type' => $_POST['wood_koyatsuka_type'] ?? '', 'size' => $_POST['wood_koyatsuka_size'] ?? '', 'other' => $_POST['wood_koyatsuka_other'] ?? ''],
-                'moya'       => ['type' => $_POST['wood_moya_type'] ?? '', 'size' => $_POST['wood_moya_size'] ?? '', 'other' => $_POST['wood_moya_other'] ?? ''],
-                'munagi'     => ['type' => $_POST['wood_munagi_type'] ?? '', 'size' => $_POST['wood_munagi_size'] ?? '', 'other' => $_POST['wood_munagi_other'] ?? ''],
-                'taruki'     => ['type' => $_POST['wood_taruki_type'] ?? '', 'w' => $_POST['wood_taruki_w'] ?? '', 'h' => $_POST['wood_taruki_h'] ?? '', 'other' => $_POST['wood_taruki_other'] ?? ''],
-                'hiuchi'     => ['type' => $_POST['wood_hiuchi_type'] ?? '', 'size' => $_POST['wood_hiuchi_size'] ?? '', 'other' => $_POST['wood_hiuchi_other'] ?? '']
+                'dodai'    => $_POST['spec_dodai'] ?? '',
+                'obiki'    => $_POST['spec_obiki'] ?? '',
+                'hashira'  => $_POST['spec_hashira'] ?? '',
+                'hari'     => $_POST['spec_hari'] ?? '',
+                'koya'     => $_POST['spec_koya'] ?? ''
             ];
             $wall_details = [
-                'menzai' => ['type' => $_POST['wall_menzai_type'] ?? '', 'other' => $_POST['wall_menzai_other'] ?? ''],
-                'sujikai' => ['type' => $_POST['wall_sujikai_type'] ?? '', 'other' => $_POST['wall_sujikai_other'] ?? '']
+                'type' => $_POST['spec_wall'] ?? ''
             ];
             $hardware_details = [
-                'type' => $_POST['hw_type'] ?? '', 'type_other' => $_POST['hw_type_other'] ?? '',
-                'method' => $_POST['hw_method'] ?? '', 'method_other' => $_POST['hw_method_other'] ?? ''
+                'type' => $_POST['spec_kanamono'] ?? ''
             ];
 
             $stmtSpecs = $pdo->prepare("
@@ -274,8 +269,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
                                     $max_version = (int)$stmtVersion->fetchColumn();
                                     
-                                    $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :name, :drive_id, :ver, 1)");
-                                    $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1]);
+                                    $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)");
+                                    $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1, 'reason' => $_POST['update_reason'][$cat] ?? null]);
                                 } catch (Exception $e) {
                                     error_log("Multi upload error (Array): " . $e->getMessage());
                                 }
@@ -295,12 +290,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
                                 $max_version = (int)$stmtVersion->fetchColumn();
                                 
-                                $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :name, :drive_id, :ver, 1)");
-                                $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1]);
+                                $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)");
+                                $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1, 'reason' => $_POST['update_reason'][$cat] ?? null]);
                             } catch (Exception $e) {
                                 error_log("Multi upload error (Single): " . $e->getMessage());
                             }
                         }
+                    }
+                }
+            }
+
+            // Handle "Included in another file" checkboxes
+            if (!empty($_POST['included_in_other'])) {
+                foreach ($_POST['included_in_other'] as $cat => $val) {
+                    if ($val == '1') {
+                        $disableOldFiles($cat);
+                        $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+                        $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
+                        $max_version = (int)$stmtVersion->fetchColumn();
+                        
+                        $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, NULL, :ver, 1, :reason)");
+                        $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => '【他ファイルに記載】', 'ver' => $max_version + 1, 'reason' => $_POST['update_reason'][$cat] ?? null]);
                     }
                 }
             }
@@ -329,8 +339,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'msg' => $change_msg
                 ]);
 
-                // Update status to primary_prep and notify admin that design request is completed
-                $projectRepo->updateStatus($project_id, 'primary_prep');
+                // Update status to doc_submitted and notify admin that design request is completed
+                $projectRepo->updateStatus($project_id, 'doc_submitted');
                 
                 $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
                 $stmtNotify->execute([

@@ -49,29 +49,34 @@
                 <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 ご請求・お支払い状況</h3>
                 <div style="font-size:13px; line-height:1.8;">
                     <?php
-                        $latest_est = !empty($all_estimates) ? $all_estimates[0] : null;
-                        $formal_estimate = $latest_est ? $latest_est['total_price'] : ($project_info['total_amount'] ?? 0);
-                        $tax = round($formal_estimate * 0.1);
-                        $grand_total = $formal_estimate + $tax;
-                        
+                        $initial = $project_info['initial_est_amount'] ?? 0;
+                        $initial_date = $project_info['initial_est_date'] ?? '-';
+                        $formal = $project_info['formal_est_amount'] ?? 0;
+                        $formal_date = $project_info['formal_est_date'] ?? '-';
+                        $add = $project_info['add_est_amount'] ?? 0;
+                        $add_date = $project_info['add_est_date'] ?? '-';
                         $deposit = $project_info['deposit_amount'] ?? 0;
-                        $additional = $project_info['additional_amount'] ?? 0;
-                        $total_req = $grand_total + $additional;
+                        $deposit_date = $project_info['deposit_date'] ?? '-';
+
+                        $total_req = $formal + $add;
                         $balance = $total_req - $deposit;
                     ?>
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>正式お見積額 (税込):</span> <strong><?= number_format($grand_total) ?> 円</strong>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>初期お見積額 (<?= htmlspecialchars($initial_date) ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
                     </div>
-                    <?php if ($additional > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#c0392b;">
-                        <span>追加費用:</span> <strong>+ <?= number_format($additional) ?> 円</strong>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>本見積額 (<?= htmlspecialchars($formal_date) ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
+                    </div>
+                    <?php if ($add > 0): ?>
+                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
+                        <span>追加費用 (<?= htmlspecialchars($add_date) ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
                     </div>
                     <?php endif; ?>
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
                         <span>ご請求総額:</span> <strong><?= number_format($total_req) ?> 円</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; color:#28a745;">
-                        <span>入金済額 (50%等):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
+                        <span>入金済額 (<?= htmlspecialchars($deposit_date) ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
                         <span>現在の残金:</span> <span><?= number_format($balance) ?> 円</span>
@@ -140,52 +145,7 @@
                         $is_skin = $project_info['req_skin'];
                     ?>
                     
-                    <?php if ($is_common): ?>
-                    <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
-                        <strong style="display:block; margin-bottom:10px; color:#1e40af;">【共通図書（構造計算等）】</strong>
-                        
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">意匠CADデータ（平面・立面・配置・矩計） <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[cad_design_all][]" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">確認申請書（2面〜5面） <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[app_doc][]" accept=".pdf" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">地盤調査報告書 <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[soil_report][]" accept=".pdf,.zip" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <?php if ($is_sky): ?>
-                    <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
-                        <strong style="display:block; margin-bottom:10px; color:#1e40af;">【天空率計算 図書】</strong>
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">道路の資料（座標、測量図、道路台帳等） <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[road_data][]" accept=".pdf,.zip,.jpg,.png" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">真北の資料 <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[true_north][]" accept=".pdf,.zip,.jpg,.png" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <?php if ($is_skin): ?>
-                    <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
-                        <strong style="display:block; margin-bottom:10px; color:#1e40af;">【外皮計算 図書】</strong>
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">断熱材・サッシ等の仕様書 <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[insulation_spec][]" accept=".pdf,.zip" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">設備仕様書（換気・エアコン等） <span style="color:red;">*</span></label>
-                            <input type="file" name="upload_files[equipment_spec][]" accept=".pdf,.zip" multiple required style="width:100%; font-size:12px;">
-                        </div>
-                    </div>
-                    <?php endif; ?>
+                    <?php include 'upload_slots.php'; ?>
                     
                     <div style="margin-bottom:15px;">
                         <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">その他補足事項・メッセージ</label>

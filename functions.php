@@ -5,8 +5,15 @@
 // 1. 各種マスターデータ定義（プルダウンの選択肢等）
 // ==========================================
 $status_options = [
-    'quote_req' => '見積依頼', 'contracted' => '受注済', 'primary_prep' => '一次回答準備中', 
-    'structural_dwg' => '構造図作成中', 'submission' => '提出済・確認中', 'correction' => '補正対応中', 'completed' => '完了'
+    'quote_req' => '見積依頼', 
+    'quote_sent' => '見積送付済 / 依頼検討中', 
+    'doc_submitted' => '図書提出済 / 確認中', 
+    'primary_prep' => '一次回答準備中', 
+    'contracted' => '受注済', 
+    'structural_dwg' => '構造図作成中', 
+    'submission' => '提出済・確認中', 
+    'correction' => '補正対応中', 
+    'completed' => '完了'
 ];
 
 $wood_opts = ['ヒノキKD', 'ﾍﾞｲﾂｶﾞKD', 'スギKD', 'ﾍﾞｲﾏﾂKD', 'ｽﾌﾟﾙｰｽKD', 'WWKD', 'E65-F255', 'E95-F315', 'E105-F300', 'E95-F285', 'その他'];
@@ -20,19 +27,30 @@ $hardware_opts = ['Z金物', 'その他'];
 
 // 図書カテゴリの目的別細分化定義
 $money_categories = [
-    'est_initial' => '着手時 お見積書', 'est_post' => '着手後 御見積書', 'est_add' => '追加 お見積書', 'inv_primary' => '一次回答 請求書', 'inv_final' => '最終 御請求書'
+    'est_initial' => '初期 御見積書', 'est_post' => '本見積 御見積書', 'est_add' => '追加 御見積書', 'inv_primary' => '一次回答 請求書', 'inv_final' => '最終 御請求書'
 ];
 $file_categories_left_pdf = [
     'pdf_plan' => '見積用PDF (平面図)', 'pdf_elevation' => '見積用PDF (立面図)', 'pdf_layout' => '見積用PDF (配置図)', 'pdf_section' => '見積用PDF (矩計図 ※必要時)'
 ];
 $file_categories_left_cad = [
-    'cad_plan' => '意匠CAD (平面図 ※一括データも可)', 'cad_elevation' => '意匠CAD (立面図)', 'cad_section' => '意匠CAD (矩計図)', 'cad_layout' => '意匠CAD (配置図)', 'cad_other' => '意匠CAD (追加分)'
-];
-$file_categories_left_other = [
-    'app_doc' => '確認申請書（2〜5面）', 'soil_report' => '地盤調査資料', 'wood_spec' => '構造材種の指定(図書)', 'wall_spec' => '耐力壁仕様の指定(図書)', 'hardware_spec' => '金物の指定(図書)'
-];
-$file_categories_option = [
-    'soil_impr' => '地盤改良設計書 (※該当時のみ)'
+    'cad_layout' => '配置図',
+    'cad_plan_1f' => '1F平面図',
+    'cad_plan_2f' => '2F平面図',
+    'cad_plan_3f' => '3F平面図',
+    'cad_plan_ph' => 'PH平面図',
+    'cad_plan_rf' => 'RF平面図',
+    'cad_elevation' => '立面図',
+    'cad_section' => '矩計図',
+    'app_doc' => '確認申請書（2〜5面）',
+    'soil_report' => '地盤調査報告書',
+    'soil_impr' => '地盤改良設計書',
+    'road_data' => '道路の資料（天空率用）',
+    'true_north' => '真北の資料（天空率用）',
+    'spec_doc' => '仕様書（外皮用）',
+    'insulation_data' => '断熱材資料',
+    'sash_data' => 'サッシ・玄関ドア仕様',
+    'ventilation_data' => '24時間換気計算図書',
+    'equip_data' => '設備機器カタログ'
 ];
 $file_categories_center = [
     'standard_dwg' => '構造標準図', 'safety_cert' => '安全証明書', 'calc_doc' => '構造計算書', 'structural_dwg' => '構造図一式', 'qa_doc' => '疑義照会・回答書', 'correction_doc' => '補正・指示図書', 'other' => 'その他参考資料'

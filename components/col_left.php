@@ -47,28 +47,8 @@
                     $categories['cad_design_all'] = '意匠CADデータ一式';
                     $categories['pdf_plan'] = '平面図';
                     $categories['pdf_elevation'] = '立面図';
-                    $categories['pdf_layout'] = '配置図';
-                    $categories['pdf_section'] = '矩計図';
-                    $categories['pdf_area_calc'] = '求積図';
-                    $categories['app_doc'] = '確認申請書';
-                    
-                    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-                        $categories['soil_report'] = '地盤調査報告書';
-                        $categories['soil_improvement_spec'] = '地盤改良関連図書';
-                        $categories['wall_spec'] = '耐力壁・筋交い仕様';
-                        $categories['hardware_spec'] = '金物仕様';
-                        $categories['wood_species_spec'] = 'プレカット図（構造材種）';
-                    }
-                    if ($project_info['req_skin'] == 1) {
-                        $categories['insulation_spec'] = '断熱・サッシ仕様';
-                        $categories['section_dwg_ins'] = '矩計図(断熱部位)';
-                        $categories['equipment_spec'] = '設備仕様書';
-                    }
-                    if ($project_info['req_sky'] == 1) {
-                        $categories['road_data'] = '道路資料';
-                        $categories['true_north'] = '真北資料';
-                    }
-                    $categories['other_extra'] = 'その他添付資料';
+                    global $file_categories_left_pdf, $file_categories_left_cad;
+                    $categories = array_merge($file_categories_left_pdf, $file_categories_left_cad);
                     $categories['all_in_one_zip'] = '一括ZIPファイル';
 
                     foreach ($categories as $cat => $label) {
@@ -99,32 +79,23 @@
             <div class="box" style="background:#e8f5e9; border-color:#c8e6c9;">
                 <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">最新の見積書PDF</h3>
                 <div style="font-size:12px; color:#666; margin-bottom:10px;">シミュレーターで作成された見積書をPDFとして表示・印刷できます。</div>
-                <?php 
-                // messagesテーブルから過去の見積もりPDF履歴を取得
-                $stmtEstHist = $pdo->prepare("SELECT file_path, created_at FROM messages WHERE project_id = :pid AND file_type = 'pdf' AND sender_id = 1 ORDER BY created_at DESC");
-                $stmtEstHist->execute(['pid' => $project_id]);
-                $estimate_history = $stmtEstHist->fetchAll();
-                
-                if (count($estimate_history) > 0): 
-                    $latest = $estimate_history[0];
-                ?>
-                    <a href="https://drive.google.com/file/d/<?= htmlspecialchars($latest['file_path'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="display:block; text-align:center; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; text-decoration:none; font-size:12px; cursor:pointer; line-height:2.2; margin-bottom:10px;">
-                        📄 最新の見積書を開く（<?= date('m/d H:i', strtotime($latest['created_at'])) ?> 発行）
+                <?php if (!empty($all_estimates)): ?>
+                    <a href="estimate_print.php?id=<?= $project_id ?>&est_id=<?= $all_estimates[0]['id'] ?>" target="_blank" style="display:block; width:100%; text-align:center; background:#28a745; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold; margin-bottom:5px;">
+                        📄 最新の見積書PDFを表示
                     </a>
-                    
-                    <?php if (count($estimate_history) > 1): ?>
-                        <div style="font-size:11px; margin-top:10px; border-top:1px dashed #c8e6c9; padding-top:5px;">
-                            <strong>🕒 過去の履歴（再発行分）</strong>
+                    <?php if (count($all_estimates) > 1): ?>
+                        <details style="font-size:11px; margin-top:10px; border-top:1px dashed #c8e6c9; padding-top:5px;">
+                            <summary style="cursor:pointer; font-weight:bold;">🕒 過去の履歴（再発行分）</summary>
                             <ul style="margin:5px 0 0 0; padding-left:20px; color:#555;">
-                            <?php for ($i = 1; $i < count($estimate_history); $i++): $hist = $estimate_history[$i]; ?>
+                            <?php for ($i = 1; $i < count($all_estimates); $i++): $hist = $all_estimates[$i]; ?>
                                 <li style="margin-bottom:3px;">
-                                    <a href="https://drive.google.com/file/d/<?= htmlspecialchars($hist['file_path'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="color:#2e7d32; text-decoration:none;">
+                                    <a href="estimate_print.php?id=<?= $project_id ?>&est_id=<?= $hist['id'] ?>" target="_blank" style="color:#2e7d32; text-decoration:none;">
                                         📄 <?= date('Y/m/d H:i', strtotime($hist['created_at'])) ?> 発行分
                                     </a>
                                 </li>
                             <?php endfor; ?>
                             </ul>
-                        </div>
+                        </details>
                     <?php endif; ?>
                 <?php else: ?>
                     <button style="width:100%; background:#777777; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:not-allowed;" disabled>
@@ -478,6 +449,49 @@
                 <?php if (empty($orders)): ?>
                     <div style="color:#999;">発注履歴はありません。</div>
                 <?php endif; ?>
+            </div>
+
+            <!-- 金銭管理フォーム -->
+            <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px; padding:10px;">
+                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 金銭・請求管理</h3>
+                <form method="POST" action="actions/admin_finance_post.php" style="font-size:12px;">
+                    <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">初期見積額 (円):</label>
+                            <input type="number" name="initial_est_amount" value="<?= htmlspecialchars($project_info['initial_est_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">初期見積日:</label>
+                            <input type="date" name="initial_est_date" value="<?= htmlspecialchars($project_info['initial_est_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">本見積額 (円):</label>
+                            <input type="number" name="formal_est_amount" value="<?= htmlspecialchars($project_info['formal_est_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">本見積日:</label>
+                            <input type="date" name="formal_est_date" value="<?= htmlspecialchars($project_info['formal_est_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">追加費用 (円):</label>
+                            <input type="number" name="add_est_amount" value="<?= htmlspecialchars($project_info['add_est_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">追加見積日:</label>
+                            <input type="date" name="add_est_date" value="<?= htmlspecialchars($project_info['add_est_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">入金済額 (円):</label>
+                            <input type="number" name="deposit_amount" value="<?= htmlspecialchars($project_info['deposit_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:2px;">入金日:</label>
+                            <input type="date" name="deposit_date" value="<?= htmlspecialchars($project_info['deposit_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745;">金銭データを保存</button>
+                </form>
             </div>
 
             <!-- 協力業者ダッシュボードへの切り替えリンク -->
