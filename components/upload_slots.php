@@ -1,24 +1,26 @@
 <?php
 // components/upload_slots.php
 
-function renderUploadSlot($label, $name, $isRequired = true) {
-    $reqSpan = $isRequired ? '<span style="color:red;">*</span>' : '';
-    $requiredAttr = $isRequired ? 'required' : '';
-    // To allow "included in another file" to bypass HTML5 'required', we will remove 'required' attr if checkbox is checked.
-    $html = <<<HTML
-    <div style="margin-bottom:12px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
-        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').required = false;">
-            <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px;">
-                <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="document.getElementById('file_{$name}').required = !this.checked;"> 他ファイルに記載
-            </label>
+if (!function_exists('renderUploadSlot')) {
+    function renderUploadSlot($label, $name, $isRequired = true) {
+        $reqSpan = $isRequired ? '<span style="color:red;">*</span>' : '';
+        $requiredAttr = $isRequired ? 'required' : '';
+        // To allow "included in another file" to bypass HTML5 'required', we will remove 'required' attr if checkbox is checked.
+        $html = <<<HTML
+        <div style="margin-bottom:12px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').required = false;">
+                <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px;">
+                    <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="document.getElementById('file_{$name}').required = !this.checked;"> 他ファイルに記載
+                </label>
+            </div>
+            <!-- 差し替え理由 -->
+            <input type="text" name="update_reason[{$name}]" placeholder="※差し替え時のみ、変更内容を入力してください" style="width:100%; font-size:11px; padding:4px; margin-top:5px; display:none;" class="update-reason-input">
         </div>
-        <!-- 差し替え理由 -->
-        <input type="text" name="update_reason[{$name}]" placeholder="※差し替え時のみ、変更内容を入力してください" style="width:100%; font-size:11px; padding:4px; margin-top:5px; display:none;" class="update-reason-input">
-    </div>
 HTML;
-    return $html;
+        return $html;
+    }
 }
 
 $is_common = ($project_info['req_permit'] || $project_info['req_wall'] || (!($project_info['req_permit']||$project_info['req_wall']||$project_info['req_skin']||$project_info['req_sky'])));
