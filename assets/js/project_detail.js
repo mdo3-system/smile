@@ -336,7 +336,7 @@ function saveAndPrintEstimate() {
                 msg += `税込合計: ${currentTotal.toLocaleString()}円\n\n`;
                 msg += "詳細は添付のPDFまたは以下のリンクからご確認ください。\n";
                 msg += `https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk\n\n`;
-                msg += "よろしければ正式にご依頼ください。";
+                msg += "ご依頼いただける場合は、「設計依頼データの送付」ボタンから必須ファイル（CADデータ等）をアップロードの上、正式にご発注をお願いいたします。";
 
                 // sendMessageを使ってチャットへ投稿（APIへPOST）
                 const chatData = new FormData();

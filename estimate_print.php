@@ -18,9 +18,15 @@ $stmt = $pdo->prepare("
 $stmt->execute(['pid' => $project_id]);
 $project_data = $stmt->fetch();
 
-// 最新の見積もり情報を取得
-$stmtEst = $pdo->prepare("SELECT * FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
-$stmtEst->execute(['pid' => $project_id]);
+// 最新または特定の見積もり情報を取得
+$est_id = $_GET['est_id'] ?? null;
+if ($est_id) {
+    $stmtEst = $pdo->prepare("SELECT * FROM estimates WHERE id = :est_id AND project_id = :pid");
+    $stmtEst->execute(['est_id' => $est_id, 'pid' => $project_id]);
+} else {
+    $stmtEst = $pdo->prepare("SELECT * FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+    $stmtEst->execute(['pid' => $project_id]);
+}
 $estimate_data = $stmtEst->fetch();
 
 if ($project_data && $estimate_data) {
@@ -109,14 +115,17 @@ if (!$data['total_price']) {
                     <span style="font-size:12px;">(税込)</span>
                 </div>
             </div>
-            <div class="company-info">
-                発行日: <?= date('Y年m月d日') ?><br><br>
-                <div class="company-name">構造設計サポート</div>
-                担当：菅原 弘貴<br>
-                〒176-0012<br>
-                東京都練馬区豊玉北5丁目<br>
-                TEL: 070-8305-8480<br>
-                Email: info@thanks.work
+            <div class="company-info" style="width: 45%; text-align: right;">
+                <div style="margin-bottom: 10px;">発行日: <?= date('Y年m月d日') ?></div>
+                <div style="line-height: 1.6; font-size: 13px; text-align: left; display: inline-block;">
+                    <span style="font-size: 18px; font-weight: bold;">株式会社住ま居る</span><br>
+                    <span style="font-size: 15px;">代表取締役 菅原 功樹</span><br>
+                    〒350-2224<br>
+                    埼玉県鶴ヶ島市町屋176-5<br>
+                    TEL : 049-271-2350<br>
+                    登録番号 : T6030001070141<br>
+                    消費税 税率10%
+                </div>
             </div>
         </div>
 

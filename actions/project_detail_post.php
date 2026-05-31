@@ -31,10 +31,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($order_type === 'design') {
                 // 意匠図作図依頼の場合は「構造仕様ヒアリング・確認・作図」などのステータスへ
                 $projectRepo->updateStatus($project_id, 'primary_prep');
+                
+                // 単価の復元 (階層別)
+                $area = (float)($_POST['floor_area'] ?? 0);
+                if ($area > 200) {
+                    $formula = "(50円×100㎡ + 40円×100㎡ + 30円×" . ($area - 200) . "㎡)";
+                } else if ($area > 100) {
+                    $formula = "(50円×100㎡ + 40円×" . ($area - 100) . "㎡)";
+                } else {
+                    $formula = "(50円×{$area}㎡)";
+                }
             } else {
                 // 構造図作図依頼の場合は「構造図作成中」
                 $projectRepo->updateStatus($project_id, 'structural_dwg');
+                
+                $area = (float)($_POST['floor_area'] ?? 0);
+                if ($area > 200) {
+                    $formula = "(60円×100㎡ + 50円×100㎡ + 40円×" . ($area - 200) . "㎡)";
+                } else if ($area > 100) {
+                    $formula = "(60円×100㎡ + 50円×" . ($area - 100) . "㎡)";
+                } else {
+                    $formula = "(60円×{$area}㎡)";
+                }
+                
+                $optAmount = 0;
+                if (isset($_POST['opt_kiso'])) $optAmount += 1000;
+                if (isset($_POST['opt_yuka'])) $optAmount += 1000;
+                if ($optAmount > 0) $formula .= " + オプション: {$optAmount}円";
             }
+            
+            // チャットへ発注通知と計算式を送信
+            $order_amount_formatted = number_format($_POST['order_amount']);
+            $msg = "【新規発注のお知らせ】\n";
+            $msg .= "業務: " . $_POST['task_title'] . "\n";
+            $msg .= "発注額: {$order_amount_formatted} 円\n";
+            $msg .= "計算式: {$formula}\n\n";
+            $msg .= "上記の通り発注いたしました。よろしくお願いいたします。";
+            
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $msg
+            ]);
 
             $pdo->commit();
         } catch (Exception $e) {
@@ -297,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtNotify->execute([
                     'pid' => $project_id,
                     'sid' => $_SESSION['user_id'],
-                    'msg' => "【通知】構造仕様の指定と必要図書の提出が完了し、設計開始が依頼されました。一次回答期日の設定をお願いします。"
+                    'msg' => "【通知】依頼種別に応じた必要図書の提出がすべて完了し、設計開始が依頼されました。図書の内容を確認の上、一次回答期日の設定をお願いします。"
                 ]);
 
                 // 管理者へメール通知

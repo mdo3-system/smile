@@ -207,22 +207,17 @@
 
                 $primary_due_date = $project_info['primary_due_date'] ?? null;
                 
-                // スケジュール定義
+                // スケジュール定義 (FIXED_LOGIC.md 準拠)
                 $schedule_steps = [
-                    ['name' => '設計図書の提出', 'actor' => 'client', 'desc' => '開始時', 'days' => 0, 'type' => 'base'],
-                    ['name' => '標準一次回答', 'actor' => 'designer', 'desc' => "{$base_days}営業日", 'days' => $base_days, 'type' => 'biz'],
-                    ['name' => 'CB & 50%ご入金', 'actor' => 'client', 'desc' => '一次回答から4日後', 'days' => 4, 'type' => 'cal'],
-                    ['name' => 'CB対応 (設計側)', 'actor' => 'designer', 'desc' => 'CB受領から3営業日', 'days' => 3, 'type' => 'biz'],
-                    ['name' => 'CB確認・返答', 'actor' => 'client', 'desc' => 'CB送付から4日後', 'days' => 4, 'type' => 'cal'],
-                    ['name' => '構造図作図', 'actor' => 'designer', 'desc' => '決定から4営業日', 'days' => 4, 'type' => 'biz'],
-                    ['name' => '構造図CB', 'actor' => 'client', 'desc' => '作図UPから2日後', 'days' => 2, 'type' => 'cal'],
-                    ['name' => '構造図修正', 'actor' => 'designer', 'desc' => 'CB受領から4営業日', 'days' => 4, 'type' => 'biz'],
-                    ['name' => '構造図CB(最終確認)', 'actor' => 'client', 'desc' => '修正UPから2日後', 'days' => 2, 'type' => 'cal'],
-                    ['name' => '申請図書一式UP', 'actor' => 'designer', 'desc' => '確認から3営業日', 'days' => 3, 'type' => 'biz'],
-                    ['name' => '補正通知', 'actor' => 'wait', 'desc' => '申請から1ヶ月程度', 'days' => 30, 'type' => 'cal'],
-                    ['name' => '補正回答', 'actor' => 'designer', 'desc' => '通知受領から7営業日', 'days' => 7, 'type' => 'biz'],
-                    ['name' => '構造審査完了', 'actor' => 'wait', 'desc' => '回答から7日程度', 'days' => 7, 'type' => 'cal'],
-                    ['name' => '残金のご精算', 'actor' => 'client', 'desc' => '完了から7日以内', 'days' => 7, 'type' => 'cal'],
+                    ['name' => '設計図書の受領', 'actor' => 'client', 'desc' => '開始時', 'days' => 0, 'type' => 'base'],
+                    ['name' => '着手基準日 (一次回答)', 'actor' => 'designer', 'desc' => "{$base_days}営業日程度", 'days' => $base_days, 'type' => 'biz'],
+                    ['name' => '構造計算・図面 初回提示', 'actor' => 'designer', 'desc' => '着手から7〜10営業日', 'days' => 10, 'type' => 'biz'],
+                    ['name' => '構造図CB (内容確認)', 'actor' => 'client', 'desc' => '初回提示から4営業日', 'days' => 4, 'type' => 'biz'],
+                    ['name' => '修正図面UP', 'actor' => 'designer', 'desc' => 'CB確認から3営業日', 'days' => 3, 'type' => 'biz'],
+                    ['name' => '申請図書一式UP', 'actor' => 'designer', 'desc' => '修正UPから3営業日', 'days' => 3, 'type' => 'biz'],
+                    ['name' => '質疑・審査待機', 'actor' => 'wait', 'desc' => '確認機関の審査', 'days' => 30, 'type' => 'cal'],
+                    ['name' => '補正対応', 'actor' => 'designer', 'desc' => '質疑受領から7営業日', 'days' => 7, 'type' => 'biz'],
+                    ['name' => '残金のご精算', 'actor' => 'client', 'desc' => '完了後7日以内', 'days' => 7, 'type' => 'cal'],
                 ];
 
                 // 日付計算
@@ -300,6 +295,49 @@
             </div>
             <!-- ▲▲▲ 進捗スケジュール可視化 ▲▲▲ -->
 
+            <?php if ($is_admin && $project_info['status'] !== 'completed'): ?>
+            <!-- ▼▼▼ 管理者用：必要図書ステータス確認パネル ▼▼▼ -->
+            <div class="box" style="background:#f8fafc; border:1px solid #cbd5e1; margin-top:15px;">
+                <h3 style="margin-top:0; font-size:14px; color:#1e293b; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">
+                    📂 必要図書の提出ステータス
+                </h3>
+                <div style="font-size:12px; margin-bottom:10px;">
+                    現在の依頼種別に応じて、以下の図書が必要です。すべて揃うと通知されます。
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <?php 
+                    // 許容応力度・壁量（共通図書）
+                    if ($project_info['req_permit'] || $project_info['req_wall'] || (!($project_info['req_permit']||$project_info['req_wall']||$project_info['req_skin']||$project_info['req_sky']))) {
+                        echo '<div style="font-size:12px;"><strong>【共通図書（構造計算等）】</strong></div>';
+                        echo '<div style="font-size:11px; margin-left:10px;">';
+                        echo '・意匠CADデータ: ' . (isset($files_by_cat['cad_design_all']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
+                        echo '・確認申請書: ' . (isset($files_by_cat['app_doc']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
+                        echo '・地盤調査報告書: ' . (isset($files_by_cat['soil_report']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>');
+                        echo '</div>';
+                    }
+                    // 天空率
+                    if ($project_info['req_sky']) {
+                        echo '<div style="font-size:12px; margin-top:5px;"><strong>【天空率計算図書】</strong></div>';
+                        echo '<div style="font-size:11px; margin-left:10px;">';
+                        echo '・道路の資料: ' . (isset($files_by_cat['road_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
+                        echo '・真北の資料: ' . (isset($files_by_cat['true_north']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>');
+                        echo '</div>';
+                    }
+                    // 外皮計算
+                    if ($project_info['req_skin']) {
+                        echo '<div style="font-size:12px; margin-top:5px;"><strong>【外皮計算図書】</strong></div>';
+                        echo '<div style="font-size:11px; margin-left:10px;">';
+                        echo '・断熱材/サッシ仕様: ' . (isset($files_by_cat['insulation_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
+                        echo '・設備仕様書: ' . (isset($files_by_cat['equipment_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>');
+                        echo '</div>';
+                    }
+                    ?>
+                </div>
+            </div>
+            <!-- ▲▲▲ 管理者用：必要図書ステータス確認パネル ▲▲▲ -->
+            <?php endif; ?>
+
             <?php if ($is_admin && $project_info['status'] === 'primary_prep'): ?>
             <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px;">
                 <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">
@@ -316,301 +354,7 @@
             </div>
             <?php endif; ?>
 
-            <?php if ($project_info['status'] === 'quote_req' || $project_info['status'] === 'primary_prep'): ?>
-            <!-- ▼▼▼ 依頼主 詳細仕様指定・図書アップロード（モーダル） ▼▼▼ -->
-            <div id="designModal" class="modal-overlay">
-                <div class="modal-box" style="max-width:800px; position:relative; background:#f8fafc;">
-                    <button type="button" onclick="closeDesignModal()" style="position:absolute; right:15px; top:15px; background:none; border:none; font-size:24px; cursor:pointer; color:#64748b;">&times;</button>
-                    <h3 class="modal-title" style="margin-top:0; font-size:16px; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">
-                        📤 設計開始依頼（必要図書の提出と詳細仕様の指定）
-                    </h3>
-                
-                <?php
-                $upload_mode = $project_info['upload_mode'] ?? 'individual';
-                $wood_json = json_decode($project_info['wood_details'] ?? '{}', true) ?: [];
-                $wall_json = json_decode($project_info['wall_details'] ?? '{}', true) ?: [];
-                $hw_json = json_decode($project_info['hardware_details'] ?? '{}', true) ?: [];
-                ?>
-                
-                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
-                    
-                    <div style="margin-bottom:15px; background:#fff; padding:15px; border:2px solid #ef4444; border-radius:6px;">
-                        <div style="font-size:13px; font-weight:bold; color:#b91c1c; margin-bottom:8px;">⚠️ 見積時からの図面変更の有無</div>
-                        <div style="display:flex; gap:15px; font-size:12px; margin-bottom:10px;">
-                            <label><input type="radio" name="drawing_changed" value="no"> 変更なし</label>
-                            <label><input type="radio" name="drawing_changed" value="yes"> 変更あり</label>
-                        </div>
-                        <textarea name="drawing_change_notes" placeholder="変更ありの場合は、変更箇所を簡単にご記入ください。" style="width:100%; padding:8px; font-size:12px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
-                    </div>
-                    
-                    <div style="margin-bottom:15px;">
-                        <label style="font-size:12px; font-weight:bold; color:#334155; display:block; margin-bottom:5px;">📂 ファイルの提出方法</label>
-                        <div style="display:flex; gap:15px; font-size:12px;">
-                            <label><input type="radio" name="upload_mode" value="combined" onchange="toggleUploadMode()" <?= $upload_mode === 'combined' ? 'checked' : '' ?>> 1つのファイル（ZIP等）にまとめてアップロードする</label>
-                            <label><input type="radio" name="upload_mode" value="individual" onchange="toggleUploadMode()" <?= $upload_mode === 'individual' ? 'checked' : '' ?>> 個別のファイルに分けてアップロード・指定する</label>
-                        </div>
-                    </div>
-
-                    <!-- 一括アップロードエリア -->
-                    <div id="mode_combined" style="display: <?= $upload_mode === 'combined' ? 'block' : 'none' ?>; background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:15px;">
-                        <div style="font-size:12px; font-weight:bold; margin-bottom:10px;">必要図書一括 (ZIP/PDF) <span style="color:#ef4444;">※CADデータ必須</span></div>
-                        <input type="file" name="upload_files[all_in_one_zip]" style="font-size:12px; width:100%;">
-                        <?php if(isset($files_by_cat['all_in_one_zip'])): ?>
-                            <div style="font-size:11px; margin-top:5px;">✅ 提出済: <a href="https://drive.google.com/file/d/<?= htmlspecialchars($files_by_cat['all_in_one_zip']['drive_file_id'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank"><?= htmlspecialchars($files_by_cat['all_in_one_zip']['file_name'], ENT_QUOTES) ?></a></div>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- 個別アップロードエリア -->
-                    <div id="mode_individual" style="display: <?= $upload_mode === 'individual' ? 'block' : 'none' ?>;">
-                        
-                        <!-- A. 共通図書 -->
-                        <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">A. 共通図書</div>
-                            <div style="display:grid; gap:10px;">
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">意匠CADデータ (平面・立面・配置・矩計を含む) <span style="color:#ef4444;">※必須（複数選択可）</span></div>
-                                    <input type="file" name="upload_files[cad_design_all][]" multiple style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['cad_design_all'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['cad_design_all']['file_name']).'</div>'; ?>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">確認申請書 (2面〜5面) <span style="color:#666;">（複数選択可）</span></div>
-                                    <input type="file" name="upload_files[app_doc][]" multiple style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['app_doc'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['app_doc']['file_name']).'</div>'; ?>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">求積図 <span style="color:#666;">（複数選択可）</span></div>
-                                    <input type="file" name="upload_files[pdf_area_calc][]" multiple style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['pdf_area_calc'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['pdf_area_calc']['file_name']).'</div>'; ?>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- B. 構造計算 -->
-                        <?php if ($req_permit == 1 || $req_wall == 1 || $req_opt_kisohari == 1): ?>
-                        <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">B. 構造仕様・図書</div>
-                            
-                            <div style="display:grid; gap:10px;">
-                                <div style="background:#f8fafc; padding:10px; border-radius:4px; border:1px solid #e2e8f0;">
-                                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">地盤調査の状況</div>
-                                    <div style="display:flex; gap:15px; font-size:11px; margin-bottom:10px;">
-                                        <label><input type="radio" name="soil_status" value="調査済" <?= ($project_info['soil_status']??'')==='調査済' ? 'checked' : '' ?>> 調査済</label>
-                                        <label><input type="radio" name="soil_status" value="未調査+令96条但し書" <?= ($project_info['soil_status']??'')==='未調査+令96条但し書' ? 'checked' : '' ?>> 未調査+令96条但し書</label>
-                                        <label><input type="radio" name="soil_status" value="調査予定" <?= ($project_info['soil_status']??'')==='調査予定' ? 'checked' : '' ?>> 調査予定</label>
-                                    </div>
-                                    
-                                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">地盤調査報告書 / 改良関連図書</div>
-                                    <div style="font-size:10px; color:#ef4444; margin-bottom:5px;">※新しくアップロードすると、過去にアップロードした同種の図書は上書き(非表示)されます。</div>
-                                    <div style="display:grid; gap:5px;">
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <span style="font-size:11px; width:70px;">調査報告書:</span>
-                                            <input type="file" name="upload_files[soil_report]" style="font-size:11px; flex:1;">
-                                        </div>
-                                        <div id="soil_imp_container" style="display:flex; flex-direction:column; gap:5px;">
-                                            <div style="display:flex; align-items:center; gap:5px;">
-                                                <span style="font-size:11px; width:70px;">改良関連図書:</span>
-                                                <input type="file" name="upload_files[soil_improvement_spec][]" style="font-size:11px; flex:1;" title="改良設計書/計算書/認定書など">
-                                                <button type="button" onclick="addSoilRow()" style="font-size:11px; padding:2px 5px; cursor:pointer;">＋追加</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style="margin-top:10px; font-size:10px;">
-                                    <?php 
-                                        if(isset($files_by_cat['soil_report'])) echo '<div style="color:#16a34a;">✅ 調査報告書: '.htmlspecialchars($files_by_cat['soil_report']['file_name']).'</div>'; 
-                                        // 複数あるかもしれない改良設計書（現在は最新のみ表示する設計だが、履歴も含め複数あれば表示）
-                                        // TODO: 厳密には $files_by_cat はカテゴリごと1つしか持っていない場合がある。複数対応は別途考慮。
-                                        if(isset($files_by_cat['soil_improvement_spec'])) echo '<div style="color:#16a34a;">✅ 改良関連図書: '.htmlspecialchars($files_by_cat['soil_improvement_spec']['file_name']).'</div>';
-                                    ?>
-                                    </div>
-                                </div>
-                                
-                                <div style="background:#f8fafc; padding:10px; border-radius:4px; border:1px solid #e2e8f0;">
-                                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">耐力壁・筋交い仕様指定</div>
-                                    <div style="display:grid; gap:5px; font-size:11px;">
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <span>面材:</span>
-                                            <select name="wall_menzai_type" style="padding:2px;">
-                                                <?php renderOptions(['構造用合板', 'OSB', 'MDF', 'パーティクルボード', 'その他'], $wall_json['menzai']['type'] ?? ''); ?>
-                                            </select>
-                                            <input type="text" name="wall_menzai_other" placeholder="その他の場合" value="<?= htmlspecialchars($wall_json['menzai']['other'] ?? '', ENT_QUOTES) ?>" style="padding:2px; flex:1;">
-                                        </div>
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <span>筋交い:</span>
-                                            <select name="wall_sujikai_type" style="padding:2px;">
-                                                <?php renderOptions(['30×45', '45×90', '90×90', 'その他'], $wall_json['sujikai']['type'] ?? ''); ?>
-                                            </select>
-                                            <input type="text" name="wall_sujikai_other" placeholder="その他の場合" value="<?= htmlspecialchars($wall_json['sujikai']['other'] ?? '', ENT_QUOTES) ?>" style="padding:2px; flex:1;">
-                                        </div>
-                                    </div>
-                                    <div style="margin-top:5px; font-size:11px;">ファイル添付: <input type="file" name="upload_files[wall_spec]" style="font-size:10px;"></div>
-                                    <?php if(isset($files_by_cat['wall_spec'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['wall_spec']['file_name']).'</div>'; ?>
-                                </div>
-                                
-                                <div style="background:#f8fafc; padding:10px; border-radius:4px; border:1px solid #e2e8f0;">
-                                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">金物仕様指定</div>
-                                    <div style="display:grid; gap:5px; font-size:11px;">
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <span>金物仕様:</span>
-                                            <select name="hw_type" style="padding:2px;">
-                                                <?php renderOptions(['Z金物', 'その他'], $hw_json['type'] ?? ''); ?>
-                                            </select>
-                                            <input type="text" name="hw_type_other" placeholder="その他の場合" value="<?= htmlspecialchars($hw_json['type_other'] ?? '', ENT_QUOTES) ?>" style="padding:2px; flex:1;">
-                                        </div>
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <span>金物工法:</span>
-                                            <select name="hw_method" style="padding:2px;">
-                                                <?php renderOptions(['Tec-One', 'プレセッター', 'Stroog', 'その他'], $hw_json['method'] ?? ''); ?>
-                                            </select>
-                                            <input type="text" name="hw_method_other" placeholder="その他の場合" value="<?= htmlspecialchars($hw_json['method_other'] ?? '', ENT_QUOTES) ?>" style="padding:2px; flex:1;">
-                                        </div>
-                                    </div>
-                                    <div style="margin-top:5px; font-size:11px;">ファイル添付: <input type="file" name="upload_files[hardware_spec]" style="font-size:10px;"></div>
-                                    <?php if(isset($files_by_cat['hardware_spec'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['hardware_spec']['file_name']).'</div>'; ?>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <!-- C. 構造材種 -->
-                        <?php if ($req_permit == 1 || $req_opt_kisohari == 1): ?>
-                        <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">C. 構造材種</div>
-                            
-                            <div style="font-size:11px; margin-bottom:10px;">プレカット図等による指定: <input type="file" name="upload_files[wood_species_spec]" style="font-size:10px;"></div>
-                            <?php if(isset($files_by_cat['wood_species_spec'])) echo '<div style="font-size:10px; color:#16a34a; margin-bottom:10px;">✅ '.htmlspecialchars($files_by_cat['wood_species_spec']['file_name']).'</div>'; ?>
-                            
-                            <table style="width:100%; font-size:11px; border-collapse:collapse; border:1px solid #e2e8f0;">
-                                <tr style="background:#f1f5f9;"><th style="border:1px solid #e2e8f0; padding:4px;">部位</th><th style="border:1px solid #e2e8f0; padding:4px;">材種</th><th style="border:1px solid #e2e8f0; padding:4px;">サイズ/その他</th></tr>
-                                
-                                <?php 
-                                    $wood_opts_std = ['スギKD', 'ヒノキKD', 'ベイマツKD', 'ベイツガKD', 'WWKD', 'E65-F255', 'E95-F315', 'E105-F300', 'E135-F375', 'その他'];
-                                    $size_opts_105_120 = ['□105', '□120', 'その他'];
-                                    $size_opts_90_105 = ['□90', '□105', 'その他'];
-                                    
-                                    function renderWoodRow($name, $key, $wood_json, $wood_opts, $size_opts) {
-                                        echo '<tr>';
-                                        echo '<td style="border:1px solid #e2e8f0; padding:4px; font-weight:bold;">'.$name.'</td>';
-                                        echo '<td style="border:1px solid #e2e8f0; padding:4px;">';
-                                        echo '<select name="wood_'.$key.'_type" style="width:100%; padding:2px; font-size:10px;">';
-                                        renderOptions($wood_opts, $wood_json[$key]['type'] ?? '');
-                                        echo '</select></td>';
-                                        
-                                        echo '<td style="border:1px solid #e2e8f0; padding:4px; display:flex; gap:2px;">';
-                                        if ($key === 'taruki') {
-                                            echo 'W <input type="number" name="wood_'.$key.'_w" value="'.htmlspecialchars($wood_json[$key]['w'] ?? '', ENT_QUOTES).'" style="width:30px; font-size:10px;"> × ';
-                                            echo 'H <input type="number" name="wood_'.$key.'_h" value="'.htmlspecialchars($wood_json[$key]['h'] ?? '', ENT_QUOTES).'" style="width:30px; font-size:10px;">';
-                                        } else {
-                                            echo '<select name="wood_'.$key.'_size" style="width:60px; padding:2px; font-size:10px;">';
-                                            renderOptions($size_opts, $wood_json[$key]['size'] ?? '');
-                                            echo '</select>';
-                                        }
-                                        echo '<input type="text" name="wood_'.$key.'_other" placeholder="その他" value="'.htmlspecialchars($wood_json[$key]['other'] ?? '', ENT_QUOTES).'" style="flex:1; padding:2px; font-size:10px;">';
-                                        echo '</td></tr>';
-                                    }
-                                    
-                                    renderWoodRow('土台', 'foundation', $wood_json, $wood_opts_std, $size_opts_105_120);
-                                    renderWoodRow('柱', 'column', $wood_json, $wood_opts_std, $size_opts_105_120);
-                                    renderWoodRow('梁', 'beam', $wood_json, $wood_opts_std, $size_opts_105_120);
-                                    renderWoodRow('大引', 'obiki', $wood_json, $wood_opts_std, $size_opts_90_105);
-                                    renderWoodRow('小屋束', 'koyatsuka', $wood_json, $wood_opts_std, $size_opts_90_105);
-                                    renderWoodRow('母屋', 'moya', $wood_json, $wood_opts_std, $size_opts_90_105);
-                                    renderWoodRow('棟木', 'munagi', $wood_json, $wood_opts_std, $size_opts_90_105);
-                                    renderWoodRow('垂木', 'taruki', $wood_json, $wood_opts_std, []);
-                                    renderWoodRow('火打', 'hiuchi', $wood_json, ['スギKD', 'ベイマツKD', 'Z金物', 'その他'], ['その他']);
-                                ?>
-                            </table>
-                        </div>
-                        <?php endif; ?>
-
-                        <!-- D. 天空率 -->
-                        <?php if ($req_sky == 1): ?>
-                        <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">D. 天空率図書</div>
-                            <div style="display:grid; gap:10px;">
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">道路の資料 (座標、測量図、道路台帳、高さ等)</div>
-                                    <input type="file" name="upload_files[road_data]" style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['road_data'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['road_data']['file_name']).'</div>'; ?>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">真北の資料</div>
-                                    <input type="file" name="upload_files[true_north]" style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['true_north'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['true_north']['file_name']).'</div>'; ?>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <!-- E. 外皮計算 -->
-                        <?php if ($req_skin == 1): ?>
-                        <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">E. 外皮計算図書</div>
-                            <div style="display:grid; gap:10px;">
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">断熱材・サッシ・ガラス仕様指定</div>
-                                    <input type="file" name="upload_files[insulation_spec]" style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['insulation_spec'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['insulation_spec']['file_name']).'</div>'; ?>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">矩計図（使用断熱材の部位記載あり）</div>
-                                    <input type="file" name="upload_files[section_dwg_ins]" style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['section_dwg_ins'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['section_dwg_ins']['file_name']).'</div>'; ?>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:bold;">設備仕様書（換気・エアコン・給湯器・照明等）</div>
-                                    <input type="file" name="upload_files[equipment_spec]" style="font-size:11px; width:100%;">
-                                    <?php if(isset($files_by_cat['equipment_spec'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['equipment_spec']['file_name']).'</div>'; ?>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <!-- F. その他欄 -->
-                        <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:#1e40af; border-bottom:1px solid #bfdbfe; margin-bottom:10px; padding-bottom:3px;">F. その他欄</div>
-                            <textarea name="client_notes_extra" rows="3" style="width:100%; font-size:11px; padding:5px; border:1px solid #ccc; border-radius:4px; margin-bottom:5px;"><?= htmlspecialchars($project_info['client_notes_extra'] ?? '', ENT_QUOTES) ?></textarea>
-                            <input type="file" name="upload_files[other_extra]" style="font-size:11px; width:100%;">
-                            <?php if(isset($files_by_cat['other_extra'])) echo '<div style="font-size:10px; color:#16a34a;">✅ '.htmlspecialchars($files_by_cat['other_extra']['file_name']).'</div>'; ?>
-                        </div>
-
-                    </div>
-
-                    <input type="hidden" name="action" id="form_action" value="">
-                    
-                    <div style="display:flex; gap:10px; margin-top:20px;">
-                        <button type="submit" onclick="document.getElementById('form_action').value='save_client_specs_draft';" style="width:100%; background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color:white; border:none; padding:14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(59,130,246,0.3);">
-                            💾 図書・仕様を保存 / アップロードする
-                        </button>
-                    </div>
-                </form>
-
-                <script>
-                    function toggleUploadMode() {
-                        const isCombined = document.querySelector('input[name="upload_mode"][value="combined"]').checked;
-                        document.getElementById('mode_combined').style.display = isCombined ? 'block' : 'none';
-                        document.getElementById('mode_individual').style.display = isCombined ? 'none' : 'block';
-                    }
-                    function openDesignModal() {
-                        document.getElementById('designModal').classList.add('active');
-                    }
-                    function closeDesignModal() {
-                        document.getElementById('designModal').classList.remove('active');
-                    }
-                    function addSoilRow() {
-                        const container = document.getElementById('soil_imp_container');
-                        const div = document.createElement('div');
-                        div.style.display = 'flex';
-                        div.style.alignItems = 'center';
-                        div.style.gap = '5px';
-                        div.innerHTML = '<span style="font-size:11px; width:70px;">(追加分):</span><input type="file" name="upload_files[soil_improvement_spec][]" style="font-size:11px; flex:1;" title="改良設計書/計算書/認定書など"><button type="button" onclick="this.parentElement.remove()" style="font-size:11px; padding:2px 5px; cursor:pointer;">削除</button>';
-                        container.appendChild(div);
-                    }
-                </script>
-                </div>
-            </div>
-            <!-- ▲▲▲ 依頼主 詳細仕様指定・図書アップロード（モーダル） ▲▲▲ -->
-            <?php endif; ?>
+            
 
             <?php if ($is_admin): ?>
             <!-- 管理者専用：協力業者への発注 -->
@@ -654,18 +398,23 @@
                         if (type === 'design') {
                             structOpts.style.display = 'none';
                             taskTitle = "構造用・外皮用意匠図作図";
-                            if (area > 0 && area <= 100) unitPrice = 50;
-                            else if (area > 100 && area <= 200) unitPrice = 40;
-                            else if (area > 200) unitPrice = 30;
-                            total = area * unitPrice;
+                            if (area > 200) {
+                                total = 50 * 100 + 40 * 100 + 30 * (area - 200);
+                            } else if (area > 100) {
+                                total = 50 * 100 + 40 * (area - 100);
+                            } else {
+                                total = 50 * area;
+                            }
                         } else {
                             structOpts.style.display = 'block';
                             taskTitle = "構造図作図";
-                            if (area > 0 && area <= 100) unitPrice = 60;
-                            else if (area > 100 && area <= 200) unitPrice = 50;
-                            else if (area > 200 && area <= 300) unitPrice = 40;
-                            else if (area > 300) unitPrice = 40; // 300以上は同じ
-                            total = area * unitPrice;
+                            if (area > 200) {
+                                total = 60 * 100 + 50 * 100 + 40 * (area - 200);
+                            } else if (area > 100) {
+                                total = 60 * 100 + 50 * (area - 100);
+                            } else {
+                                total = 60 * area;
+                            }
                             
                             if (document.getElementById('opt_kiso').checked) total += 1000;
                             if (document.getElementById('opt_yuka').checked) total += 1000;
@@ -675,8 +424,26 @@
                         total = Math.floor(total);
 
                         if (area > 0) {
+                            let formulaText = "";
+                            if (type === 'design') {
+                                if (area > 200) formulaText = `(50円×100㎡ + 40円×100㎡ + 30円×${area - 200}㎡)`;
+                                else if (area > 100) formulaText = `(50円×100㎡ + 40円×${area - 100}㎡)`;
+                                else formulaText = `(50円×${area}㎡)`;
+                            } else {
+                                if (area > 200) formulaText = `(60円×100㎡ + 50円×100㎡ + 40円×${area - 200}㎡)`;
+                                else if (area > 100) formulaText = `(60円×100㎡ + 50円×${area - 100}㎡)`;
+                                else formulaText = `(60円×${area}㎡)`;
+                            }
+                            if (type === 'structure') {
+                                let optAmount = 0;
+                                if (document.getElementById('opt_kiso').checked) optAmount += 1000;
+                                if (document.getElementById('opt_yuka').checked) optAmount += 1000;
+                                if (optAmount > 0) formulaText += ` + オプション: ${optAmount}円`;
+                            }
+                            
                             document.getElementById('sub_calc_result').innerHTML = 
-                                '<span style="color:#28a745;font-size:12px;font-weight:bold;">算出額: ' + total.toLocaleString() + '円</span>';
+                                `<span style="color:#28a745;font-size:12px;font-weight:bold;">算出額: ${total.toLocaleString()}円</span><br>` + 
+                                `<span style="color:#666;font-size:11px;">計算式: ${formulaText}</span>`;
                         } else {
                             document.getElementById('sub_calc_result').innerHTML = '';
                         }

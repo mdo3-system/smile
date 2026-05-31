@@ -25,6 +25,9 @@ if ($_SESSION['role'] === 'client' && $project['client_id'] !== $current_user_id
     die("この案件へのアクセス権限がありません。<br><a href='index.php'>ダッシュボードへ戻る</a>");
 }
 
+require_once 'Repositories/ProjectRepository.php';
+$projectRepo = new ProjectRepository($pdo);
+
 require_once __DIR__ . '/actions/project_detail_post.php';
 
 // ==========================================
@@ -47,11 +50,10 @@ if (!$project_info) {
 
 $upload_mode = $project_info['upload_mode'] ?? 'individual';
 
-// 見積情報の取得
-$stmtEst = $pdo->prepare("SELECT pdf_drive_file_id FROM estimates WHERE project_id = :pid");
-$stmtEst->execute(['pid' => $project_id]);
-$estimate_info = $stmtEst->fetch();
-$pdf_drive_id = $estimate_info['pdf_drive_file_id'] ?? null;
+// 見積情報（全履歴）の取得
+$stmtAllEst = $pdo->prepare("SELECT * FROM estimates WHERE project_id = :pid ORDER BY id DESC");
+$stmtAllEst->execute(['pid' => $project_id]);
+$all_estimates = $stmtAllEst->fetchAll();
 
 // 案件に関連する全ファイル（最新のみ）を取得 (依頼主提出物用)
 $stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND is_latest = 1");
@@ -204,13 +206,12 @@ $chat_messages = $stmtMsgs->fetchAll();
 ※一次回答のチェックバック・50%のご入金が4営業日以内にいただけない場合は、対応日数に加算されますこと、予めご承知おき願います。
 ※基本は設計サポート業務となりますので、私は設計者にはなりません。
 
-ご依頼いただける際は下記をお送りください：
+ご依頼いただける際は、「設計依頼データの送付」ボタンから以下のファイルをご送付ください：
 1. 意匠図CADデータ（JWW/DXF等）
 2. 確認申請書 2面〜5面
 3. 地盤調査報告書
-4. 構造材種の指定（土台・大引・柱・梁・小屋束・母屋・棟木・垂木・火打）
-5. Z金物以外の場合は金物仕様の指定
-6. 耐力壁配置ルール（大臣認定耐力壁 EXハイパー、パーティクルボード、内部筋違 等）
+4. 真北・道路資料（天空率等の場合）
+※ 構造材種や金物の指定などは、「設計依頼データの送付」時のコメント欄にご記入ください。
 
 高さの不整合が多い傾向にございます。構造で図面間の高さの不整合は手が止まってしまいますこと、予めご承知おき願います。
 

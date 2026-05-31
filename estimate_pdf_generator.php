@@ -136,14 +136,17 @@ function generate_estimate_pdf($project_id, $pdo) {
                     </div>
                 </td>
                 
-                <td style="width: 50%; text-align: right; font-size: 10pt; line-height: 1.6; vertical-align: top;">
-                    <div style="margin-bottom: 10px;">発行日: ' . $date_str . '</div>
-                    <div style="margin-bottom: 5px; font-size: 12pt; font-weight: bold;">構造設計サポート</div>
-                    担当：菅原 弘貴<br>
-                    〒176-0012<br>
-                    東京都練馬区豊玉北5丁目<br>
-                    TEL: 070-8305-8480<br>
-                    Email: info@thanks.work
+                <td style="width: 40%; text-align: right;">
+                    <div style="margin-bottom: 10px; text-align: right; font-size: 11pt;">発行日: ' . date('Y年m月d日') . '</div>
+                    <div style="line-height: 1.6; font-size: 10pt; text-align: left; display: inline-block;">
+                        <span style="font-size: 14pt; font-weight: bold;">株式会社住ま居る</span><br>
+                        <span style="font-size: 12pt;">代表取締役 菅原 功樹</span><br>
+                        〒350-2224<br>
+                        埼玉県鶴ヶ島市町屋176-5<br>
+                        TEL : 049-271-2350<br>
+                        登録番号 : T6030001070141<br>
+                        消費税 税率10%
+                    </div>
                 </td>
             </tr>
         </table>

@@ -49,14 +49,18 @@
                 <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 ご請求・お支払い状況</h3>
                 <div style="font-size:13px; line-height:1.8;">
                     <?php
-                        $formal_estimate = $project_info['total_amount'] ?? 0; // TODO: DBから正式見積額を取得
+                        $latest_est = !empty($all_estimates) ? $all_estimates[0] : null;
+                        $formal_estimate = $latest_est ? $latest_est['total_price'] : ($project_info['total_amount'] ?? 0);
+                        $tax = round($formal_estimate * 0.1);
+                        $grand_total = $formal_estimate + $tax;
+                        
                         $deposit = $project_info['deposit_amount'] ?? 0;
                         $additional = $project_info['additional_amount'] ?? 0;
-                        $total_req = $formal_estimate + $additional;
+                        $total_req = $grand_total + $additional;
                         $balance = $total_req - $deposit;
                     ?>
                     <div style="display:flex; justify-content:space-between;">
-                        <span>正式お見積額:</span> <strong><?= number_format($formal_estimate) ?> 円</strong>
+                        <span>正式お見積額 (税込):</span> <strong><?= number_format($grand_total) ?> 円</strong>
                     </div>
                     <?php if ($additional > 0): ?>
                     <div style="display:flex; justify-content:space-between; color:#c0392b;">
@@ -76,12 +80,122 @@
             </div>
             
             <div class="box" style="background:#e8f5e9; border-color:#c8e6c9;">
-                <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">最新の見積書PDF</h3>
-                <form action="estimate_print.php" method="GET" target="_blank">
-                    <input type="hidden" name="id" value="<?= $project_id ?>">
-                    <button type="submit" style="width:100%; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">
-                        📄 最新の見積書を開く（印刷・PDF保存）
+                <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">📝 見積書・請求書</h3>
+                
+                <?php if (!empty($all_estimates)): ?>
+                    <div style="margin-bottom:15px; padding:10px; background:#fff; border:2px solid #28a745; border-radius:6px; text-align:center;">
+                        <div style="font-weight:bold; color:#155724; margin-bottom:5px;">最新の御見積書</div>
+                        <a href="estimate_print.php?id=<?= $project_id ?>&est_id=<?= $all_estimates[0]['id'] ?>" target="_blank" style="display:inline-block; padding:8px 15px; background:#28a745; color:white; font-weight:bold; border-radius:4px; text-decoration:none;">
+                            📄 見積書を表示・ダウンロード
+                        </a>
+                    </div>
+                    
+                    <?php if (count($all_estimates) > 1): ?>
+                    <details style="font-size:12px; margin-bottom:10px;">
+                        <summary style="cursor:pointer; color:#0056b3;">過去の見積履歴を表示</summary>
+                        <ul style="list-style:none; padding-left:10px; margin-top:5px; line-height:1.6;">
+                        <?php foreach(array_slice($all_estimates, 1) as $est): ?>
+                            <li>
+                                <a href="estimate_print.php?id=<?= $project_id ?>&est_id=<?= $est['id'] ?>" target="_blank" style="text-decoration:none; color:#555;">
+                                    📄 <?= htmlspecialchars($est['created_at']) ?> 提示分 (税込: ¥<?= number_format($est['total_price'] * 1.1) ?>)
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                        </ul>
+                    </details>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div style="font-size:12px; color:#666; padding:10px; text-align:center; background:#fff; border-radius:4px;">見積書はまだ発行されていません。</div>
+                <?php endif; ?>
+                
+                <hr style="border:0; border-top:1px dashed #c8e6c9; margin:15px 0;">
+                
+                <h3 style="margin-top:0; font-size:14px; color:#0056b3; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">正式なご依頼（設計依頼データ送付）</h3>
+                
+                <?php if ($project_info['status'] === 'quote_req'): ?>
+                    <p style="font-size:11px; color:#666; margin-bottom:10px;">見積もり内容をご確認いただき、正式に発注される場合は、こちらから必要な設計データを送付してください。</p>
+                    <button onclick="document.getElementById('orderModal').classList.add('active')" style="width:100%; background:#0056b3; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:14px;">
+                        📤 設計依頼データの送付
                     </button>
+                <?php else: ?>
+                    <div style="font-size:12px; color:#155724; background:#d4edda; padding:10px; border-radius:4px; text-align:center; border:1px solid #c3e6cb;">
+                        <strong>✅ 正式発注済み（必要図書提出済）</strong><br>
+                        <span style="font-size:11px;">現在、担当者が図書を確認し、設計作業を進めています。</span>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- ===== 発注データアップロードモーダル ===== -->
+        <div class="modal-overlay" id="orderModal">
+            <div class="modal-box" style="max-width:600px;">
+                <div class="modal-title">📤 設計依頼データの送付（正式発注）</div>
+                <div style="font-size:13px; margin-bottom:15px; color:#555;">以下の必須データをアップロードして、正式に発注してください。</div>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="request_design_start">
+                    
+                    <?php
+                        $is_common = ($project_info['req_permit'] || $project_info['req_wall'] || (!($project_info['req_permit']||$project_info['req_wall']||$project_info['req_skin']||$project_info['req_sky'])));
+                        $is_sky = $project_info['req_sky'];
+                        $is_skin = $project_info['req_skin'];
+                    ?>
+                    
+                    <?php if ($is_common): ?>
+                    <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
+                        <strong style="display:block; margin-bottom:10px; color:#1e40af;">【共通図書（構造計算等）】</strong>
+                        
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">意匠CADデータ（平面・立面・配置・矩計） <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[cad_design_all][]" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">確認申請書（2面〜5面） <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[app_doc][]" accept=".pdf" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">地盤調査報告書 <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[soil_report][]" accept=".pdf,.zip" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($is_sky): ?>
+                    <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
+                        <strong style="display:block; margin-bottom:10px; color:#1e40af;">【天空率計算 図書】</strong>
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">道路の資料（座標、測量図、道路台帳等） <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[road_data][]" accept=".pdf,.zip,.jpg,.png" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">真北の資料 <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[true_north][]" accept=".pdf,.zip,.jpg,.png" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($is_skin): ?>
+                    <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
+                        <strong style="display:block; margin-bottom:10px; color:#1e40af;">【外皮計算 図書】</strong>
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">断熱材・サッシ等の仕様書 <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[insulation_spec][]" accept=".pdf,.zip" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:3px;">設備仕様書（換気・エアコン等） <span style="color:red;">*</span></label>
+                            <input type="file" name="upload_files[equipment_spec][]" accept=".pdf,.zip" multiple required style="width:100%; font-size:12px;">
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">その他補足事項・メッセージ</label>
+                        <textarea name="client_notes_extra" rows="3" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="よろしくお願いいたします。"></textarea>
+                    </div>
+                    
+                    <div class="modal-btns">
+                        <button type="button" onclick="document.getElementById('orderModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
+                        <button type="submit" style="padding:8px 20px; background:#0056b3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;" onclick="this.innerHTML='送信中...';">送信して正式発注</button>
+                    </div>
                 </form>
             </div>
         </div>
