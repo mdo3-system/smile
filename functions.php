@@ -79,6 +79,57 @@ function addMonths($dateStr, $months) {
     return $date->format('Y-m-d');
 }
 
+// ==========================================
+// 3. スケジュール共通定義（管理者・依頼主で共用）
+// ==========================================
+
+/**
+ * 依頼種別に応じた一次回答までの営業日数を返す
+ */
+function getScheduleBaseDays(array $project_info): int {
+    $req_permit      = (int)($project_info['req_permit']      ?? 0);
+    $req_wall        = (int)($project_info['req_wall']        ?? 0);
+    $req_skin        = (int)($project_info['req_skin']        ?? 0);
+    $req_sky         = (int)($project_info['req_sky']         ?? 0);
+    $req_opt_kisohari = (int)($project_info['req_opt_kisohari'] ?? 0);
+
+    if ($req_permit || $req_opt_kisohari) return 12;
+    if ($req_wall)                         return 7;
+    if ($req_skin || $req_sky)             return 10;
+    return 12; // デフォルト
+}
+
+/**
+ * スケジュールステップ定義を返す（FIXED_LOGIC.md §5 準拠）
+ * @param int $base_days 一次回答までの営業日数
+ */
+function getScheduleSteps(int $base_days): array {
+    return [
+        ['name' => '設計図書の受領',         'actor' => 'client',   'desc' => '開始時',                    'days' => 0,         'type' => 'base'],
+        ['name' => '着手基準日 (一次回答)',   'actor' => 'designer', 'desc' => "{$base_days}営業日程度",    'days' => $base_days,'type' => 'biz'],
+        ['name' => '構造計算・図面 初回提示', 'actor' => 'designer', 'desc' => '着手から7〜10営業日',       'days' => 10,        'type' => 'biz'],
+        ['name' => '構造図CB (内容確認)',     'actor' => 'client',   'desc' => '初回提示から4営業日',        'days' => 4,         'type' => 'biz'],
+        ['name' => '修正図面UP',              'actor' => 'designer', 'desc' => 'CB確認から3営業日',          'days' => 3,         'type' => 'biz'],
+        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '修正UPから3営業日',          'days' => 3,         'type' => 'biz'],
+        ['name' => '質疑・審査待機',          'actor' => 'wait',     'desc' => '確認機関の審査',             'days' => 30,        'type' => 'cal'],
+        ['name' => '補正対応',                'actor' => 'designer', 'desc' => '質疑受領から7営業日',        'days' => 7,         'type' => 'biz'],
+        ['name' => '残金のご精算',            'actor' => 'client',   'desc' => '完了後7日以内',              'days' => 7,         'type' => 'cal'],
+    ];
+}
+
+/**
+ * 見積時受領図面のカテゴリ定義
+ */
+function getEstimatePdfCategories(): array {
+    return [
+        'pdf_plan'      => '平面図',
+        'pdf_elevation' => '立面図',
+        'pdf_layout'    => '配置図',
+        'pdf_section'   => '矩計図',
+        'pdf_area_calc' => '求積図',
+    ];
+}
+
 
 // ==========================================
 // 3. Email送信ロジック

@@ -12,42 +12,10 @@
         </div>
         
         <?php
-        // 計算タイプ別の納期判定
-        $req_permit = $project_info['req_permit'] ?? 0;
-        $req_wall = $project_info['req_wall'] ?? 0;
-        $req_skin = $project_info['req_skin'] ?? 0;
-        $req_sky = $project_info['req_sky'] ?? 0;
-        $req_opt_kisohari = $project_info['req_opt_kisohari'] ?? 0;
-
-        $base_days = 12;
-        if ($req_permit == 1 || $req_opt_kisohari == 1) {
-            $base_days = 12;
-        } elseif ($req_wall == 1) {
-            $base_days = 7;
-        } elseif ($req_skin == 1 || $req_sky == 1) {
-            $base_days = 10;
-        }
-
+        // 共通関数で営業日数とステップを取得 (functions.php)
+        $base_days      = getScheduleBaseDays($project_info);
+        $schedule_steps = getScheduleSteps($base_days);
         $primary_due_date = $project_info['primary_due_date'] ?? null;
-        
-        // スケジュール定義 (FIXED_LOGIC.md 準拠)
-        $schedule_steps = [
-            ['name' => '設計図書の受領', 'actor' => 'client', 'desc' => '開始時', 'days' => 0, 'type' => 'base'],
-            ['name' => '着手基準日 (一次回答)', 'actor' => 'designer', 'desc' => "{$base_days}営業日程度", 'days' => $base_days, 'type' => 'biz'],
-            ['name' => '構造計算・図面 初回提示', 'actor' => 'designer', 'desc' => '着手から7〜10営業日', 'days' => 10, 'type' => 'biz'],
-            ['name' => '構造図CB (内容確認)', 'actor' => 'client', 'desc' => '初回提示から4営業日', 'days' => 4, 'type' => 'biz'],
-            ['name' => '修正図面UP', 'actor' => 'designer', 'desc' => 'CB確認から3営業日', 'days' => 3, 'type' => 'biz'],
-            ['name' => '申請図書一式UP', 'actor' => 'designer', 'desc' => '修正UPから3営業日', 'days' => 3, 'type' => 'biz'],
-            ['name' => '質疑・審査待機', 'actor' => 'wait', 'desc' => '確認機関の審査', 'days' => 30, 'type' => 'cal'],
-            ['name' => '補正対応', 'actor' => 'designer', 'desc' => '質疑受領から7営業日', 'days' => 7, 'type' => 'biz'],
-            ['name' => '残金のご精算', 'actor' => 'client', 'desc' => '完了後7日以内', 'days' => 7, 'type' => 'cal'],
-        ];
-
-        // 日付計算
-        $current_date = $primary_due_date ? date('Y-m-d', strtotime("-{$base_days} weekdays", strtotime($primary_due_date))) : null; 
-        if ($primary_due_date) {
-            $current_calc_date = $primary_due_date;
-        }
 
         echo '<div style="max-height: 400px; overflow-y: auto;">';
         echo '<table style="width:100%; border-collapse:collapse; font-size:11px;">';

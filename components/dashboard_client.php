@@ -54,36 +54,10 @@
                 <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 全体スケジュール</h3>
                 <div style="font-size:13px; line-height:1.6;">
                     <?php
-                    // 日数計算のベース
-                    $req_permit = $project_info['req_permit'] ?? 0;
-                    $req_wall = $project_info['req_wall'] ?? 0;
-                    $req_skin = $project_info['req_skin'] ?? 0;
-                    $req_sky = $project_info['req_sky'] ?? 0;
-                    $req_opt_kisohari = $project_info['req_opt_kisohari'] ?? 0;
-                    
-                    $base_days = 12;
-                    if ($req_permit == 1 || $req_opt_kisohari == 1) {
-                        $base_days = 12;
-                    } elseif ($req_wall == 1) {
-                        $base_days = 7;
-                    } elseif ($req_skin == 1 || $req_sky == 1) {
-                        $base_days = 10;
-                    }
-
+                    // 共通関数で営業日数とステップを取得 (functions.php)
+                    $base_days      = getScheduleBaseDays($project_info);
+                    $schedule_steps = getScheduleSteps($base_days);
                     $primary_due_date = $project_info['primary_due_date'] ?? null;
-                    
-                    // スケジュール定義 (FIXED_LOGIC.md 準拠)
-                    $schedule_steps = [
-                        ['name' => '設計図書の受領', 'actor' => 'client', 'desc' => '開始時', 'days' => 0, 'type' => 'base'],
-                        ['name' => '着手基準日 (一次回答)', 'actor' => 'designer', 'desc' => "{$base_days}営業日程度", 'days' => $base_days, 'type' => 'biz'],
-                        ['name' => '構造計算・図面 初回提示', 'actor' => 'designer', 'desc' => '着手から7〜10営業日', 'days' => 10, 'type' => 'biz'],
-                        ['name' => '構造図CB (内容確認)', 'actor' => 'client', 'desc' => '初回提示から4営業日', 'days' => 4, 'type' => 'biz'],
-                        ['name' => '修正図面UP', 'actor' => 'designer', 'desc' => 'CB確認から3営業日', 'days' => 3, 'type' => 'biz'],
-                        ['name' => '申請図書一式UP', 'actor' => 'designer', 'desc' => '修正UPから3営業日', 'days' => 3, 'type' => 'biz'],
-                        ['name' => '質疑・審査待機', 'actor' => 'wait', 'desc' => '確認機関の審査', 'days' => 30, 'type' => 'cal'],
-                        ['name' => '補正対応', 'actor' => 'designer', 'desc' => '質疑受領から7営業日', 'days' => 7, 'type' => 'biz'],
-                        ['name' => '残金のご精算', 'actor' => 'client', 'desc' => '完了後7日以内', 'days' => 7, 'type' => 'cal'],
-                    ];
 
                     if (empty($primary_due_date)) {
                         echo '<div style="color:#e53e3e; font-size:12px; margin-bottom:10px; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">⏳ 具体的な日付は、設計依頼のご提出後に担当者が確認・設定します。</div>';
@@ -185,32 +159,7 @@
                 </div>
             </div>
 
-            <div class="box" style="margin-top:15px; background:#f1f5f9; border-color:#cbd5e1;">
-                <h3 style="margin-top:0; font-size:14px; color:#334155; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">📋 見積時の受領図面</h3>
-                <div style="font-size:11px; color:#64748b; margin-bottom:10px;">※見積依頼時にご提示いただいた参考図面です。</div>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <?php
-                    $est_pdf_cats = ['pdf_plan' => '平面図', 'pdf_elevation' => '立面図', 'pdf_layout' => '配置図', 'pdf_section' => '矩計図', 'pdf_area_calc' => '求積図'];
-                    $has_est_files = false;
-                    foreach ($est_pdf_cats as $cat => $label) {
-                        if (!empty($files_by_cat[$cat])) {
-                            $has_est_files = true;
-                            echo "<div style='margin-bottom:8px;'><strong style='color:#1e40af; font-size:12px;'>{$label}:</strong><br>";
-                            foreach ($files_by_cat[$cat] as $f) {
-                                $url = (strpos($f['drive_file_id'], 'uploads/') !== 0 && !empty($f['drive_file_id'])) 
-                                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                    : htmlspecialchars($f['drive_file_id'], ENT_QUOTES);
-                                echo "<div style='margin-bottom:3px;'><a href='{$url}' target='_blank' class='file-link' style='white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90%;'>📄 {$f['file_name']}</a></div>";
-                            }
-                            echo "</div>";
-                        }
-                    }
-                    if (!$has_est_files) {
-                        echo "<div style='color:#999; font-size:12px;'>提出された図面はありません。</div>";
-                    }
-                    ?>
-                </div>
-            </div>
+            <?php require __DIR__ . '/col_estimate_files.php'; ?>
             
             <div class="box" style="margin-top:15px; background:#e8f5e9; border-color:#c8e6c9;">
                 <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">📝 見積書・請求書</h3>
