@@ -49,8 +49,9 @@
             $current_calc_date = $primary_due_date;
         }
 
+        echo '<div style="max-height: 400px; overflow-y: auto;">';
         echo '<table style="width:100%; border-collapse:collapse; font-size:11px;">';
-        echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定</th><th style="padding:6px; text-align:left;">実施日</th></tr></thead>';
+        echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; position:sticky; top:0;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定</th><th style="padding:6px; text-align:left;">実施日</th></tr></thead>';
         echo '<tbody>';
         
         $calc_date = $primary_due_date; 
@@ -113,6 +114,7 @@
             echo "</tr>";
         }
         echo '</tbody></table>';
+        echo '</div>';
         ?>
     </div>
     <!-- ▲▲▲ 進捗スケジュール可視化 ▲▲▲ -->

@@ -490,18 +490,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $max_version = (int)$stmtVersion->fetchColumn();
                 $new_version = $max_version + 1;
 
+                $update_reason = $_POST['update_reason'] ?? null;
+
                 // 3. 新しいレコードを挿入
                 $stmtInsert = $pdo->prepare("
-                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
-                    VALUES (:pid, :cat, :name, :drive_id, :ver, 1)
+                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) 
+                    VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)
                 ");
                 $stmtInsert->execute([
                     'pid' => $project_id,
                     'cat' => $file_category,
                     'name' => $file_name,
                     'drive_id' => $drive_file_id,
-                    'ver' => $new_version
+                    'ver' => $new_version,
+                    'reason' => $update_reason
                 ]);
+
+                // 差し替え理由があればメッセージに投稿
+                if (!empty($update_reason)) {
+                    $cat_label = $file_category; // 簡易的にカテゴリーキーを使用。必要ならマップ用意。
+                    $msg = "【図書差し替え通知】\n対象: {$cat_label}\n理由: {$update_reason}";
+                    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                    $stmtMsg->execute([
+                        'pid' => $project_id,
+                        'sid' => $_SESSION['user_id'] ?? 1,
+                        'msg' => $msg
+                    ]);
+                }
 
                 $pdo->commit();
             } catch (Exception $e) {

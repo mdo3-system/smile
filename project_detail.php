@@ -118,7 +118,7 @@ $chat_messages = $stmtMsgs->fetchAll();
     <title>案件詳細 | 構造設計サポート・ポータル</title>
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        .container { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; align-items: flex-start; }
+        .container { display: flex; gap: 20px; width: 98%; max-width: none; margin: 0 auto; align-items: flex-start; }
         .column { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
         .col-left { flex: 1; min-width: 300px; }
         .col-center { flex: 1; min-width: 300px; }
@@ -131,7 +131,7 @@ $chat_messages = $stmtMsgs->fetchAll();
         a.file-link:hover { background: #e1e4e8; }
         
         /* ===== LINEスタイルチャット ===== */
-        .chat-wrapper { display: flex; flex-direction: column; height: 520px; }
+        .chat-wrapper { display: flex; flex-direction: column; height: 75vh; min-height: 600px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 10px; background: #ece5dd; border-radius: 6px 6px 0 0; display: flex; flex-direction: column; gap: 8px; }
         .chat-bubble-row { display: flex; align-items: flex-end; gap: 6px; }
         .chat-bubble-row.from-me { flex-direction: row-reverse; }

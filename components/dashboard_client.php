@@ -182,8 +182,35 @@
                     </div>
                 </div>
             </div>
+
+            <div class="box" style="margin-top:15px; background:#f1f5f9; border-color:#cbd5e1;">
+                <h3 style="margin-top:0; font-size:14px; color:#334155; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">📋 見積時の受領図面</h3>
+                <div style="font-size:11px; color:#64748b; margin-bottom:10px;">※見積依頼時にご提示いただいた参考図面です。</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <?php
+                    $est_pdf_cats = ['pdf_plan' => '平面図', 'pdf_elevation' => '立面図', 'pdf_layout' => '配置図', 'pdf_section' => '矩計図', 'pdf_area_calc' => '求積図'];
+                    $has_est_files = false;
+                    foreach ($est_pdf_cats as $cat => $label) {
+                        if (!empty($files_by_cat[$cat])) {
+                            $has_est_files = true;
+                            echo "<div style='margin-bottom:8px;'><strong style='color:#1e40af; font-size:12px;'>{$label}:</strong><br>";
+                            foreach ($files_by_cat[$cat] as $f) {
+                                $url = (strpos($f['drive_file_id'], 'uploads/') !== 0 && !empty($f['drive_file_id'])) 
+                                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                    : htmlspecialchars($f['drive_file_id'], ENT_QUOTES);
+                                echo "<div style='margin-bottom:3px;'><a href='{$url}' target='_blank' class='file-link' style='white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90%;'>📄 {$f['file_name']}</a></div>";
+                            }
+                            echo "</div>";
+                        }
+                    }
+                    if (!$has_est_files) {
+                        echo "<div style='color:#999; font-size:12px;'>提出された図面はありません。</div>";
+                    }
+                    ?>
+                </div>
+            </div>
             
-            <div class="box" style="background:#e8f5e9; border-color:#c8e6c9;">
+            <div class="box" style="margin-top:15px; background:#e8f5e9; border-color:#c8e6c9;">
                 <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">📝 見積書・請求書</h3>
                 
                 <?php if (!empty($all_estimates)): ?>
@@ -246,9 +273,21 @@
                     
                     <?php include 'upload_slots.php'; ?>
                     
+                    <div style="margin-bottom:15px; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:6px;">
+                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:8px; color:#b91c1c;">【重要】見積時から図面の変更はありますか？</label>
+                        <div style="display:flex; gap:15px; margin-bottom:10px;">
+                            <label style="font-size:13px; cursor:pointer;"><input type="radio" name="drawing_changed" value="no" required onchange="document.getElementById('drawing_change_notes_area').style.display='none'; document.getElementById('drawing_change_notes').removeAttribute('required');"> 変更なし</label>
+                            <label style="font-size:13px; cursor:pointer;"><input type="radio" name="drawing_changed" value="yes" required onchange="document.getElementById('drawing_change_notes_area').style.display='block'; document.getElementById('drawing_change_notes').setAttribute('required', 'required');"> 変更あり</label>
+                        </div>
+                        <div id="drawing_change_notes_area" style="display:none;">
+                            <label style="display:block; font-size:11px; margin-bottom:5px; color:#555;">変更箇所を簡単にお知らせください</label>
+                            <textarea id="drawing_change_notes" name="drawing_change_notes" rows="2" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 2階の窓の位置を変更、面積が1坪増えました 等"></textarea>
+                        </div>
+                    </div>
+
                     <div style="margin-bottom:15px;">
                         <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">その他補足事項・メッセージ</label>
-                        <textarea name="client_notes_extra" rows="3" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="よろしくお願いいたします。"></textarea>
+                        <textarea name="client_notes_extra" rows="3" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="よろしくお願いいたします。"></textarea>
                     </div>
                     
                     <div class="modal-btns">
@@ -382,56 +421,6 @@
             </div>
         </div>
 
-        <!-- ===== 図書差し替え・追加モーダル ===== -->
-        <div class="modal-overlay" id="replaceModal">
-            <div class="modal-box" style="max-width:600px;">
-                <div class="modal-title">🔄 図書の追加・差し替え</div>
-                <div style="font-size:13px; margin-bottom:15px; color:#555;">不足図書のアップロードや、既存ファイルの差し替えを行います。<br>※差し替えを行う場合は、必ず変更内容（理由）を入力してください。</div>
-                <form method="POST" action="project_detail.php?id=<?= $project_id ?>" enctype="multipart/form-data">
-                    <input type="hidden" name="action" value="replace_documents">
-                    <input type="hidden" name="project_id" value="<?= $project_id ?>">
-                    
-                    <?php
-                        // upload_slotsに渡すフラグ。既存ファイルがある場合は update_reason を表示させるための処理を内包
-                        $is_common = ($project_info['req_permit'] || $project_info['req_wall'] || (!($project_info['req_permit']||$project_info['req_wall']||$project_info['req_skin']||$project_info['req_sky'])));
-                        $is_sky = $project_info['req_sky'];
-                        $is_skin = $project_info['req_skin'];
-                    ?>
-                    <?php include 'upload_slots.php'; ?>
-                    
-                    <div class="modal-btns">
-                        <button type="button" onclick="document.getElementById('replaceModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
-                        <button type="submit" style="padding:8px 20px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">アップロードして通知</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <script>
-            // 差し替えモーダル内で、ファイルを選択したら変更理由入力を必須化し、表示するスクリプト
-            document.addEventListener('DOMContentLoaded', function() {
-                const replaceModal = document.getElementById('replaceModal');
-                if (replaceModal) {
-                    const fileInputs = replaceModal.querySelectorAll('input[type="file"]');
-                    fileInputs.forEach(input => {
-                        // required属性を最初は外しておく（必要なものだけアップするため）
-                        input.removeAttribute('required');
-                        
-                        input.addEventListener('change', function() {
-                            const reasonInput = this.closest('div').nextElementSibling;
-                            if (reasonInput && reasonInput.classList.contains('update-reason-input')) {
-                                if (this.files.length > 0) {
-                                    reasonInput.style.display = 'block';
-                                    reasonInput.setAttribute('required', 'required');
-                                } else {
-                                    reasonInput.style.display = 'none';
-                                    reasonInput.removeAttribute('required');
-                                }
-                            }
-                        });
-                    });
-                }
-            });
-        </script>
+        <!-- replaceModal removed -->
     </div>
 </div>
