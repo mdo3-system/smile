@@ -417,6 +417,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($due_date) {
                 $projectRepo->updatePrimaryDueDate($project_id, $due_date);
                 
+                // 設計着手・スケジュール確定のステータスへ進める
+                // primary_prep → contracted (スケジュール確定済み)
+                if (($project_info['status'] ?? '') === 'primary_prep') {
+                    $projectRepo->updateStatus($project_id, 'contracted');
+                }
+                
                 // Auto message
                 $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
                 $stmtMsg->execute([

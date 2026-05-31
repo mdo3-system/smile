@@ -2,7 +2,7 @@
 // components/dashboard_admin.php
 // 管理者用ダッシュボード（全機能入り・進捗特化）
 ?>
-<div class="container" style="max-width: 1600px; display:flex; gap:20px; width:100%;">
+<div class="container" style="display:flex; gap:20px; width:100%;">
     <!-- カラム1: 基本情報 + 依頼主アップロード図書 -->
     <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
         <?php require __DIR__ . '/col_left.php'; ?>

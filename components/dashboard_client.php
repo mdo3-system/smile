@@ -86,7 +86,9 @@
                     ];
 
                     if (empty($primary_due_date)) {
-                        echo '<div style="color:#666; font-size:12px; margin-bottom:10px;">※具体的な日付は、図書提出後に担当者が確認・設定します。</div>';
+                        echo '<div style="color:#e53e3e; font-size:12px; margin-bottom:10px; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">⏳ 具体的な日付は、設計依頼のご提出後に担当者が確認・設定します。</div>';
+                    } else {
+                        echo '<div style="color:#155724; font-size:12px; margin-bottom:10px; background:#d4edda; border:1px solid #c3e6cb; padding:8px; border-radius:4px;">✅ 一次回答期日：<strong>' . date('Y年m月d日', strtotime($primary_due_date)) . '</strong>（スケジュール確定済み）</div>';
                     }
 
                     echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';

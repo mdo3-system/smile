@@ -67,6 +67,18 @@ class EstimateController
             $stmtUpdate = $pdo->prepare("UPDATE estimates SET pdf_drive_file_id = :did WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
             $stmtUpdate->execute(['did' => $pdfDriveId, 'pid' => $projectId]);
 
+            // 5. projects.initial_est_amount が未設定(0 or NULL)の場合のみ初期見積額を自動設定
+            $stmtCheckInit = $pdo->prepare("SELECT initial_est_amount FROM projects WHERE id = :pid");
+            $stmtCheckInit->execute(['pid' => $projectId]);
+            $currentInitAmt = $stmtCheckInit->fetchColumn();
+            if (empty($currentInitAmt) || (int)$currentInitAmt === 0) {
+                $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice > 0) {
+                    $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid");
+                    $stmtInit->execute(['amt' => $totalPrice, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
+                }
+            }
+
             $debug = ob_get_clean();
             header('Content-Type: application/json');
             echo json_encode([
