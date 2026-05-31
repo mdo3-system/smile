@@ -17,10 +17,13 @@
                     $categories = array_merge($base_categories, $file_categories_left_pdf ?? [], $file_categories_left_cad ?? []);
                     $categories['all_in_one_zip'] = '一括ZIPファイル';
 
-                    foreach ($categories as $cat => $label) {
-                        if (isset($files_by_cat[$cat]) && is_array($files_by_cat[$cat])) {
-                            echo "<div><strong style='color:#1e40af;'>{$label}:</strong><br>";
-                            foreach ($files_by_cat[$cat] as $f) {
+                    $has_files = false;
+                    foreach ($files_by_cat as $cat => $files) {
+                        $label = $categories[$cat] ?? 'その他 (' . htmlspecialchars($cat) . ')';
+                        if (is_array($files) && count($files) > 0) {
+                            $has_files = true;
+                            echo "<div style='margin-bottom:8px;'><strong style='color:#1e40af;'>{$label}:</strong><br>";
+                            foreach ($files as $f) {
                                 $url = (strpos($f['drive_file_id'], 'uploads/') !== 0 && !empty($f['drive_file_id'])) 
                                     ? 'https://drive.google.com/file/d/' . htmlspecialchars($f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
                                     : htmlspecialchars($f['drive_file_id'], ENT_QUOTES);
@@ -30,11 +33,6 @@
                         }
                     }
                     
-                    // まだ何もアップロードされていない場合
-                    $has_files = false;
-                    foreach ($categories as $cat => $label) {
-                        if (isset($files_by_cat[$cat])) $has_files = true;
-                    }
                     if (!$has_files) {
                         echo "<div style='color:#999; font-size:12px;'>まだ図書はアップロードされていません。</div>";
                     }
@@ -59,6 +57,34 @@
                     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
                         $req_docs['app_doc'] = '確認申請書（2〜5面）';
                         $req_docs['soil_report'] = '地盤調査資料';
+                    }
+                    if ($project_info['req_skin'] == 1) {
+                        $req_docs['spec_doc'] = '仕様書';
+                        $req_docs['insulation_data'] = '断熱材資料';
+                        $req_docs['sash_data'] = 'サッシ・玄関ドア仕様';
+                        $req_docs['ventilation_data'] = '24時間換気計算図書';
+                        $req_docs['equip_data'] = '設備機器カタログ';
+                    }
+                    if ($project_info['req_sky'] == 1) {
+                        $req_road = true;
+                        $req_north = true;
+                        if (isset($all_estimates) && !empty($all_estimates)) {
+                            $latest_note = json_decode($all_estimates[0]['note'] ?? '[]', true) ?: [];
+                            $has_road = false;
+                            $has_north = false;
+                            foreach ($latest_note as $item) {
+                                if (isset($item['name'])) {
+                                    if (strpos($item['name'], '天空率 道路斜線') !== false) $has_road = true;
+                                    if (strpos($item['name'], '天空率 北側斜線') !== false) $has_north = true;
+                                }
+                            }
+                            if ($has_road || $has_north) {
+                                $req_road = $has_road;
+                                $req_north = $has_north;
+                            }
+                        }
+                        if ($req_road) $req_docs['road_data'] = '道路の資料';
+                        if ($req_north) $req_docs['true_north'] = '真北の資料';
                     }
                     // 地盤改良がある場合は追加
                     if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {

@@ -68,11 +68,30 @@ $is_skin = $project_info['req_skin'];
     </div>
     <?php endif; ?>
     
-    <?php if ($is_sky): ?>
+    <?php 
+    $req_road = true;
+    $req_north = true;
+    if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
+        $latest_note = json_decode($all_estimates[0]['note'] ?? '[]', true) ?: [];
+        $has_road = false;
+        $has_north = false;
+        foreach ($latest_note as $item) {
+            if (isset($item['name'])) {
+                if (strpos($item['name'], '天空率 道路斜線') !== false) $has_road = true;
+                if (strpos($item['name'], '天空率 北側斜線') !== false) $has_north = true;
+            }
+        }
+        // 見積もりが保存されていて判定可能な場合のみ上書き
+        if ($has_road || $has_north) {
+            $req_road = $has_road;
+            $req_north = $has_north;
+        }
+    }
+    if ($is_sky): ?>
     <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
         <strong style="display:block; margin-bottom:10px; color:#1e40af;">【天空率計算 図書】</strong>
-        <?= renderUploadSlot('道路の資料（座標、測量図、レベル等）', 'road_data') ?>
-        <?= renderUploadSlot('真北の資料（真北測量図等）', 'true_north') ?>
+        <?php if ($req_road) echo renderUploadSlot('道路の資料（座標、測量図、レベル等）', 'road_data'); ?>
+        <?php if ($req_north) echo renderUploadSlot('真北の資料（真北測量図等）', 'true_north'); ?>
     </div>
     <?php endif; ?>
     

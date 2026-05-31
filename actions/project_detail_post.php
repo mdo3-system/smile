@@ -202,8 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
         try {
             if ($project_name !== '') {
-                $stmt = $pdo->prepare("UPDATE projects SET project_name = :name, billing_company_name = :billing WHERE id = :pid");
-                $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'pid' => $project_id]);
+                $stmt = $pdo->prepare("UPDATE projects SET project_name = :name, billing_company_name = :billing, billing_phone_number = :b_phone WHERE id = :pid");
+                $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'b_phone' => $phone_number, 'pid' => $project_id]);
             }
             if ($phone_number !== '') {
                 $stmtPhone = $pdo->prepare("UPDATE users SET phone_number = :phone WHERE id = :uid");

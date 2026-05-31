@@ -18,13 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // 1. 案件作成
             $stmt = $pdo->prepare("
-                INSERT INTO projects (client_id, project_name, billing_company_name, status, req_permit, req_wall, req_skin, req_sky, req_opt_kisohari) 
-                VALUES (:client_id, :name, :billing, 'quote_req', :permit, :wall, :skin, :sky, :kisohari)
+                INSERT INTO projects (client_id, project_name, billing_company_name, billing_phone_number, status, req_permit, req_wall, req_skin, req_sky, req_opt_kisohari) 
+                VALUES (:client_id, :name, :billing, :b_phone, 'quote_req', :permit, :wall, :skin, :sky, :kisohari)
             ");
             $stmt->execute([
                 'client_id' => $current_user_id,
                 'name'      => $project_name,
                 'billing'   => trim($_POST['billing_company_name'] ?? ''),
+                'b_phone'   => trim($_POST['phone_number'] ?? ''),
                 'permit'    => isset($_POST['req_permit']) ? 1 : 0,
                 'wall'      => isset($_POST['req_wall']) ? 1 : 0,
                 'skin'      => isset($_POST['req_skin']) ? 1 : 0,

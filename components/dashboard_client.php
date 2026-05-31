@@ -259,11 +259,11 @@
             </div>
         </div>
 
-        <!-- 中央パネル1：成果物一覧 -->
-        <?php require __DIR__ . '/col_center_deliverables.php'; ?>
-
-        <!-- 中央パネル2：依頼主アップロード図書と不足図書 -->
-        <?php require __DIR__ . '/col_center_uploads.php'; ?>
+        <!-- カラム2：成果物一覧 ＋ 依頼主アップロード図書 -->
+        <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
+            <?php require __DIR__ . '/col_center_deliverables.php'; ?>
+            <?php require __DIR__ . '/col_center_uploads.php'; ?>
+        </div>
 
         <!-- 右パネル：チャット -->
         <div class="column col-right" style="flex: 1;">
