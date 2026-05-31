@@ -1,4 +1,4 @@
-<div class="column col-center">
+<div class="column col-center" style="flex: 1;">
             <h2 class="section-title" style="background:#8b5cf6;">📂 成果物（納品物）</h2>
             <div style="font-size:12px; color:#555; margin-bottom:15px;">
                 常に最新版が表示されます。過去の履歴もここからダウンロード可能です。<br>
@@ -119,86 +119,6 @@
                             </div>
                         <?php endforeach; ?>
                     </div>
+                </div>
             <?php endforeach; ?>
-
-            <div class="box" style="margin-top:20px; border-top:2px solid #3b82f6;">
-                <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #ccc; padding-bottom:5px;">依頼主アップロード図書</h3>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <?php
-                    $base_categories = [
-                        'cad_design_all' => '意匠CADデータ一式',
-                        'pdf_plan' => '平面図',
-                        'pdf_elevation' => '立面図'
-                    ];
-                    global $file_categories_left_pdf, $file_categories_left_cad;
-                    $categories = array_merge($base_categories, $file_categories_left_pdf ?? [], $file_categories_left_cad ?? []);
-                    $categories['all_in_one_zip'] = '一括ZIPファイル';
-
-                    foreach ($categories as $cat => $label) {
-                        if (isset($files_by_cat[$cat]) && is_array($files_by_cat[$cat])) {
-                            echo "<div><strong style='color:#1e40af;'>{$label}:</strong><br>";
-                            foreach ($files_by_cat[$cat] as $f) {
-                                $url = (strpos($f['drive_file_id'], 'uploads/') !== 0 && !empty($f['drive_file_id'])) 
-                                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                    : htmlspecialchars($f['drive_file_id'], ENT_QUOTES);
-                                echo "<div style='margin-bottom:3px;'><a href='{$url}' target='_blank' class='file-link' style='white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90%;'>📄 {$f['file_name']}</a></div>";
-                            }
-                            echo "</div>";
-                        }
-                    }
-                    
-                    // まだ何もアップロードされていない場合
-                    $has_files = false;
-                    foreach ($categories as $cat => $label) {
-                        if (isset($files_by_cat[$cat])) $has_files = true;
-                    }
-                    if (!$has_files) {
-                        echo "<div style='color:#999; font-size:12px;'>まだ図書はアップロードされていません。</div>";
-                    }
-                    ?>
-                </div>
-            </div>
-
-            <?php if ($project_info['status'] === 'quote_req' || $project_info['status'] === 'primary_prep'): ?>
-            <div class="box" style="background:#f8fafc; border-color:#e2e8f0; margin-top:15px;">
-                <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">📋 提出が必要な図書</h3>
-                <div style="display:flex; flex-direction:column; gap:8px; font-size:12px; margin-bottom:15px;">
-                    <?php
-                    // 依頼内容に基づく必要図書の判定
-                    $req_docs = [];
-                    // 許容応力度の場合は意匠CAD必須（平面、立面、矩計、配置など。ここでは一括ZIPがあればOKとする判定も可能）
-                    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-                        $req_docs['cad_design_all'] = '意匠CAD一式 (または個別図面)';
-                    }
-                    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-                        $req_docs['app_doc'] = '確認申請書（2〜5面）';
-                        $req_docs['soil_report'] = '地盤調査資料';
-                    }
-                    // 地盤改良がある場合は追加
-                    if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-                        $req_docs['soil_impr'] = '地盤改良関連図書';
-                    }
-
-                    foreach ($req_docs as $key => $label) {
-                        $is_submitted = false;
-                        if (isset($files_by_cat[$key])) {
-                            $is_submitted = true;
-                        } else if ($key === 'cad_design_all') {
-                            // 個別のCAD図面でもOKとする
-                            if (isset($files_by_cat['cad_plan']) || isset($files_by_cat['cad_elevation']) || isset($files_by_cat['all_in_one_zip'])) {
-                                $is_submitted = true;
-                            }
-                        }
-                        
-                        if ($is_submitted) {
-                            echo "<div>✅ {$label} <span style='color:#10b981;'>(UP済)</span></div>";
-                        } else {
-                            echo "<div>❌ <span style='color:#ef4444; font-weight:bold;'>{$label}</span> <span style='color:#999;'>(未提出)</span></div>";
-                        }
-                    }
-                    ?>
-                </div>
-
-            </div>
-            <?php endif; ?>
-        </div>
+</div>

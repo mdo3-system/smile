@@ -259,95 +259,11 @@
             </div>
         </div>
 
-        <!-- 中央パネル：提出図書と成果物 -->
-        <div class="column col-center" style="flex: 1;">
-            <h2 class="section-title" style="background:#3b82f6;">📁 図書のやり取り</h2>
+        <!-- 中央パネル1：成果物一覧 -->
+        <?php require __DIR__ . '/col_center_deliverables.php'; ?>
 
-            <!-- 成果物を最上段へ -->
-            <div class="box" style="border:2px solid #3b82f6; box-shadow:0 4px 6px rgba(59,130,246,0.1);">
-                <h3 style="margin-top:0; font-size:14px; color:#1e40af; border-bottom:1px solid #bfdbfe; padding-bottom:5px;">🎁 納品された成果物</h3>
-                <div style="font-size:12px; color:#555; margin-bottom:10px;">
-                    完成した構造図や計算書はこちらからダウンロードしてください。
-                </div>
-                <?php 
-                $has_artifact = false;
-                $artifact_categories = [
-                    'structural_dwg' => '構造図', 
-                    'calc_doc' => '構造計算書', 
-                    'wall_calc_doc' => '壁量計算書',
-                    'skin_calc_doc' => '外皮計算書',
-                    'sky_calc_doc' => '天空率計算書'
-                ];
-                foreach ($artifact_categories as $cat => $label):
-                    if (isset($files_by_cat[$cat])):
-                        $has_artifact = true;
-                        $f = $files_by_cat[$cat][0];
-                        $url = (strpos($f['drive_file_id'], 'uploads/') !== 0 && !empty($f['drive_file_id'])) ? 'https://drive.google.com/file/d/' . htmlspecialchars($f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($f['drive_file_id'], ENT_QUOTES);
-                ?>
-                    <div style="padding:10px; margin-bottom:10px; border:1px solid #93c5fd; background:#eff6ff; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-                        <div style="font-weight:bold; color:#1e40af; font-size:13px;">📄 <?= $label ?> (V<?= $f['version'] ?>)</div>
-                        <a href="<?= $url ?>" target="_blank" class="file-link" style="font-size:12px; padding:6px 12px; background:#3b82f6; color:white; border-radius:4px; text-decoration:none;">ダウンロード</a>
-                    </div>
-                <?php 
-                    endif;
-                endforeach; 
-                if (!$has_artifact): 
-                ?>
-                    <div style="padding:15px; text-align:center; color:#999; border:1px dashed #ccc; border-radius:6px;">
-                        まだ納品された成果物はありません。
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- 提出図書リストと差し替え -->
-            <div class="box">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:10px;">
-                    <h3 style="margin:0; font-size:14px;">ご提出いただいた図書</h3>
-                    <?php if ($project_info['status'] !== 'quote_req'): ?>
-                        <button onclick="document.getElementById('replaceModal').classList.add('active')" style="background:#dc3545; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">ファイルの追加・差し替え</button>
-                    <?php endif; ?>
-                </div>
-                
-                <div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
-                    <?php
-                    // 依頼内容に基づく必要図書の判定 (左パネルと同じロジック)
-                    $req_docs = [];
-                    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-                        $req_docs['cad_layout'] = '配置図';
-                        $req_docs['cad_plan_1f'] = '1F平面図';
-                        $req_docs['cad_plan_2f'] = '2F平面図';
-                        $req_docs['cad_elevation'] = '立面図';
-                        $req_docs['cad_section'] = '矩計図';
-                    }
-                    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-                        $req_docs['app_doc'] = '確認申請書';
-                        $req_docs['soil_report'] = '地盤調査資料';
-                    }
-                    if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-                        $req_docs['soil_impr'] = '地盤改良関連図書';
-                    }
-
-                    if (empty($req_docs)) {
-                        echo "<div style='color:#666;'>見積依頼前のため、必要な図書はまだ確定していません。</div>";
-                    } else {
-                        foreach ($req_docs as $key => $label) {
-                            if (isset($files_by_cat[$key])) {
-                                $f = $files_by_cat[$key][0];
-                                $url = (strpos($f['drive_file_id'], 'uploads/') !== 0 && !empty($f['drive_file_id'])) ? 'https://drive.google.com/file/d/' . htmlspecialchars($f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($f['drive_file_id'], ENT_QUOTES);
-                                echo "<div style='padding:8px; border:1px solid #e2e8f0; border-radius:4px; background:#f8fafc; display:flex; justify-content:space-between;'>";
-                                echo "<span><strong>{$label}:</strong> <a href='{$url}' target='_blank' style='color:#2563eb; text-decoration:none;'>📄 {$f['file_name']}</a></span>";
-                                echo "</div>";
-                            } else {
-                                echo "<div style='padding:8px; border:1px solid #fca5a5; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:bold; display:flex; justify-content:space-between;'>";
-                                echo "<span><strong>{$label}:</strong> 未提出（不足図書）</span>";
-                                echo "</div>";
-                            }
-                        }
-                    }
-                    ?>
-                </div>
-            </div>
-        </div>
+        <!-- 中央パネル2：依頼主アップロード図書と不足図書 -->
+        <?php require __DIR__ . '/col_center_uploads.php'; ?>
 
         <!-- 右パネル：チャット -->
         <div class="column col-right" style="flex: 1;">
