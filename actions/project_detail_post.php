@@ -375,6 +375,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update status to doc_submitted and notify admin that design request is completed
                 $projectRepo->updateStatus($project_id, 'doc_submitted');
                 
+                // 自動見積りの最新額を初期お見積額に設定
+                $stmtEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+                $stmtEst->execute(['pid' => $project_id]);
+                $latest_est = $stmtEst->fetchColumn();
+                if ($latest_est) {
+                    $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid AND (initial_est_amount IS NULL OR initial_est_amount = 0)");
+                    $stmtInit->execute(['amt' => $latest_est, 'dt' => date('Y-m-d'), 'pid' => $project_id]);
+                }
+                
                 $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
                 $stmtNotify->execute([
                     'pid' => $project_id,

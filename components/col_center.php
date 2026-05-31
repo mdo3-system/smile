@@ -1,39 +1,53 @@
 <div class="column col-center">
             <h2 class="section-title" style="background:#8b5cf6;">📂 成果物（納品物）</h2>
-            <div style="font-size:12px; color:#555; margin-bottom:15px;">常に最新版が表示されます。過去の履歴もここからダウンロード可能です。</div>
+            <div style="font-size:12px; color:#555; margin-bottom:15px;">
+                常に最新版が表示されます。過去の履歴もここからダウンロード可能です。<br>
+                <span style="color:#d97706; font-weight:bold;">※補正通知等の追加資料は、右下のチャット欄からアップロードしてください。</span>
+            </div>
 
             <?php
             // 各種目別の成果物定義
             $artifact_sections = [];
             
-            if ($req_permit == 1 || $req_opt_kisohari == 1) {
+            if ($req_permit == 1) {
                 $artifact_sections['許容応力度計算'] = [
-                    'structural_dwg' => '構造図',
-                    'standard_dwg' => '構造標準図',
-                    'calc_doc' => '構造計算書',
-                    'safety_cert' => '安全証明書',
                     'inv_primary' => '一次回答',
-                    'inv_primary_rev' => '修正一次回答'
+                    'inv_primary_rev' => '修正一次回答',
+                    'safety_cert' => '安全証明書',
+                    'standard_dwg' => '構造標準図',
+                    'structural_dwg' => '構造図',
+                    'calc_doc' => '構造計算書'
                 ];
             }
             if ($req_wall == 1) {
-                $artifact_sections['性能表示壁量計算'] = [
-                    'wall_calc_doc' => '壁量計算書',
-                    'wall_kiso_dwg' => '基礎伏図',
-                    'wall_perf_doc' => '性能評価用図書'
+                $artifact_sections['壁量計算'] = [
+                    'inv_primary' => '一次回答',
+                    'inv_primary_rev' => '修正一次回答',
+                    'wall_spreadsheet' => '表計算ツール',
+                    'wall_calc_doc' => '壁量計算書'
+                ];
+            }
+            if ($req_opt_kisohari == 1) {
+                $artifact_sections['＋OP（基礎・横架材計算書）'] = [
+                    'standard_dwg' => '構造標準図',
+                    'structural_dwg' => '構造図',
+                    'kiso_hari_calc_doc' => '基礎横架材計算書'
                 ];
             }
             if ($req_skin == 1) {
                 $artifact_sections['外皮計算'] = [
+                    'inv_primary' => '一次回答',
+                    'inv_primary_rev' => '修正一次回答',
                     'skin_calc_doc' => '外皮計算書',
-                    'skin_energy_doc' => '一次エネ計算書',
-                    'skin_desc_doc' => '設計内容説明書'
+                    'skin_web_prog' => 'WEBプログラム計算書',
+                    'skin_doc' => '外皮計算資料'
                 ];
             }
             if ($req_sky == 1) {
-                $artifact_sections['天空率計算'] = [
-                    'sky_calc_doc' => '天空率計算書',
-                    'sky_dwg' => '天空率図面'
+                $artifact_sections['天空率'] = [
+                    'inv_primary' => '一次回答',
+                    'inv_primary_rev' => '修正一次回答',
+                    'sky_dwg' => '天空率図書'
                 ];
             }
             // その他の納品物
@@ -184,10 +198,7 @@
                     }
                     ?>
                 </div>
-                <button type="button" onclick="document.getElementById('designModal').classList.add('active')" style="width:100%; background:#3b82f6; color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; display:flex; justify-content:center; align-items:center; gap:8px; box-shadow:0 4px 6px rgba(59,130,246,0.3);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    設計依頼・図書アップロード
-                </button>
+
             </div>
             <?php endif; ?>
         </div>

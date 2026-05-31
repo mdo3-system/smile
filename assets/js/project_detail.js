@@ -334,8 +334,8 @@ function saveAndPrintEstimate() {
                 msg += `税抜金額: ${currentEstimate.toLocaleString()}円\n`;
                 msg += `消費税: ${currentTax.toLocaleString()}円\n`;
                 msg += `税込合計: ${currentTotal.toLocaleString()}円\n\n`;
-                msg += "詳細は添付のPDFまたは以下のリンクからご確認ください。\n";
-                msg += `https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk\n\n`;
+                msg += "詳細は左パネルの最新の見積書からご確認ください。\n";
+                msg += "\n";
                 msg += "ご依頼いただける場合は、「設計依頼データの送付」ボタンから必須ファイル（CADデータ等）をアップロードの上、正式にご発注をお願いいたします。";
 
                 // sendMessageを使ってチャットへ投稿（APIへPOST）

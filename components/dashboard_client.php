@@ -16,7 +16,7 @@
                 </div>
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
-                    <strong>宛先名:</strong> <?= htmlspecialchars($project_info['billing_company_name'] ?: $project_info['company_name'], ENT_QUOTES) ?> 様<br>
+                    <strong>宛先名:</strong> <?= htmlspecialchars(!empty($project_info['billing_company_name']) ? $project_info['billing_company_name'] : $project_info['company_name'], ENT_QUOTES) ?> 様<br>
                     <strong>お電話:</strong> <?= htmlspecialchars($project_info['client_phone'] ?: '未登録', ENT_QUOTES) ?><br>
                     <?php
                         $status_labels = [
@@ -53,19 +53,94 @@
             <div class="box" style="margin-top:15px; background:#f0f8ff; border-color:#cce5ff;">
                 <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 全体スケジュール</h3>
                 <div style="font-size:13px; line-height:1.6;">
-                    <?php if (empty($project_info['primary_due_date'])): ?>
-                        <div style="color:#666; font-size:12px;">※スケジュールは、図書提出後に担当者が確認・設定します。</div>
-                    <?php else: ?>
-                        <strong>一次回答納期:</strong> <?= htmlspecialchars($project_info['primary_due_date']) ?><br>
-                        <?php
-                            $actuals = json_decode($project_info['schedule_actuals'] ?? '{}', true);
-                            if (!empty($actuals['primary_reply'])):
-                        ?>
-                            <div style="color:#28a745; font-size:11px;">✅ <?= htmlspecialchars($actuals['primary_reply']) ?> に一次回答済</div>
-                        <?php endif; ?>
+                    <?php
+                    // 日数計算のベース
+                    $req_permit = $project_info['req_permit'] ?? 0;
+                    $req_wall = $project_info['req_wall'] ?? 0;
+                    $req_skin = $project_info['req_skin'] ?? 0;
+                    $req_sky = $project_info['req_sky'] ?? 0;
+                    $req_opt_kisohari = $project_info['req_opt_kisohari'] ?? 0;
+                    
+                    $base_days = 12;
+                    if ($req_permit == 1 || $req_opt_kisohari == 1) {
+                        $base_days = 12;
+                    } elseif ($req_wall == 1) {
+                        $base_days = 7;
+                    } elseif ($req_skin == 1 || $req_sky == 1) {
+                        $base_days = 10;
+                    }
+
+                    $primary_due_date = $project_info['primary_due_date'] ?? null;
+                    
+                    // スケジュール定義 (FIXED_LOGIC.md 準拠)
+                    $schedule_steps = [
+                        ['name' => '設計図書の受領', 'actor' => 'client', 'desc' => '開始時', 'days' => 0, 'type' => 'base'],
+                        ['name' => '着手基準日 (一次回答)', 'actor' => 'designer', 'desc' => "{$base_days}営業日程度", 'days' => $base_days, 'type' => 'biz'],
+                        ['name' => '構造計算・図面 初回提示', 'actor' => 'designer', 'desc' => '着手から7〜10営業日', 'days' => 10, 'type' => 'biz'],
+                        ['name' => '構造図CB (内容確認)', 'actor' => 'client', 'desc' => '初回提示から4営業日', 'days' => 4, 'type' => 'biz'],
+                        ['name' => '修正図面UP', 'actor' => 'designer', 'desc' => 'CB確認から3営業日', 'days' => 3, 'type' => 'biz'],
+                        ['name' => '申請図書一式UP', 'actor' => 'designer', 'desc' => '修正UPから3営業日', 'days' => 3, 'type' => 'biz'],
+                        ['name' => '質疑・審査待機', 'actor' => 'wait', 'desc' => '確認機関の審査', 'days' => 30, 'type' => 'cal'],
+                        ['name' => '補正対応', 'actor' => 'designer', 'desc' => '質疑受領から7営業日', 'days' => 7, 'type' => 'biz'],
+                        ['name' => '残金のご精算', 'actor' => 'client', 'desc' => '完了後7日以内', 'days' => 7, 'type' => 'cal'],
+                    ];
+
+                    if (empty($primary_due_date)) {
+                        echo '<div style="color:#666; font-size:12px; margin-bottom:10px;">※具体的な日付は、図書提出後に担当者が確認・設定します。</div>';
+                    }
+
+                    echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';
+                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日</th></tr></thead>';
+                    echo '<tbody>';
+                    
+                    $calc_date = $primary_due_date;
+                    $schedule_actuals = json_decode($project_info['schedule_actuals'] ?? '{}', true) ?: [];
+                    
+                    foreach ($schedule_steps as $idx => $step) {
+                        $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
+                        $badge = '';
+                        if ($step['actor'] == 'designer') {
+                            $badge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟦 サポート</span>';
+                        } elseif ($step['actor'] == 'client') {
+                            $client_display_name = htmlspecialchars($project_info['client_name'], ENT_QUOTES) . '様';
+                            $badge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟩 ' . $client_display_name . '</span>';
+                        } else {
+                            $badge = '<span style="background:#64748b; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">⬛ 審査・待機</span>';
+                        }
+
+                        $date_str = '<span style="color:#64748b;">未確定</span>';
                         
-                        <!-- TODO: 他のマイルストーン（構造計算納期など）も必要に応じて追加 -->
-                    <?php endif; ?>
+                        if ($primary_due_date) {
+                            if ($idx == 0) {
+                                $date_str = '<span style="color:#64748b;">-</span>';
+                            } elseif ($idx == 1) {
+                                $calc_date = $primary_due_date;
+                                $date_str = '<strong>' . date('m/d', strtotime($primary_due_date)) . '</strong>';
+                            } else {
+                                if ($step['type'] == 'biz') {
+                                    $calc_date = addBusinessDays($calc_date, $step['days']);
+                                } elseif ($step['type'] == 'cal') {
+                                    $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
+                                }
+                                $date_str = date('m/d', strtotime($calc_date));
+                            }
+                        }
+
+                        // 実施日があればそれを起算日に上書きする
+                        $actual_date = $schedule_actuals[$idx] ?? '';
+                        if ($actual_date) {
+                            $calc_date = $actual_date;
+                            $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
+                        }
+
+                        echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
+                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
+                        echo "<td style='padding:6px;'>{$badge}</td>";
+                        echo "<td style='padding:6px;'>{$date_str}</td>";
+                        echo "</tr>";
+                    }
+                    echo '</tbody></table>';
+                    ?>
                 </div>
             </div>
 
@@ -364,7 +439,7 @@
         <div class="modal-overlay" id="editInfoModal">
             <div class="modal-box">
                 <div class="modal-title">基本情報の編集</div>
-                <form method="POST" action="actions/project_detail_post.php">
+                <form method="POST" action="project_detail.php?id=<?= $project_id ?>">
                     <input type="hidden" name="action" value="update_client_info">
                     <input type="hidden" name="project_id" value="<?= $project_id ?>">
                     
@@ -396,7 +471,7 @@
             <div class="modal-box" style="max-width:600px;">
                 <div class="modal-title">🔄 図書の追加・差し替え</div>
                 <div style="font-size:13px; margin-bottom:15px; color:#555;">不足図書のアップロードや、既存ファイルの差し替えを行います。<br>※差し替えを行う場合は、必ず変更内容（理由）を入力してください。</div>
-                <form method="POST" action="actions/project_detail_post.php" enctype="multipart/form-data">
+                <form method="POST" action="project_detail.php?id=<?= $project_id ?>" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="replace_documents">
                     <input type="hidden" name="project_id" value="<?= $project_id ?>">
                     
