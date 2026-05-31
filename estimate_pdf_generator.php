@@ -12,7 +12,7 @@ function generate_estimate_pdf($project_id, $pdo) {
     // 案件情報と見積もり情報を取得
     // 案件情報を取得
     $stmt = $pdo->prepare("
-        SELECT p.project_name, u.company_name, u.contact_name 
+        SELECT p.project_name, p.billing_company_name, u.company_name, u.contact_name 
         FROM projects p 
         JOIN users u ON p.client_id = u.id 
         WHERE p.id = :pid
@@ -73,7 +73,8 @@ function generate_estimate_pdf($project_id, $pdo) {
     // kozminproregular = 小塚明朝 Regular
     $pdf->SetFont('kozminproregular', '', 10);
     
-    $company_name = htmlspecialchars($data['company_name'] ?? '', ENT_QUOTES);
+    $billing_name = !empty($data['billing_company_name']) ? $data['billing_company_name'] : ($data['company_name'] ?? '');
+    $company_name = htmlspecialchars($billing_name, ENT_QUOTES);
     $contact_name = htmlspecialchars($data['contact_name'] ?? '', ENT_QUOTES);
     $project_name = htmlspecialchars($data['project_name'] ?? '', ENT_QUOTES);
     $date_str = date('Y年m月d日');

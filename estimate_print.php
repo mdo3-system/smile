@@ -10,7 +10,7 @@ if (!$project_id) { die("案件が指定されていません。"); }
 
 // 案件情報を取得
 $stmt = $pdo->prepare("
-    SELECT p.project_name, u.company_name, u.contact_name 
+    SELECT p.project_name, p.billing_company_name, u.company_name, u.contact_name 
     FROM projects p 
     JOIN users u ON p.client_id = u.id 
     WHERE p.id = :pid
@@ -102,7 +102,12 @@ if (!$data['total_price']) {
         <div class="info-section">
             <div class="client-info">
                 <div class="client-name">
-                    <?php if(!empty($data['company_name'])): ?><?= htmlspecialchars($data['company_name'], ENT_QUOTES) ?><br><?php endif; ?>
+                    <?php 
+                        $billing_name = !empty($data['billing_company_name']) ? $data['billing_company_name'] : ($data['company_name'] ?? '');
+                        if(!empty($billing_name)): 
+                    ?>
+                        <?= htmlspecialchars($billing_name, ENT_QUOTES) ?><br>
+                    <?php endif; ?>
                     <?= htmlspecialchars($data['contact_name'], ENT_QUOTES) ?> 様
                 </div>
                 <div class="project-desc">

@@ -18,12 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // 1. 案件作成
             $stmt = $pdo->prepare("
-                INSERT INTO projects (client_id, project_name, status, req_permit, req_wall, req_skin, req_sky, req_opt_kisohari) 
-                VALUES (:client_id, :name, 'quote_req', :permit, :wall, :skin, :sky, :kisohari)
+                INSERT INTO projects (client_id, project_name, billing_company_name, status, req_permit, req_wall, req_skin, req_sky, req_opt_kisohari) 
+                VALUES (:client_id, :name, :billing, 'quote_req', :permit, :wall, :skin, :sky, :kisohari)
             ");
             $stmt->execute([
                 'client_id' => $current_user_id,
                 'name'      => $project_name,
+                'billing'   => trim($_POST['billing_company_name'] ?? ''),
                 'permit'    => isset($_POST['req_permit']) ? 1 : 0,
                 'wall'      => isset($_POST['req_wall']) ? 1 : 0,
                 'skin'      => isset($_POST['req_skin']) ? 1 : 0,
@@ -31,6 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'kisohari'  => isset($_POST['req_opt_kisohari']) ? 1 : 0,
             ]);
             $new_project_id = $pdo->lastInsertId();
+
+            // 電話番号が入力されていればユーザー情報を更新
+            $phone = trim($_POST['phone_number'] ?? '');
+            if (!empty($phone)) {
+                $stmtPhone = $pdo->prepare("UPDATE users SET phone_number = :phone WHERE id = :uid");
+                $stmtPhone->execute(['phone' => $phone, 'uid' => $current_user_id]);
+            }
 
             // 2. 仕様データの初期登録 (空枠を作成)
             $stmtSpecs = $pdo->prepare("
@@ -331,6 +339,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label for="project_name">物件名（必須）</label>
                     <input type="text" id="project_name" name="project_name" placeholder="例: ○○様邸 新築工事" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="billing_company_name">見積書・請求書の宛先名称（※変更がある場合のみ）</label>
+                    <input type="text" id="billing_company_name" name="billing_company_name" placeholder="例: 株式会社○○ 支店等">
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">※未入力の場合はご登録の会社名が宛先となります。</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone_number">お電話番号</label>
+                    <input type="text" id="phone_number" name="phone_number" placeholder="例: 090-1234-5678">
                 </div>
                 
                 <div class="form-group">

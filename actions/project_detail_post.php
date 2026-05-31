@@ -193,8 +193,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
 
+    // 基本情報の更新処理 (update_client_info)
+    if ($action === 'update_client_info') {
+        $project_name = trim($_POST['project_name'] ?? '');
+        $billing_company_name = trim($_POST['billing_company_name'] ?? '');
+        $phone_number = trim($_POST['phone_number'] ?? '');
+        
+        $pdo->beginTransaction();
+        try {
+            if ($project_name !== '') {
+                $stmt = $pdo->prepare("UPDATE projects SET project_name = :name, billing_company_name = :billing WHERE id = :pid");
+                $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'pid' => $project_id]);
+            }
+            if ($phone_number !== '') {
+                $stmtPhone = $pdo->prepare("UPDATE users SET phone_number = :phone WHERE id = :uid");
+                $stmtPhone->execute(['phone' => $phone_number, 'uid' => $_SESSION['user_id']]);
+            }
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("基本情報の更新に失敗しました: " . $e->getMessage());
+        }
+        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    }
+
     // 仕様保存・一括ファイルアップロード処理
-    if ($action === 'save_client_specs_draft' || $action === 'request_design_start') {
+    if ($action === 'save_client_specs_draft' || $action === 'request_design_start' || $action === 'replace_documents') {
         $pdo->beginTransaction();
         try {
             // Update upload mode
@@ -316,6 +340,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Only execute validation and status change if action is request_design_start
+            if ($action === 'replace_documents') {
+                $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                $stmtMsg->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => "【図書追加・差し替え通知】\n不足図書の追加、または既存ファイルの差し替えが行われました。ファイル一覧をご確認ください。"
+                ]);
+            }
+
             if ($action === 'request_design_start') {
                 // Backend validation for drawing change report
                 $drawing_changed = $_POST['drawing_changed'] ?? '';
