@@ -6,6 +6,13 @@
             </div>
 
             <?php
+            // 案件ごとの依頼内容を取得
+            $req_permit = $project_info['req_permit'] ?? 0;
+            $req_wall = $project_info['req_wall'] ?? 0;
+            $req_skin = $project_info['req_skin'] ?? 0;
+            $req_sky = $project_info['req_sky'] ?? 0;
+            $req_opt_kisohari = $project_info['req_opt_kisohari'] ?? 0;
+
             // 各種目別の成果物定義
             $artifact_sections = [];
             
