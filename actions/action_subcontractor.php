@@ -5,9 +5,8 @@
 if ($action === 'order_subcontractor') {
     $pdo->beginTransaction();
     try {
-        // 納期計算: 依頼日+3営業日 (簡易的に+3 day)
-        // TODO: functions.php の営業日計算関数を使うのが理想だが、ここでは一旦直接+3 day
-        $due_date = date('Y-m-d', strtotime('+3 weekdays'));
+        // 納期
+        $due_date = $_POST['due_date'] ?? date('Y-m-d', strtotime('+3 weekdays'));
 
         $stmt = $pdo->prepare("INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount, status, due_date, order_type, floor_area, opt_kiso, opt_yuka) VALUES (:pid, :sub_id, :task, :amount, 'requested', :due, :type, :area, :kiso, :yuka)");
         $stmt->execute([

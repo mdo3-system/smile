@@ -193,7 +193,12 @@ if ($is_admin) {
                     <input type="text" name="task_title" placeholder="依頼内容（自動入力）" style="width:100%; margin-bottom:10px; font-size:14px; padding:5px; box-sizing:border-box;" readonly required>
                     <input type="number" name="order_amount" placeholder="金額(税込) 自動入力" style="width:100%; margin-bottom:15px; font-size:14px; padding:5px; box-sizing:border-box;" readonly required>
                     
-                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:10px; font-size:16px; font-weight:bold; cursor:pointer; border-radius:4px;" onclick="return confirm('発注してよろしいですか？（納期は3日後に自動設定されます）')">発注を確定・送信</button>
+                    <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                        <label style="font-size:14px; font-weight:bold; width:100px;">希望納品日:</label>
+                        <input type="date" name="due_date" required style="flex:1; padding:5px; font-size:14px; border:1px solid #ccc; border-radius:3px;">
+                    </div>
+
+                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:10px; font-size:16px; font-weight:bold; cursor:pointer; border-radius:4px;" onclick="return confirm('発注してよろしいですか？')">発注を確定・送信</button>
                 </form>
 
                 <script>
@@ -359,7 +364,7 @@ if ($is_admin) {
                         }
                     ?>
                     <p>状態: <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 8px; border-radius:4px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span></p>
-                    <p style="font-size:13px; color:#555;">完了納期予定日: <strong><?= $task['expected_delivery_date'] ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></p>
+                    <p style="font-size:13px; color:#555;">完了納期予定日: <strong><?= !empty($task['expected_delivery_date']) ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></p>
 
                     <div class="delivery-section" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:13px;">
                         <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
