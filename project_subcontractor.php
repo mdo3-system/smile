@@ -277,12 +277,13 @@ if ($is_admin) {
             </div>
         </div>
         <?php foreach ($my_tasks as $task): 
-            // 該当案件の最新のCADファイルを取得
+            // 該当案件の最新かつ「業者公開済み」のCADファイルを取得
             $stmtFiles = $pdo->prepare("
                 SELECT * FROM project_files 
                 WHERE project_id = :project_id 
                 AND file_category LIKE 'cad_%' 
-                AND is_latest = 1
+                AND is_latest = 1 
+                AND is_published_to_sub = 1
             ");
             $stmtFiles->execute(['project_id' => $task['project_id']]);
             $cad_files = $stmtFiles->fetchAll();
@@ -291,41 +292,37 @@ if ($is_admin) {
                 <h3>案件名: <?= htmlspecialchars($task['project_name'], ENT_QUOTES) ?></h3>
                 <p>依頼内容: <?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?></p>
                 <p>報酬額: <strong><?= number_format($task['order_amount']) ?>円</strong></p>
+
+                <!-- CADデータ表示セクション (常に表示) -->
+                <div class="cad-files-section" style="margin:15px 0; border:1px solid #cce5ff; background:#e6f2ff; padding:10px; border-radius:5px; font-size:13px;">
+                    <strong style="color:#004085;">📂 共有されたCADデータ:</strong>
+                    <?php if (count($cad_files) > 0): ?>
+                        <ul style="margin:5px 0 0 0; padding-left:20px;">
+                            <?php foreach ($cad_files as $file): 
+                                $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
+                                if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
+                                    $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                }
+                            ?>
+                                <li style="margin-bottom:3px;">
+                                    <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
+                                        📄 <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> <span class="badge" style="background:#555; color:white; font-size:10px; padding:1px 4px; border-radius:3px;">V<?= $file['version'] ?></span>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php else: ?>
+                        <div style="color:#856404; font-size:12px; margin-top:5px;">現在共有されているCADデータはありません。（管理者が公開するとここに表示されます）</div>
+                    <?php endif; ?>
+                </div>
                 
                 <?php if ($task['status'] === 'requested'): ?>
                     <form method="POST">
                         <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
                         <button type="submit" class="btn-accept">この依頼を承諾する</button>
                     </form>
-                    
-                    <div class="cad-files-section" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; color:#c0392b; font-size:13px;">
-                        <strong>📂 CADデータダウンロード:</strong>
-                        <span style="margin-left:10px; font-weight:bold;">🔒 承諾待ちのため非公開 (依頼承諾後に公開されます)</span>
-                    </div>
                 <?php elseif ($task['status'] === 'accepted'): ?>
                     <p>状態: <span class="badge" style="background:#007bff; color:white; padding:3px 8px; border-radius:4px;">作業中 (承諾済)</span></p>
-                    
-                    <div class="cad-files-section" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:13px;">
-                        <strong>📂 CADデータダウンロード:</strong>
-                        <?php if (count($cad_files) > 0): ?>
-                            <ul style="margin:5px 0 0 0; padding-left:20px;">
-                                <?php foreach ($cad_files as $file): 
-                                    $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
-                                    if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
-                                        $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
-                                    }
-                                ?>
-                                    <li style="margin-bottom:3px;">
-                                        <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
-                                            📄 <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> <span class="badge" style="background:#555; color:white; font-size:10px; padding:1px 4px; border-radius:3px;">V<?= $file['version'] ?></span>
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        <?php else: ?>
-                            <span style="color:#999; font-size:12px; margin-left:10px;">登録されているCADデータはありません。</span>
-                        <?php endif; ?>
-                    </div>
 
                     <div class="delivery-section" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:13px;">
                         <strong>📤 成果物（作成した図面）の納品:</strong>

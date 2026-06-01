@@ -10,8 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require __DIR__ . '/action_subcontractor.php';
     }
     
-    // ファイルアップロード関連（成果物・通常アップロード）
-    elseif (in_array($action, ['upload_artifact']) || (isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK)) {
+    // ファイルアップロード関連（成果物・通常アップロード・他ファイル記載・CAD公開トグル）
+    elseif (in_array($action, ['upload_artifact', 'toggle_cad_publish']) || ($_POST['action_type'] ?? '') === 'single_upload' || (isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK)) {
         require __DIR__ . '/action_upload_file.php';
     }
 

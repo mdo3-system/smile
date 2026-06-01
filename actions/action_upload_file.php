@@ -41,6 +41,15 @@ if ($action === 'upload_artifact' && $is_admin) {
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
+if ($action === 'toggle_cad_publish' && $is_admin) {
+    $file_id = intval($_POST['file_id'] ?? 0);
+    if ($file_id > 0) {
+        $stmt = $pdo->prepare("UPDATE project_files SET is_published_to_sub = NOT is_published_to_sub WHERE id = :id");
+        $stmt->execute(['id' => $file_id]);
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+}
+
 // ファイルアップロード処理（管理者・依頼主）
 $is_upload = isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK;
 $is_included = isset($_POST['included_in_other']) && $_POST['included_in_other'] == '1';

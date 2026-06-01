@@ -99,6 +99,18 @@
                                     </a>
                                 <?php endif; ?>
                                 
+                                <?php if ($is_admin && strpos($cat, 'cad_') === 0): ?>
+                                    <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                        <input type="hidden" name="action" value="toggle_cad_publish">
+                                        <input type="hidden" name="file_id" value="<?= $latest['id'] ?>">
+                                        <?php if ($latest['is_published_to_sub']): ?>
+                                            <button type="submit" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;" onclick="return confirm('業者への公開を取り消しますか？')">業者公開を解除</button>
+                                        <?php else: ?>
+                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;">業者へ公開する</button>
+                                        <?php endif; ?>
+                                    </form>
+                                <?php endif; ?>
+
                                 <?php if (count($history) > 1): ?>
                                     <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
                                         <option value="">過去バージョン...</option>
