@@ -159,9 +159,10 @@ if ($is_admin) {
     <?php if ($is_admin && $project_info): ?>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
             <h1 style="margin:0; font-size:24px;">🏢 協力業者への発注・管理ダッシュボード</h1>
-            <div style="font-size:14px;">
-                案件名: <strong><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></strong>
-                <a href="project_detail.php?id=<?= $project_id ?>" style="margin-left:15px; color:#3b82f6; text-decoration:none; font-weight:bold;">⬅ メイン画面へ戻る</a>
+            <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
+                <span>案件名: <strong><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></strong></span>
+                <span style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></span>
+                <a href="project_detail.php?id=<?= $project_id ?>" style="color:#3b82f6; text-decoration:none; font-weight:bold;">⬅ メイン画面へ戻る</a>
             </div>
         </div>
 
@@ -370,9 +371,10 @@ if ($is_admin) {
     <?php else: ?>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
             <h1 style="margin:0; font-size:24px;">👷 協力業者専用ダッシュボード</h1>
-            <div style="font-size:14px;">
-                ログイン中: <strong><?= htmlspecialchars($_SESSION['contact_name'], ENT_QUOTES) ?></strong> 様
-                <a href="logout.php" style="margin-left:15px; color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
+            <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
+                <span>ログイン中: <strong><?= htmlspecialchars($_SESSION['contact_name'], ENT_QUOTES) ?></strong> 様</span>
+                <span style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></span>
+                <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
             </div>
         </div>
         <?php foreach ($my_tasks as $task): 

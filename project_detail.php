@@ -178,6 +178,7 @@ $chat_messages = $stmtMsgs->fetchAll();
             <?php endif; ?>
         </div>
         <div style="display:flex; align-items:center; gap:15px;">
+            <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= SYSTEM_VERSION ?></div>
             <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>
     </div>

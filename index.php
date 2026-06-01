@@ -60,6 +60,7 @@ $status_labels = [
     <div class="header">
         <h1>💼 案件ダッシュボード</h1>
         <div style="display:flex; align-items:center; gap:15px;">
+            <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="subcontractors_list.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">👷 協力業者マスター</a>
                 <a href="admin_sales.php" style="font-weight:bold; color:white; background:#e67e22; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📊 経理・売上管理</a>
