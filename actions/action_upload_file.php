@@ -61,7 +61,7 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
             $pdo->beginTransaction();
             
             $file_name = '';
-            $drive_file_id = null;
+            $drive_file_id = '';
             
             if ($is_included) {
                 $file_name = '【他ファイルに記載】';
