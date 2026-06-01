@@ -89,9 +89,15 @@
                                 : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
                         ?>
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-                                <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb;">
-                                    📄 最新版 (V<?= $latest['version'] ?>)
-                                </a>
+                                <?php if ($latest['file_name'] === '【他ファイルに記載】'): ?>
+                                    <span style="background:#f59e0b; color:white; padding:3px 8px; border-radius:3px; font-size:11px; font-weight:bold;">
+                                        ✅ 提出済（他のCADファイルに記載）
+                                    </span>
+                                <?php else: ?>
+                                    <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb;">
+                                        📄 最新版 (V<?= $latest['version'] ?>)
+                                    </a>
+                                <?php endif; ?>
                                 
                                 <?php if (count($history) > 1): ?>
                                     <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
@@ -137,7 +143,10 @@
                                     </div>
                                     <?php endif; ?>
 
-                                    <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer; white-space:nowrap;">UP/更新</button>
+                                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                        <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer; white-space:nowrap;">UP/更新</button>
+                                        <span style="font-size:8px; color:#ef4444; font-weight:bold; text-align:center;">※ボタンを押して<br>確定してください</span>
+                                    </div>
                                 </div>
                             </form>
                         <?php endif; ?>

@@ -170,10 +170,6 @@
             
 
             <?php if ($is_admin): ?>
-            <!-- 協力業者ダッシュボードへの切り替えリンク -->
-            <div style="margin-top:10px; text-align:center;">
-                <a href="project_subcontractor.php?id=<?= $project_id ?>" target="_blank" style="display:inline-block; background:#3b82f6; color:white; padding:7px 15px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者への発注・管理ダッシュボードを開く</a>
-            </div>
 
             <!-- 金銭管理フォーム -->
             <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px; padding:10px;">

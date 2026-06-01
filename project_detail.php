@@ -166,7 +166,12 @@ $chat_messages = $stmtMsgs->fetchAll();
 </head>
 <body>
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
-        <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
+            <?php if ($is_admin): ?>
+                <a href="project_subcontractor.php?id=<?= $project_id ?>" target="_blank" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
+            <?php endif; ?>
+        </div>
         <div style="display:flex; align-items:center; gap:15px;">
             <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>
