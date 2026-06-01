@@ -76,7 +76,7 @@ if ($action === 'order_subcontractor') {
         $pdo->rollBack();
         die("発注処理に失敗しました: " . $e->getMessage());
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
 // 納品承認処理

@@ -127,9 +127,12 @@
                                     <input type="file" name="upload_file" id="file_<?= $cat ?>" <?= empty($history) ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:120px;">
                                     
                                     <?php if (empty($history)): // 初回提出時のみ「他ファイルに記載」を選べるようにする ?>
-                                    <label style="font-size:10px; display:flex; align-items:center; gap:2px; color:#475569; white-space:nowrap;">
-                                        <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 別ファイル済
-                                    </label>
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <label style="font-size:10px; display:flex; align-items:center; gap:2px; color:#475569; white-space:nowrap;">
+                                            <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 別ファイル済
+                                        </label>
+                                        <div style="font-size:9px; color:#94a3b8; line-height:1.2;">※一括UP等で他図面に含まれる場合</div>
+                                    </div>
                                     <?php endif; ?>
 
                                     <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer; white-space:nowrap;">UP/更新</button>
