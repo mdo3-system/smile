@@ -25,7 +25,7 @@ AIエージェントは、以下の「バックアップ」および「バージ
     - 次に `git add .` および `git commit -m "Backup before: [指示内容]"` を実行せよ。
     - コミット後、必ず `git push origin main` を行い、GitHubへプッシュすること。
     - **【重要】GitHubへのプッシュ完了後、必ず以下のSSHコマンドを実行し、本番Webサーバー(XServer)へ変更をデプロイすること。**
-      `ssh -o BatchMode=yes -p 10022 mdo3@sv16592.xserver.jp "cd thanks.work/public_html/system && git pull origin main"`
+      `ssh -o BatchMode=yes -p 10022 mdo3@mdo3.xsrv.jp "cd thanks.work/public_html/system && git pull origin main"`
     - 「バックアップおよびデプロイ完了」と報告する際は、必ず実際に実行した Git/SSH コマンドの出力をチャット欄に引用せよ。証拠がない報告は虚偽と見なす。
 3.  **新バージョンの宣言と反映:**
     - **原則:** コードを修正する際は、必ずパッチバージョンをインクリメント（`*.*.+1`）すること。

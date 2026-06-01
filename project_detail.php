@@ -99,11 +99,13 @@ $orders = $stmtOrders->fetchAll();
 $stmtDelivered = $pdo->prepare("
     SELECT o.*, u.contact_name, 
            f1.drive_file_id AS pdf_id, f1.file_name AS pdf_name, f1.version AS pdf_ver,
-           f2.drive_file_id AS arc_id, f2.file_name AS arc_name, f2.version AS arc_ver
+           f2.drive_file_id AS arc_d_id, f2.file_name AS arc_d_name, f2.version AS arc_d_ver,
+           f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
     FROM subcontractor_orders o 
     JOIN users u ON o.subcontractor_id = u.id 
     LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
-    LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend' AND f2.is_latest = 1
+    LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend_design' AND f2.is_latest = 1
+    LEFT JOIN project_files f3 ON o.project_id = f3.project_id AND f3.file_category = 'sub_architrend_struct' AND f3.is_latest = 1
     WHERE o.project_id = :pid AND o.status = 'delivered'
 ");
 $stmtDelivered->execute(['pid' => $project_id]);
