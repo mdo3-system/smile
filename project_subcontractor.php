@@ -13,6 +13,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
     $expected_delivery_date = $_POST['expected_delivery_date'];
     $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'accepted', expected_delivery_date = :edate WHERE id = :id AND subcontractor_id = :sub_id");
     $stmt->execute(['edate' => $expected_delivery_date, 'id' => $order_id, 'sub_id' => $user_id]);
+
+    $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
+    $stmtP->execute(['id' => $order_id]);
+    $p_id = $stmtP->fetchColumn();
+
+    if ($p_id) {
+        $msg = "発注を承諾しました。完了予定日: " . date('Y年m月d日', strtotime($expected_delivery_date));
+        $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
+        $stmtMsg->execute(['pid' => $p_id, 'sid' => $user_id, 'msg' => $msg]);
+    }
+
     header("Location: project_subcontractor.php");
     exit;
 }
@@ -274,20 +285,85 @@ if ($is_admin) {
                 <?php if (empty($admin_orders)): ?>
                     <p style="color:#666;">まだ発注履歴はありません。</p>
                 <?php else: ?>
-                    <?php foreach($admin_orders as $o): ?>
+                    <?php foreach($admin_orders as $o): 
+                        $badge_bg = '#6c757d'; 
+                        $status_label = $o['status'];
+                        if ($o['status'] === 'requested') {
+                            $badge_bg = '#ffc107'; $status_label = '発注済 (未承諾)';
+                        } elseif ($o['status'] === 'accepted') {
+                            $badge_bg = '#007bff'; $status_label = '作業中 (承諾済)';
+                        } elseif ($o['status'] === 'delivered') {
+                            $badge_bg = '#fd7e14'; $status_label = '納品済 (確認待ち)';
+                        } elseif ($o['status'] === 'completed') {
+                            $badge_bg = '#28a745'; $status_label = '完了 (確認済)';
+                        }
+                    ?>
                         <div style="padding:10px 0; border-bottom:1px solid #eee;">
                             <div style="font-weight:bold; margin-bottom:5px;">
                                 <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?> 様宛
-                                <span class="badge" style="background:#555; color:white; padding:3px 6px; border-radius:3px; font-size:12px; margin-left:10px;"><?= htmlspecialchars($o['status'], ENT_QUOTES) ?></span>
+                                <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 6px; border-radius:3px; font-size:12px; margin-left:10px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span>
                             </div>
                             <div style="font-size:13px; color:#444;">
                                 依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
                                 発注額: <?= number_format($o['order_amount']) ?>円<br>
-                                発注日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?>
+                                発注日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
+                                希望納品日: <?= !empty($o['due_date']) ? date('Y年m月d日', strtotime($o['due_date'])) : '未設定' ?><br>
+                                完了予定日 (業者回答): <?= !empty($o['expected_delivery_date']) ? '<strong style="color:#e67e22;">'.date('Y年m月d日', strtotime($o['expected_delivery_date'])).'</strong>' : '<span style="color:#999;">未定</span>' ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
+            </div>
+
+            <!-- 管理者用 案件別チャットUI -->
+            <div class="task-card">
+                <?php
+                    // このプロジェクトのチャット履歴を取得
+                    $stmtChatAdmin = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'sub_admin' ORDER BY id ASC");
+                    $stmtChatAdmin->execute(['pid' => $project_id]);
+                    $admin_msgs = $stmtChatAdmin->fetchAll();
+                ?>
+                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">💬 協力業者連絡チャット</h2>
+                <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:400px;">
+                    <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $project_id ?>">
+                        <?php foreach ($admin_msgs as $msg): 
+                            $isMe = ($msg['sender_id'] == $_SESSION['user_id'] || $msg['sender_id'] == 1);
+                            $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
+                            $align = $isMe ? 'flex-end' : 'flex-start';
+                            
+                            $senderName = $isMe ? 'あなた (管理者)' : '協力業者';
+                        ?>
+                            <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
+                                <span style="font-size:10px; color:#666; margin-bottom:2px;"><?= $senderName ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
+                                <?php if (!empty($msg['message_text'])): ?>
+                                    <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:80%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($msg['file_path'])): 
+                                    $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
+                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
+                                        : htmlspecialchars($msg['file_path'], ENT_QUOTES);
+                                ?>
+                                    <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
+                                        <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
+                                            <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo "🖼 画像を見る"; else echo "📄 添付ファイルを見る"; ?>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if(empty($admin_msgs)): ?>
+                            <div style="text-align:center; color:#aaa; font-size:12px; margin-top:20px;">まだメッセージはありません。</div>
+                        <?php endif; ?>
+                    </div>
+                    <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px; display:flex; gap:10px; align-items:center;">
+                        <input type="file" id="chatFile_<?= $project_id ?>" accept="image/*,.pdf" style="display:none;" onchange="document.getElementById('fileLabel_<?= $project_id ?>').style.color='#28a745'">
+                        <label for="chatFile_<?= $project_id ?>" id="fileLabel_<?= $project_id ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
+                        
+                        <textarea id="chatText_<?= $project_id ?>" style="flex:1; border:1px solid #ccc; border-radius:20px; padding:8px 12px; font-size:13px; resize:none;" rows="1" placeholder="メッセージを入力..."></textarea>
+                        
+                        <button onclick="sendProjMessage(<?= $project_id ?>)" style="background:#3b82f6; color:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:16px;">➤</button>
+                    </div>
+                </div>
             </div>
         </div>
 
