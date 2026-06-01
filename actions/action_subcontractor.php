@@ -84,11 +84,41 @@ if ($action === 'approve_delivery') {
     $order_id = intval($_POST['order_id']);
     $pdo->beginTransaction();
     try {
-        // 1. 発注ステータスを completed に更新し、納品完了日を記録
-        $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :id");
-        $stmt->execute(['id' => $order_id]);
+        // 1. サブコントラクターがアップロードした PDF を取得
+        $stmtGetPdf = $pdo->prepare("
+            SELECT * FROM project_files 
+            WHERE project_id = :pid AND file_category = 'sub_structural_pdf' AND is_latest = 1
+        ");
+        $stmtGetPdf->execute(['pid' => $project_id]);
+        $pdf_file = $stmtGetPdf->fetch();
 
-        // 2. 案件ステータスを「提出済・確認中 (submission)」に更新
+        if ($pdf_file) {
+            // 既存の依頼主向け structural_dwg を非最新にする
+            $stmtUpdate = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
+            $stmtUpdate->execute(['pid' => $project_id]);
+
+            // 新しい structural_dwg としてバージョンを上げて挿入
+            $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = 'structural_dwg'");
+            $stmtVer->execute(['pid' => $project_id]);
+            $new_v = ($stmtVer->fetch()['max_v'] ?? 0) + 1;
+
+            $stmtInsert = $pdo->prepare("
+                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest)
+                VALUES (:pid, 'structural_dwg', :fname, :fpath, :ver, 1)
+            ");
+            $stmtInsert->execute([
+                'pid' => $project_id,
+                'fname' => $pdf_file['file_name'],
+                'fpath' => $pdf_file['drive_file_id'],
+                'ver' => $new_v
+            ]);
+        }
+
+        // 2. 発注ステータスを completed に更新し、納品完了日を記録
+        $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :id");
+        $stmtOrder->execute(['id' => $order_id]);
+
+        // 3. 案件ステータスを「提出済・確認中 (submission)」に更新
         $projectRepo->updateStatus($project_id, 'submission');
 
         $pdo->commit();

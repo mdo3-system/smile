@@ -97,10 +97,13 @@ $orders = $stmtOrders->fetchAll();
 
 // 未承認の納品を取得
 $stmtDelivered = $pdo->prepare("
-    SELECT o.*, u.contact_name, f.drive_file_id, f.file_name, f.version
+    SELECT o.*, u.contact_name, 
+           f1.drive_file_id AS pdf_id, f1.file_name AS pdf_name, f1.version AS pdf_ver,
+           f2.drive_file_id AS arc_id, f2.file_name AS arc_name, f2.version AS arc_ver
     FROM subcontractor_orders o 
     JOIN users u ON o.subcontractor_id = u.id 
-    LEFT JOIN project_files f ON o.project_id = f.project_id AND f.file_category = 'structural_dwg' AND f.is_latest = 1
+    LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
+    LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend' AND f2.is_latest = 1
     WHERE o.project_id = :pid AND o.status = 'delivered'
 ");
 $stmtDelivered->execute(['pid' => $project_id]);

@@ -100,14 +100,12 @@ function sendMessage(text) {
             if(data.success) {
                 if (textarea) textarea.value = '';
                 if (fileInput) fileInput.value = '';
-                const preview = document.getElementById('filePreview');
-                if (preview) preview.style.display = 'none';
+                document.getElementById('filePreview').innerHTML = '';
                 pollMessages();
             } else {
-                alert('送信に失敗しました');
+                alert(data.error || '送信失敗');
             }
         })
-        .catch(e => alert('通信エラー: ' + e))
         .finally(() => {
             if (sendBtn) {
                 sendBtn.disabled = false;
@@ -117,21 +115,63 @@ function sendMessage(text) {
 }
 
 function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         sendMessage();
     }
 }
 
 function previewFile(input) {
     const preview = document.getElementById('filePreview');
-    if (preview) {
-        if (input.files.length > 0) {
-            preview.textContent = '📎 ' + input.files[0].name;
-            preview.style.display = 'block';
-        } else {
-            preview.style.display = 'none';
-        }
+    if (input.files && input.files[0]) {
+        preview.innerHTML = `📎 ${input.files[0].name}`;
+    } else {
+        preview.innerHTML = '';
+    }
+}
+
+// ===== 協力業者チャット用関数 (Admin <-> Subcontractor) =====
+function sendSubMessage() {
+    const textarea = document.getElementById('subChatTextarea');
+    const fileInput = document.getElementById('subChatFileInput');
+    const msg = textarea ? textarea.value.trim() : '';
+    if (!msg && (!fileInput || fileInput.files.length === 0)) return;
+
+    const formData = new FormData();
+    formData.append('project_id', window.APP_PROJECT_ID);
+    formData.append('action', 'send_message');
+    formData.append('thread_type', 'sub_admin');
+    formData.append('message_text', msg);
+    if (fileInput && fileInput.files.length > 0) {
+        formData.append('file', fileInput.files[0]);
+    }
+
+    fetch('api_send_message.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                if (textarea) textarea.value = '';
+                if (fileInput) fileInput.value = '';
+                document.getElementById('subFilePreview').innerHTML = '';
+                // 簡易的にリロードして反映させる（非同期更新も可能だがシンプル化のため）
+                window.location.reload();
+            } else {
+                alert(data.error || '送信失敗');
+            }
+        });
+}
+
+function handleSubKey(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        sendSubMessage();
+    }
+}
+
+function previewSubFile(input) {
+    const preview = document.getElementById('subFilePreview');
+    if (input.files && input.files[0]) {
+        preview.innerHTML = `📎 ${input.files[0].name}`;
+    } else {
+        preview.innerHTML = '';
     }
 }
 

@@ -21,50 +21,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $order_id = intval($_POST['order_id']);
     $project_id = intval($_POST['project_id']);
     
-    if (isset($_FILES['delivery_file']) && $_FILES['delivery_file']['error'] === UPLOAD_ERR_OK) {
-        $file_tmp = $_FILES['delivery_file']['tmp_name'];
-        $file_name = $_FILES['delivery_file']['name'];
-        $mime_type = $_FILES['delivery_file']['type'];
+    require_once 'google_drive_client.php';
+    
+    try {
+        $pdo->beginTransaction();
         
-        try {
-            // Google Drive へのアップロード
-            require_once 'google_drive_client.php';
-            $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type);
-            
-            $pdo->beginTransaction();
-            // 1. 最新バージョンの確認
-            $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = 'structural_dwg'");
-            $stmtVer->execute(['pid' => $project_id]);
-            $max_v = $stmtVer->fetch()['max_v'] ?? 0;
-            $new_v = $max_v + 1;
-            
-            // 2. 過去のファイルの is_latest を 0 に更新
-            $stmtUpdateLatest = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
-            $stmtUpdateLatest->execute(['pid' => $project_id]);
-            
-            // 3. 新しいファイルを登録
-            $stmtInsertFile = $pdo->prepare("
-                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
-                VALUES (:pid, 'structural_dwg', :fname, :fpath, :ver, 1)
-            ");
-            $stmtInsertFile->execute([
-                'pid' => $project_id,
-                'fname' => $file_name,
-                'fpath' => $drive_file_id,
-                'ver' => $new_v
-            ]);
-            
-            // 4. 発注ステータスを delivered (納品済) に更新
-            $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered' WHERE id = :id AND subcontractor_id = :sub_id");
-            $stmtOrder->execute(['id' => $order_id, 'sub_id' => $user_id]);
-            
-            $pdo->commit();
-        } catch (Exception $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
+        $files_to_upload = [
+            'architrend_file' => 'sub_architrend',
+            'structural_pdf' => 'sub_structural_pdf'
+        ];
+        
+        $uploaded_any = false;
+        
+        foreach ($files_to_upload as $input_name => $category) {
+            if (isset($_FILES[$input_name]) && $_FILES[$input_name]['error'] === UPLOAD_ERR_OK) {
+                $file_tmp = $_FILES[$input_name]['tmp_name'];
+                $file_name = $_FILES[$input_name]['name'];
+                $mime_type = $_FILES[$input_name]['type'];
+                
+                $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type);
+                
+                // 1. 最新バージョンの確認
+                $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = :cat");
+                $stmtVer->execute(['pid' => $project_id, 'cat' => $category]);
+                $max_v = $stmtVer->fetch()['max_v'] ?? 0;
+                $new_v = $max_v + 1;
+                
+                // 2. 過去のファイルの is_latest を 0 に更新
+                $stmtUpdateLatest = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+                $stmtUpdateLatest->execute(['pid' => $project_id, 'cat' => $category]);
+                
+                // 3. 新しいファイルを登録 (これらは管理者と業者の間のみで表示される)
+                $stmtInsertFile = $pdo->prepare("
+                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                    VALUES (:pid, :cat, :fname, :fpath, :ver, 1)
+                ");
+                $stmtInsertFile->execute([
+                    'pid' => $project_id,
+                    'cat' => $category,
+                    'fname' => $file_name,
+                    'fpath' => $drive_file_id,
+                    'ver' => $new_v
+                ]);
+                $uploaded_any = true;
             }
-            die("納品処理に失敗しました: " . $e->getMessage());
         }
+        
+        if ($uploaded_any) {
+            // 発注ステータスを delivered (納品済) に更新
+            $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered', updated_at = NOW() WHERE id = :id AND subcontractor_id = :sub_id");
+            $stmtOrder->execute(['id' => $order_id, 'sub_id' => $user_id]);
+            $pdo->commit();
+        } else {
+            $pdo->rollBack();
+            die("ファイルが選択されていません。");
+        }
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        die("納品処理に失敗しました: " . $e->getMessage());
     }
     header("Location: project_subcontractor.php");
     exit;
@@ -326,12 +342,22 @@ if ($is_admin) {
 
                     <div class="delivery-section" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:13px;">
                         <strong>📤 成果物（作成した図面）の納品:</strong>
-                        <form method="POST" enctype="multipart/form-data" style="margin-top:5px; display:flex; gap:10px; align-items:center;">
+                        <form method="POST" enctype="multipart/form-data" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
                             <input type="hidden" name="action" value="deliver_task">
                             <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
                             <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
-                            <input type="file" name="delivery_file" required style="font-size:12px;">
-                            <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:12px; cursor:pointer;">納品する</button>
+                            
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <label style="width:120px; font-weight:bold; color:#0056b3;">アーキトレンドデータ:</label>
+                                <input type="file" name="architrend_file" style="font-size:12px;">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <label style="width:120px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
+                                <input type="file" name="structural_pdf" style="font-size:12px;">
+                            </div>
+                            <div style="margin-top:5px;">
+                                <button type="submit" style="background:#28a745; color:white; border:none; padding:6px 15px; border-radius:3px; font-size:13px; font-weight:bold; cursor:pointer;">上記ファイルで納品する</button>
+                            </div>
                         </form>
                     </div>
                 <?php else: ?>
@@ -370,8 +396,99 @@ if ($is_admin) {
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
+
+                <!-- サブコントラクター用 案件別チャットUI -->
+                <?php
+                    // このプロジェクトのチャット履歴を取得
+                    $stmtChat = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'sub_admin' ORDER BY id ASC");
+                    $stmtChat->execute(['pid' => $task['project_id']]);
+                    $sub_msgs = $stmtChat->fetchAll();
+                ?>
+                <div style="margin-top:20px; border-top:2px solid #ccc; padding-top:15px;">
+                    <h4 style="margin:0 0 10px 0; color:#d97706;">💬 この案件の連絡・質疑チャット</h4>
+                    <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:300px;">
+                        <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $task['project_id'] ?>">
+                            <?php foreach ($sub_msgs as $msg): 
+                                $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
+                                $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
+                                $align = $isMe ? 'flex-end' : 'flex-start';
+                                $sender = $isMe ? 'あなた' : '管理者';
+                            ?>
+                                <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
+                                    <span style="font-size:10px; color:#666; margin-bottom:2px;"><?= $sender ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
+                                    <?php if (!empty($msg['message_text'])): ?>
+                                        <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:80%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($msg['file_path'])): 
+                                        $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
+                                            ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
+                                            : htmlspecialchars($msg['file_path'], ENT_QUOTES);
+                                    ?>
+                                        <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
+                                            <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
+                                                <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo "🖼 画像を見る"; else echo "📄 添付ファイルを見る"; ?>
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px; display:flex; gap:10px; align-items:center;">
+                            <input type="file" id="chatFile_<?= $task['project_id'] ?>" accept="image/*,.pdf" style="display:none;" onchange="document.getElementById('fileLabel_<?= $task['project_id'] ?>').style.color='#28a745'">
+                            <label for="chatFile_<?= $task['project_id'] ?>" id="fileLabel_<?= $task['project_id'] ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
+                            
+                            <textarea id="chatText_<?= $task['project_id'] ?>" style="flex:1; border:1px solid #ccc; border-radius:20px; padding:8px 12px; font-size:13px; resize:none;" rows="1" placeholder="メッセージを入力..."></textarea>
+                            
+                            <button onclick="sendProjMessage(<?= $task['project_id'] ?>)" style="background:#3b82f6; color:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:16px;">➤</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
+
+    <script>
+    function sendProjMessage(projectId) {
+        const textEl = document.getElementById('chatText_' + projectId);
+        const fileEl = document.getElementById('chatFile_' + projectId);
+        const msg = textEl.value.trim();
+        
+        if (!msg && (!fileEl.files || fileEl.files.length === 0)) return;
+
+        const formData = new FormData();
+        formData.append('project_id', projectId);
+        formData.append('action', 'send_message');
+        formData.append('thread_type', 'sub_admin');
+        formData.append('message_text', msg);
+        if (fileEl.files && fileEl.files.length > 0) {
+            formData.append('file', fileEl.files[0]);
+        }
+
+        fetch('api_send_message.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    textEl.value = '';
+                    fileEl.value = '';
+                    document.getElementById('fileLabel_' + projectId).style.color = '#6c757d';
+                    window.location.reload();
+                } else {
+                    alert('送信エラー');
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('通信エラー');
+            });
+    }
+    
+    // スクロールを最下部に
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[id^="chatList_"]').forEach(el => {
+            el.scrollTop = el.scrollHeight;
+        });
+    });
+    </script>
 </body>
 </html>

@@ -31,12 +31,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // グローバルチャット送信
     if ($action === 'send_global_message') {
         $message_text = trim($_POST['message_text'] ?? '');
-        if ($message_text !== '') {
-            $stmt = $pdo->prepare("INSERT INTO global_messages (subcontractor_id, sender_id, message_text) VALUES (:sub_id, :sid, :msg)");
+        $drive_file_id = '';
+        $file_type = '';
+
+        if (isset($_FILES['chat_file']) && $_FILES['chat_file']['error'] === UPLOAD_ERR_OK) {
+            require_once 'google_drive_client.php';
+            $file_tmp = $_FILES['chat_file']['tmp_name'];
+            $file_name = $_FILES['chat_file']['name'];
+            $mime_type = $_FILES['chat_file']['type'];
+            $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type);
+            $file_type = (strpos($mime_type, 'image') === 0) ? 'image' : 'file';
+        }
+
+        if ($message_text !== '' || $drive_file_id !== '') {
+            $stmt = $pdo->prepare("INSERT INTO global_messages (subcontractor_id, sender_id, message_text, file_path, file_type) VALUES (:sub_id, :sid, :msg, :fpath, :ftype)");
             $stmt->execute([
                 'sub_id' => $target_sub_id,
                 'sid' => $user_id,
-                'msg' => $message_text
+                'msg' => $message_text,
+                'fpath' => $drive_file_id,
+                'ftype' => $file_type
             ]);
         }
         header("Location: subcontractor_portal.php" . ($is_admin ? "?sub_id=" . $target_sub_id : ""));
@@ -79,12 +93,28 @@ $stmtTasks = $pdo->prepare("
 $stmtTasks->execute(['sub_id' => $target_sub_id]);
 $tasks = $stmtTasks->fetchAll();
 
-// 月次集計データの作成
+// 月次集計データの作成 (25日締め)
 $monthly_totals = [];
 foreach ($tasks as $t) {
     if ($t['status'] === 'delivered') {
         // updated_at を納品日として月を判定
-        $month = date('Y-m', strtotime($t['updated_at'] ?? $t['created_at']));
+        $date_str = $t['updated_at'] ?? $t['created_at'];
+        $ts = strtotime($date_str);
+        
+        $y = (int)date('Y', $ts);
+        $m = (int)date('m', $ts);
+        $d = (int)date('d', $ts);
+        
+        // 26日以降なら翌月分としてカウント
+        if ($d >= 26) {
+            $m++;
+            if ($m > 12) {
+                $m = 1;
+                $y++;
+            }
+        }
+        $month = sprintf("%04d-%02d", $y, $m);
+        
         if (!isset($monthly_totals[$month])) {
             $monthly_totals[$month] = 0;
         }
@@ -183,10 +213,26 @@ $global_messages = $stmtChat->fetchAll();
                         ?>
                             <div style="display:flex; flex-direction:column; align-items: <?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
                                 <div style="font-size:10px; color:#777; margin-bottom:2px;"><?= htmlspecialchars($msg['contact_name']) ?> - <?= date('m/d H:i', strtotime($msg['created_at'])) ?></div>
-                                <div style="max-width:80%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; white-space:pre-wrap;
-                                     <?= $is_mine ? 'background:#3b82f6; color:white; border-bottom-right-radius:2px;' : 'background:#e2e8f0; color:#333; border-bottom-left-radius:2px;' ?>">
-                                    <?= htmlspecialchars($msg['message_text']) ?>
-                                </div>
+                                <?php if (!empty($msg['message_text'])): ?>
+                                    <div style="max-width:80%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; white-space:pre-wrap; <?= $is_mine ? 'background:#3b82f6; color:white; border-bottom-right-radius:2px;' : 'background:#e2e8f0; color:#333; border-bottom-left-radius:2px;' ?>">
+                                        <?= htmlspecialchars($msg['message_text']) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($msg['file_path'])): 
+                                    $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
+                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
+                                        : htmlspecialchars($msg['file_path'], ENT_QUOTES);
+                                ?>
+                                    <div style="max-width:80%; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px; <?= $is_mine ? 'background:#3b82f6;' : 'background:#e2e8f0;' ?>">
+                                        <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; text-decoration:none;">
+                                            <?php if (($msg['file_type'] ?? '') === 'image'): ?>
+                                                🖼 画像を見る
+                                            <?php else: ?>
+                                                📄 添付ファイルを見る
+                                            <?php endif; ?>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -194,10 +240,14 @@ $global_messages = $stmtChat->fetchAll();
                     <?php endif; ?>
                 </div>
 
-                <form method="POST" style="display:flex; gap:5px;">
+                <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;">
                     <input type="hidden" name="action" value="send_global_message">
-                    <textarea name="message_text" rows="2" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; resize:none; font-family:inherit; font-size:13px;" placeholder="メッセージを入力..." required></textarea>
-                    <button type="submit" style="background:#10b981; color:white; border:none; padding:0 15px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                    <div style="display:flex; align-items:center; gap:10px; background:#fff; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                        <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
+                        <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
+                        <textarea name="message_text" rows="2" style="flex:1; border:none; resize:none; font-family:inherit; font-size:13px; outline:none;" placeholder="メッセージを入力..."></textarea>
+                        <button type="submit" style="background:#10b981; color:white; border:none; padding:10px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                    </div>
                 </form>
             </div>
 
