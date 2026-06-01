@@ -5,9 +5,7 @@
 if ($action === 'save_client_specs_draft' || $action === 'request_design_start' || $action === 'replace_documents') {
     $pdo->beginTransaction();
     try {
-        // Update upload mode
-        $upload_mode = $_POST['upload_mode'] ?? 'individual';
-        $projectRepo->updateUploadMode($project_id, $upload_mode);
+
 
         // Save JSON specs
         $wood_details = [

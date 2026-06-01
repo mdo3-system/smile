@@ -12,7 +12,7 @@ if (!function_exists('renderUploadSlot')) {
             <div style="display:flex; align-items:center; gap:10px;">
                 <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').required = false;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px;">
-                    <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="document.getElementById('file_{$name}').required = !this.checked;"> 他ファイルに記載
+                    <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="document.getElementById('file_{$name}').required = !this.checked;"> 別図面ファイルに記載（アップロード不要）
                 </label>
             </div>
             <!-- 差し替え理由 -->
@@ -40,7 +40,7 @@ $is_skin = $project_info['req_skin'];
         <?= renderUploadSlot('PH平面図', 'cad_plan_ph', false) ?>
         <?= renderUploadSlot('RF平面図', 'cad_plan_rf', false) ?>
         <?= renderUploadSlot('立面図 (一式または各面)', 'cad_elevation') ?>
-        <?= renderUploadSlot('矩計図', 'cad_section') ?>
+        <?= renderUploadSlot('矩計図', 'cad_section', false) ?>
         <?= renderUploadSlot('確認申請書（2面〜5面）', 'app_doc') ?>
         <?= renderUploadSlot('地盤調査報告書', 'soil_report') ?>
         <?= renderUploadSlot('地盤改良設計書', 'soil_impr', false) ?>
@@ -69,29 +69,26 @@ $is_skin = $project_info['req_skin'];
     <?php endif; ?>
     
     <?php 
-    $req_road = true;
-    $req_north = true;
+    $req_road = false;
+    $req_north = false;
     if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         $latest_note = json_decode($all_estimates[0]['note'] ?? '[]', true) ?: [];
-        $has_road = false;
-        $has_north = false;
         foreach ($latest_note as $item) {
-            if (isset($item['name'])) {
-                if (strpos($item['name'], '天空率 道路斜線') !== false) $has_road = true;
-                if (strpos($item['name'], '天空率 北側斜線') !== false) $has_north = true;
+            if (isset($item['name']) && isset($item['amount']) && (float)$item['amount'] > 0) {
+                if (strpos($item['name'], '天空率 道路斜線') !== false) $req_road = true;
+                if (strpos($item['name'], '天空率 北側斜線') !== false) $req_north = true;
             }
         }
-        // 見積もりが保存されていて判定可能な場合のみ上書き
-        if ($has_road || $has_north) {
-            $req_road = $has_road;
-            $req_north = $has_north;
-        }
+    } else if ($is_sky) {
+        // 見積前は念のため両方表示（ユーザーが選んだか不明なため）
+        $req_road = true;
+        $req_north = true;
     }
     if ($is_sky): ?>
     <div style="margin-bottom:15px; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f8fafc;">
         <strong style="display:block; margin-bottom:10px; color:#1e40af;">【天空率計算 図書】</strong>
         <?php if ($req_road) echo renderUploadSlot('道路の資料（座標、測量図、レベル等）', 'road_data'); ?>
-        <?php if ($req_north) echo renderUploadSlot('真北の資料（真北測量図等）', 'true_north'); ?>
+        <?php if ($req_north) echo renderUploadSlot('真北の資料（配置図に記載の通りにチェックで提出不要）', 'true_north'); ?>
     </div>
     <?php endif; ?>
     

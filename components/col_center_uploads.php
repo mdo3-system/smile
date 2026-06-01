@@ -11,7 +11,6 @@
 
     // 1. 共通図書・CAD
     $common_docs = [];
-    $common_docs['all_in_one_zip'] = '一括ZIPファイル';
     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
         $common_docs['cad_layout'] = '配置図';
         $common_docs['cad_plan_1f'] = '1F平面図';
