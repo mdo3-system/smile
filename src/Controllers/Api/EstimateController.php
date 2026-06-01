@@ -74,8 +74,10 @@ class EstimateController
             if (empty($currentInitAmt) || (int)$currentInitAmt === 0) {
                 $totalPrice = (int)($_POST['total_price'] ?? 0);
                 if ($totalPrice > 0) {
+                    $tax = round($totalPrice * 0.1);
+                    $grandTotal = $totalPrice + $tax;
                     $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid");
-                    $stmtInit->execute(['amt' => $totalPrice, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
+                    $stmtInit->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
                 }
             }
 

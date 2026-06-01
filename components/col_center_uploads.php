@@ -129,9 +129,11 @@
                                     <?php if (empty($history)): // 初回提出時のみ「他ファイルに記載」を選べるようにする ?>
                                     <div style="display:flex; flex-direction:column; gap:2px;">
                                         <label style="font-size:10px; display:flex; align-items:center; gap:2px; color:#475569; white-space:nowrap;">
-                                            <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 別ファイル済
+                                            <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 
+                                            <span style="color:#d97706; font-weight:bold;">別ファイル済<br>
+                                                <span style="font-size:9px; color:#e67e22; font-weight:normal; display:inline-block; margin-top:2px;">※他のCADファイルに記載がある場合</span>
+                                            </span>
                                         </label>
-                                        <div style="font-size:9px; color:#94a3b8; line-height:1.2;">※一括UP等で他図面に含まれる場合</div>
                                     </div>
                                     <?php endif; ?>
 
