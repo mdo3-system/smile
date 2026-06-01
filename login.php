@@ -64,9 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $app_url = rtrim($app_url, '/');
             }
             
-            // 協力業者の場合は直接 project_subcontractor.php にトークン付きで遷移させ、
+            // 協力業者の場合は直接 subcontractor_portal.php にトークン付きで遷移させ、
             // それ以外（管理者・依頼主）は index.php にトークン付きで遷移させる
-            $target_page = ($user['role'] === 'subcontractor') ? 'project_subcontractor.php' : 'index.php';
+            $target_page = ($user['role'] === 'subcontractor') ? 'subcontractor_portal.php' : 'index.php';
             $login_url = "{$app_url}/{$target_page}?token={$token}";
             
             $message = "ご入力のメールアドレス宛にログインリンクを送信しました（開発環境用に下記にリンクを表示します）。";

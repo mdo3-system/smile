@@ -1,0 +1,260 @@
+<?php
+require_once 'auth.php';
+check_auth(['admin', 'subcontractor']);
+
+$user_id = $_SESSION['user_id'];
+$is_admin = ($_SESSION['role'] === 'admin');
+
+// 表示対象の協力業者IDを決定
+$target_sub_id = 0;
+if ($is_admin) {
+    $target_sub_id = intval($_GET['sub_id'] ?? 0);
+    if ($target_sub_id === 0) {
+        die("業者IDが指定されていません。");
+    }
+} else {
+    $target_sub_id = $user_id;
+}
+
+// 業者情報を取得
+$stmtSub = $pdo->prepare("SELECT * FROM users WHERE id = :id AND role = 'subcontractor'");
+$stmtSub->execute(['id' => $target_sub_id]);
+$subcontractor = $stmtSub->fetch();
+if (!$subcontractor) {
+    die("指定された業者は存在しません。");
+}
+
+// POST処理（チャット送信・支払い記録）
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    
+    // グローバルチャット送信
+    if ($action === 'send_global_message') {
+        $message_text = trim($_POST['message_text'] ?? '');
+        if ($message_text !== '') {
+            $stmt = $pdo->prepare("INSERT INTO global_messages (subcontractor_id, sender_id, message_text) VALUES (:sub_id, :sid, :msg)");
+            $stmt->execute([
+                'sub_id' => $target_sub_id,
+                'sid' => $user_id,
+                'msg' => $message_text
+            ]);
+        }
+        header("Location: subcontractor_portal.php" . ($is_admin ? "?sub_id=" . $target_sub_id : ""));
+        exit;
+    }
+    
+    // 支払い記録の保存 (管理者のみ)
+    if ($action === 'log_sub_payment' && $is_admin) {
+        $target_month = $_POST['target_month'] ?? '';
+        $paid_amount = intval($_POST['paid_amount'] ?? 0);
+        $note = $_POST['note'] ?? '';
+        
+        if ($target_month !== '') {
+            // UPSERT処理
+            $stmt = $pdo->prepare("
+                INSERT INTO subcontractor_payments (subcontractor_id, target_month, paid_amount, paid_at, note) 
+                VALUES (:sub_id, :t_month, :amt, NOW(), :note)
+                ON DUPLICATE KEY UPDATE paid_amount = :amt, paid_at = NOW(), note = :note
+            ");
+            $stmt->execute([
+                'sub_id' => $target_sub_id,
+                't_month' => $target_month,
+                'amt' => $paid_amount,
+                'note' => $note
+            ]);
+        }
+        header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
+        exit;
+    }
+}
+
+// スケジュール（進行中のタスク一覧）
+$stmtTasks = $pdo->prepare("
+    SELECT o.*, p.project_name 
+    FROM subcontractor_orders o 
+    JOIN projects p ON o.project_id = p.id 
+    WHERE o.subcontractor_id = :sub_id 
+    ORDER BY o.created_at DESC
+");
+$stmtTasks->execute(['sub_id' => $target_sub_id]);
+$tasks = $stmtTasks->fetchAll();
+
+// 月次集計データの作成
+$monthly_totals = [];
+foreach ($tasks as $t) {
+    if ($t['status'] === 'delivered') {
+        // updated_at を納品日として月を判定
+        $month = date('Y-m', strtotime($t['updated_at'] ?? $t['created_at']));
+        if (!isset($monthly_totals[$month])) {
+            $monthly_totals[$month] = 0;
+        }
+        $monthly_totals[$month] += intval($t['order_amount']);
+    }
+}
+krsort($monthly_totals); // 最新月順にソート
+
+// 支払い記録の取得
+$stmtPayments = $pdo->prepare("SELECT * FROM subcontractor_payments WHERE subcontractor_id = :sub_id");
+$stmtPayments->execute(['sub_id' => $target_sub_id]);
+$payments = [];
+foreach ($stmtPayments->fetchAll() as $p) {
+    $payments[$p['target_month']] = $p;
+}
+
+// グローバルチャット履歴の取得
+$stmtChat = $pdo->prepare("
+    SELECT m.*, u.contact_name, u.role 
+    FROM global_messages m 
+    JOIN users u ON m.sender_id = u.id 
+    WHERE m.subcontractor_id = :sub_id 
+    ORDER BY m.created_at ASC
+");
+$stmtChat->execute(['sub_id' => $target_sub_id]);
+$global_messages = $stmtChat->fetchAll();
+
+
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>協力業者専用ポータル - <?= htmlspecialchars($subcontractor['contact_name']) ?></title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; }
+        .col-main { flex: 2; }
+        .col-side { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+        .box { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h2, h3 { margin-top: 0; }
+        .task-card { border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; margin-bottom: 10px; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
+    </style>
+</head>
+<body>
+    <div style="max-width:1200px; margin: 0 auto 15px; display:flex; justify-content:space-between; align-items:center;">
+        <h2><?= htmlspecialchars($subcontractor['contact_name']) ?> 様 - 協力業者ポータル</h2>
+        <?php if ($is_admin): ?>
+            <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
+        <?php else: ?>
+            <a href="logout.php" style="color:#c0392b; font-weight:bold; text-decoration:none;">ログアウト</a>
+        <?php endif; ?>
+    </div>
+
+    <div class="container">
+        <!-- 左カラム：案件スケジュール -->
+        <div class="col-main box">
+            <h3>📋 担当案件・スケジュール</h3>
+            <?php if (count($tasks) > 0): ?>
+                <?php foreach ($tasks as $t): ?>
+                    <div class="task-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:16px;"><?= htmlspecialchars($t['project_name']) ?></strong>
+                            <?php 
+                                if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b;">承諾待ち</span>';
+                                elseif ($t['status'] === 'accepted') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';
+                                elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#10b981;">納品済</span>';
+                            ?>
+                        </div>
+                        <p style="margin: 8px 0; font-size: 13px; color: #555;">依頼内容: <?= htmlspecialchars($t['task_title']) ?></p>
+                        <p style="margin: 0; font-size: 13px; font-weight:bold;">発注額: <?= number_format($t['order_amount']) ?>円</p>
+                        
+                        <!-- 案件ごとの詳細へ飛ぶリンク -->
+                        <div style="margin-top:10px; text-align:right;">
+                            <a href="project_subcontractor.php?id=<?= $t['project_id'] ?>" style="display:inline-block; background:#e2e8f0; color:#333; padding:5px 10px; text-decoration:none; font-size:12px; border-radius:4px; font-weight:bold;">この案件の詳細（図書DL・納品）を見る ➔</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p style="color:#777; font-size:14px;">現在担当している案件はありません。</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- 右カラム：グローバルチャット & 月次請求 -->
+        <div class="col-side">
+            <!-- 💬 グローバルチャット -->
+            <div class="box" style="display:flex; flex-direction:column; height:450px;">
+                <h3>💬 業務連絡チャット</h3>
+                <p style="font-size:12px; color:#666; margin-top:0;">案件に紐付かない、一般的な業務連絡や支払いに関するやり取りを行います。</p>
+                
+                <div style="flex:1; overflow-y:auto; background:#f8f9fa; border:1px solid #ddd; border-radius:4px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:10px;">
+                    <?php if (count($global_messages) > 0): ?>
+                        <?php foreach ($global_messages as $msg): 
+                            $is_mine = ($msg['sender_id'] == $user_id);
+                        ?>
+                            <div style="display:flex; flex-direction:column; align-items: <?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
+                                <div style="font-size:10px; color:#777; margin-bottom:2px;"><?= htmlspecialchars($msg['contact_name']) ?> - <?= date('m/d H:i', strtotime($msg['created_at'])) ?></div>
+                                <div style="max-width:80%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; white-space:pre-wrap;
+                                     <?= $is_mine ? 'background:#3b82f6; color:white; border-bottom-right-radius:2px;' : 'background:#e2e8f0; color:#333; border-bottom-left-radius:2px;' ?>">
+                                    <?= htmlspecialchars($msg['message_text']) ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="text-align:center; color:#aaa; font-size:12px; margin-top:20px;">まだメッセージはありません。</div>
+                    <?php endif; ?>
+                </div>
+
+                <form method="POST" style="display:flex; gap:5px;">
+                    <input type="hidden" name="action" value="send_global_message">
+                    <textarea name="message_text" rows="2" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; resize:none; font-family:inherit; font-size:13px;" placeholder="メッセージを入力..." required></textarea>
+                    <button type="submit" style="background:#10b981; color:white; border:none; padding:0 15px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                </form>
+            </div>
+
+            <!-- 💰 月次・請求支払い状況 -->
+            <div class="box">
+                <h3>💰 月次・請求支払い状況</h3>
+                <p style="font-size:12px; color:#666; margin-top:0;">納品完了した案件の報酬額（月別）などを管理します。</p>
+                
+                <?php if (count($monthly_totals) > 0): ?>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <?php foreach ($monthly_totals as $month => $total): 
+                            $payment = $payments[$month] ?? null;
+                            $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
+                            $balance = $total - $paid_amount;
+                        ?>
+                            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#f8fafc;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:5px;">
+                                    <strong style="font-size:15px; color:#1e293b;"><?= $month ?> 納品分</strong>
+                                    <?php if ($balance <= 0): ?>
+                                        <span class="badge" style="background:#10b981;">支払完了</span>
+                                    <?php else: ?>
+                                        <span class="badge" style="background:#ef4444;">未払残あり</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+                                    <span>合計報酬額:</span>
+                                    <strong><?= number_format($total) ?> 円</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; color:#10b981;">
+                                    <span>支払済額:</span>
+                                    <strong><?= number_format($paid_amount) ?> 円</strong>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444;">
+                                    <span>未払残高:</span>
+                                    <strong><?= number_format($balance) ?> 円</strong>
+                                </div>
+                                
+                                <?php if ($is_admin): ?>
+                                    <form method="POST" style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:10px;">
+                                        <input type="hidden" name="action" value="log_sub_payment">
+                                        <input type="hidden" name="target_month" value="<?= $month ?>">
+                                        <div style="display:flex; gap:5px; align-items:center;">
+                                            <input type="number" name="paid_amount" value="<?= $total ?>" style="width:100px; padding:4px; font-size:12px;"> 円を
+                                            <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">支払記録として保存</button>
+                                        </div>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div style="background:#f8f9fa; border:1px solid #ddd; height:80px; border-radius:4px; display:flex; justify-content:center; align-items:center; color:#999; font-size:13px;">
+                        納品済みの案件がありません。
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
