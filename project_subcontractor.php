@@ -140,7 +140,7 @@ if ($is_admin) {
             <!-- 発注フォーム -->
             <div class="task-card">
                 <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">🤝 新規発注（自動算出）</h2>
-                <form action="project_detail_post.php" method="POST">
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
                     <input type="hidden" name="action" value="order_subcontractor">
                     <input type="hidden" name="project_id" value="<?= $project_id ?>">
                     
