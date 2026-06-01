@@ -38,45 +38,6 @@
                 </div>
             </div>
 
-            <div class="box" style="margin-top:15px; background:#fff3cd; border-color:#ffeeba;">
-                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 ご請求・お支払い状況</h3>
-                <div style="font-size:13px; line-height:1.8;">
-                    <?php
-                        $initial = $project_info['initial_est_amount'] ?? 0;
-                        $initial_date = $project_info['initial_est_date'] ?? '-';
-                        $formal = $project_info['formal_est_amount'] ?? 0;
-                        $formal_date = $project_info['formal_est_date'] ?? '-';
-                        $add = $project_info['add_est_amount'] ?? 0;
-                        $add_date = $project_info['add_est_date'] ?? '-';
-                        $deposit = $project_info['deposit_amount'] ?? 0;
-                        $deposit_date = $project_info['deposit_date'] ?? '-';
-
-                        $total_req = $formal + $add;
-                        $balance = $total_req - $deposit;
-                    ?>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>初期お見積額 (<?= htmlspecialchars($initial_date) ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>本見積額 (<?= htmlspecialchars($formal_date) ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
-                    </div>
-                    <?php if ($add > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
-                        <span>追加費用 (<?= htmlspecialchars($add_date) ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
-                    </div>
-                    <?php endif; ?>
-                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-                        <span>ご請求総額:</span> <strong><?= number_format($total_req) ?> 円</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; color:#28a745;">
-                        <span>入金済額 (<?= htmlspecialchars($deposit_date) ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
-                        <span>現在の残金:</span> <span><?= number_format($balance) ?> 円</span>
-                    </div>
-                </div>
-            </div>
-
             
             <div class="box" style="background:#e8f5e9; border-color:#c8e6c9;">
                 <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">最新の見積書PDF</h3>
@@ -170,49 +131,86 @@
             
 
             <?php if ($is_admin): ?>
+            <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px; padding:15px;">
+                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 経理・請求管理（管理者専用）</h3>
+                
+                <?php
+                    $initial = $project_info['initial_est_amount'] ?? 0;
+                    $initial_date = $project_info['initial_est_date'] ?? '';
+                    $formal = $project_info['formal_est_amount'] ?? 0;
+                    $formal_date = $project_info['formal_est_date'] ?? '';
+                    $add = $project_info['add_est_amount'] ?? 0;
+                    $add_date = $project_info['add_est_date'] ?? '';
+                    $deposit = $project_info['deposit_amount'] ?? 0;
+                    $deposit_date = $project_info['deposit_date'] ?? '';
 
-            <!-- 金銭管理フォーム -->
-            <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px; padding:10px;">
-                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 金銭・請求管理</h3>
-                <form method="POST" action="actions/admin_finance_post.php" style="font-size:12px;">
-                    <input type="hidden" name="project_id" value="<?= $project_id ?>">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">初期見積額 (円):</label>
-                            <input type="number" name="initial_est_amount" value="<?= htmlspecialchars($project_info['initial_est_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">初期見積日:</label>
-                            <input type="date" name="initial_est_date" value="<?= htmlspecialchars($project_info['initial_est_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">本見積額 (円):</label>
-                            <input type="number" name="formal_est_amount" value="<?= htmlspecialchars($project_info['formal_est_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">本見積日:</label>
-                            <input type="date" name="formal_est_date" value="<?= htmlspecialchars($project_info['formal_est_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">追加費用 (円):</label>
-                            <input type="number" name="add_est_amount" value="<?= htmlspecialchars($project_info['add_est_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">追加見積日:</label>
-                            <input type="date" name="add_est_date" value="<?= htmlspecialchars($project_info['add_est_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">入金済額 (円):</label>
-                            <input type="number" name="deposit_amount" value="<?= htmlspecialchars($project_info['deposit_amount'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
-                        <div>
-                            <label style="display:block;margin-bottom:2px;">入金日:</label>
-                            <input type="date" name="deposit_date" value="<?= htmlspecialchars($project_info['deposit_date'] ?? '') ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                        </div>
+                    $total_req = $formal + $add;
+                    $balance = $total_req - $deposit;
+                ?>
+                <div style="font-size:13px; line-height:1.8; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>初期お見積額 (<?= $initial_date ? htmlspecialchars($initial_date) : '-' ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
                     </div>
-                    <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745;">金銭データを保存</button>
-                </form>
-            </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>本見積額 (<?= $formal_date ? htmlspecialchars($formal_date) : '-' ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
+                    </div>
+                    <?php if ($add > 0): ?>
+                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
+                        <span>追加費用 (<?= $add_date ? htmlspecialchars($add_date) : '-' ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
+                    </div>
+                    <?php endif; ?>
+                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
+                        <span>ご請求総額:</span> <strong><?= number_format($total_req) ?> 円</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; color:#28a745;">
+                        <span>入金済額 (<?= $deposit_date ? htmlspecialchars($deposit_date) : '-' ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
+                        <span>現在の残金:</span> <span><?= number_format($balance) ?> 円</span>
+                    </div>
+                </div>
 
+                <details>
+                    <summary style="cursor:pointer; font-weight:bold; font-size:12px; color:#856404; border-top:1px dashed #ffeeba; padding-top:10px;">編集する (金銭データの更新)</summary>
+                    <form method="POST" action="actions/admin_finance_post.php" style="font-size:12px; margin-top:10px;">
+                        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">初期見積額 (円):</label>
+                                <input type="number" name="initial_est_amount" value="<?= htmlspecialchars($initial) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">初期見積日:</label>
+                                <input type="date" name="initial_est_date" value="<?= htmlspecialchars($initial_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">本見積額 (円):</label>
+                                <input type="number" name="formal_est_amount" value="<?= htmlspecialchars($formal) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">本見積日:</label>
+                                <input type="date" name="formal_est_date" value="<?= htmlspecialchars($formal_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">追加費用 (円):</label>
+                                <input type="number" name="add_est_amount" value="<?= htmlspecialchars($add) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">追加費用日:</label>
+                                <input type="date" name="add_est_date" value="<?= htmlspecialchars($add_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">入金済額 (円):</label>
+                                <input type="number" name="deposit_amount" value="<?= htmlspecialchars($deposit) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">入金日:</label>
+                                <input type="date" name="deposit_date" value="<?= htmlspecialchars($deposit_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745;">金銭データを保存</button>
+                    </form>
+                </details>
+            </div>
             <?php endif; ?>
         </div>
