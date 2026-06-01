@@ -119,12 +119,20 @@
                         <?php if ($project_info['status'] !== 'quote_req'): ?>
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:8px; display:flex; flex-direction:column; gap:5px; border-top:1px dashed #e2e8f0; padding-top:5px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
+                                <input type="hidden" name="action_type" value="single_upload">
                                 <?php if (!empty($history)): ?>
                                     <input type="text" name="update_reason" placeholder="差し替え理由（必須）" required style="font-size:10px; width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:3px; box-sizing:border-box;">
                                 <?php endif; ?>
-                                <div style="display:flex; gap:5px; align-items:center;">
-                                    <input type="file" name="upload_file" required style="font-size:10px; flex:1; max-width:150px;">
-                                    <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer;">UP/更新</button>
+                                <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+                                    <input type="file" name="upload_file" id="file_<?= $cat ?>" <?= empty($history) ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:120px;">
+                                    
+                                    <?php if (empty($history)): // 初回提出時のみ「他ファイルに記載」を選べるようにする ?>
+                                    <label style="font-size:10px; display:flex; align-items:center; gap:2px; color:#475569; white-space:nowrap;">
+                                        <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 別ファイル済
+                                    </label>
+                                    <?php endif; ?>
+
+                                    <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer; white-space:nowrap;">UP/更新</button>
                                 </div>
                             </form>
                         <?php endif; ?>

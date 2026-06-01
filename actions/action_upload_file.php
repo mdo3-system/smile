@@ -42,19 +42,29 @@ if ($action === 'upload_artifact' && $is_admin) {
 }
 
 // ファイルアップロード処理（管理者・依頼主）
-if (isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK) {
+$is_upload = isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK;
+$is_included = isset($_POST['included_in_other']) && $_POST['included_in_other'] == '1';
+
+if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_included)) {
     $file_category = $_POST['file_category'] ?? '';
     if ($file_category !== '') {
-        $file_name = $_FILES['upload_file']['name'];
-        $tmp_name = $_FILES['upload_file']['tmp_name'];
-        $mime_type = $_FILES['upload_file']['type'];
-
         try {
-            // Google Drive へのアップロード
-            require_once 'google_drive_client.php';
-            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
-
             $pdo->beginTransaction();
+            
+            $file_name = '';
+            $drive_file_id = null;
+            
+            if ($is_included) {
+                $file_name = '【他ファイルに記載】';
+            } else {
+                $file_name = $_FILES['upload_file']['name'];
+                $tmp_name = $_FILES['upload_file']['tmp_name'];
+                $mime_type = $_FILES['upload_file']['type'];
+                // Google Drive へのアップロード
+                require_once 'google_drive_client.php';
+                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+            }
+
             // 1. 既存の同カテゴリのファイルを最新フラグから外す
             $stmtDisable = $pdo->prepare("
                 UPDATE project_files 
