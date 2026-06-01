@@ -2,7 +2,7 @@
             <h2 class="section-title" style="background:#8b5cf6;">📂 成果物（納品物）</h2>
             <div style="font-size:12px; color:#555; margin-bottom:15px;">
                 常に最新版が表示されます。過去の履歴もここからダウンロード可能です。<br>
-                <span style="color:#d97706; font-weight:bold;">※補正通知等の追加資料は、右下のチャット欄からアップロードしてください。</span>
+                <span style="color:#d97706; font-weight:bold;">※質疑事項などは右下のチャット欄から画像とともに送信できます。</span>
             </div>
 
             <?php
