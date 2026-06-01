@@ -115,8 +115,8 @@
                             <div style="font-size:11px; color:#ef4444;">未提出</div>
                         <?php endif; ?>
 
-                        <!-- アップロードフォーム (管理者は代理UP可) -->
-                        <?php if ($project_info['status'] !== 'quote_req'): ?>
+                        <!-- アップロードフォーム -->
+                        <?php if ($project_info['status'] !== 'quote_req' && !$is_admin): ?>
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:8px; display:flex; flex-direction:column; gap:5px; border-top:1px dashed #e2e8f0; padding-top:5px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
                                 <input type="hidden" name="action_type" value="single_upload">
