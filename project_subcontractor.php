@@ -1,6 +1,7 @@
 <?php
 // project_subcontractor.php
 require_once 'auth.php';
+require_once 'functions.php';
 check_auth(['admin', 'subcontractor']);
 
 // セッションからログイン中のユーザー情報を取得

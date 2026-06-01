@@ -1,6 +1,7 @@
 <?php
 // index.php
 require_once 'auth.php';
+require_once 'functions.php';
 check_auth(['admin', 'client']);
 
 // 1. ログインユーザーの情報を取得

@@ -1,5 +1,6 @@
 <?php
 require_once 'auth.php';
+require_once 'functions.php';
 check_auth(['admin', 'subcontractor']);
 
 $user_id = $_SESSION['user_id'];
