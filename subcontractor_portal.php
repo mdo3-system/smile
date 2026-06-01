@@ -163,11 +163,14 @@ $global_messages = $stmtChat->fetchAll();
 <body>
     <div style="max-width:1200px; margin: 0 auto 15px; display:flex; justify-content:space-between; align-items:center;">
         <h2><?= htmlspecialchars($subcontractor['contact_name']) ?> 様 - 協力業者ポータル</h2>
-        <?php if ($is_admin): ?>
-            <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
-        <?php else: ?>
-            <a href="logout.php" style="color:#c0392b; font-weight:bold; text-decoration:none;">ログアウト</a>
-        <?php endif; ?>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
+            <?php if ($is_admin): ?>
+                <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
+            <?php else: ?>
+                <a href="logout.php" style="color:#c0392b; font-weight:bold; text-decoration:none;">ログアウト</a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div class="container">
@@ -189,8 +192,18 @@ $global_messages = $stmtChat->fetchAll();
                         <p style="margin: 0; font-size: 13px; font-weight:bold;">発注額: <?= number_format($t['order_amount']) ?>円</p>
                         
                         <!-- 案件ごとの詳細へ飛ぶリンク -->
-                        <div style="margin-top:10px; text-align:right;">
-                            <a href="project_subcontractor.php?id=<?= $t['project_id'] ?>" style="display:inline-block; background:#e2e8f0; color:#333; padding:5px 10px; text-decoration:none; font-size:12px; border-radius:4px; font-weight:bold;">この案件の詳細（図書DL・納品）を見る ➔</a>
+                        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <?php if ($t['status'] === 'requested' && !$is_admin): ?>
+                                    <form method="POST" action="project_subcontractor.php" style="background:#fff3cd; padding:8px; border-radius:4px; border:1px solid #ffeeba; display:flex; gap:10px; align-items:center;">
+                                        <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
+                                        <span style="font-size:12px; font-weight:bold; color:#856404;">完了納期予定:</span>
+                                        <input type="date" name="expected_delivery_date" required style="padding:4px; font-size:12px;">
+                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:12px; cursor:pointer;">承諾する</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                            <a href="project_subcontractor.php?id=<?= $t['project_id'] ?>" style="display:inline-block; background:#e2e8f0; color:#333; padding:5px 10px; text-decoration:none; font-size:12px; border-radius:4px; font-weight:bold;">この案件の詳細（図書DL・納品等）を見る ➔</a>
                         </div>
                     </div>
                 <?php endforeach; ?>

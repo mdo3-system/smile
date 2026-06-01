@@ -370,7 +370,10 @@ if ($is_admin) {
 
     <?php else: ?>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
-            <h1 style="margin:0; font-size:24px;">👷 協力業者専用ダッシュボード</h1>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <h1 style="margin:0; font-size:24px;">👷 協力業者専用ダッシュボード</h1>
+                <a href="subcontractor_portal.php" style="background:#e2e8f0; color:#333; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:13px; font-weight:bold;">⬅ 一覧画面に戻る</a>
+            </div>
             <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
                 <span>ログイン中: <strong><?= htmlspecialchars($_SESSION['contact_name'], ENT_QUOTES) ?></strong> 様</span>
                 <span style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></span>
