@@ -31,9 +31,21 @@ if ($action === 'update_schedule_actual') {
     if ($is_admin) {
         $step_idx = $_POST['step_idx'] ?? '';
         $actual_date = $_POST['actual_date'] ?? '';
+        $schedule_type = $_POST['schedule_type'] ?? 'permit';
+        
+        $col_map = [
+            'permit' => 'schedule_actuals',
+            'wall' => 'schedule_actuals_wall',
+            'skin' => 'schedule_actuals_skin',
+            'sky' => 'schedule_actuals_sky',
+        ];
+        $db_col = $col_map[$schedule_type] ?? 'schedule_actuals';
+
         if ($step_idx !== '') {
-            $projData = $projectRepo->findById($project_id);
-            $current_actuals_json = $projData ? $projData['schedule_actuals'] : '{}';
+            $stmtCol = $pdo->prepare("SELECT {$db_col} FROM projects WHERE id = :id");
+            $stmtCol->execute(['id' => $project_id]);
+            $current_actuals_json = $stmtCol->fetchColumn();
+            
             $actuals = json_decode($current_actuals_json ?? '{}', true) ?: [];
             
             if (empty($actual_date)) {
@@ -41,7 +53,7 @@ if ($action === 'update_schedule_actual') {
             } else {
                 $actuals[$step_idx] = $actual_date;
             }
-            $stmt = $pdo->prepare("UPDATE projects SET schedule_actuals = :act WHERE id = :pid");
+            $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
             $stmt->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
         }
     }

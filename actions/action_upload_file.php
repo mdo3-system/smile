@@ -32,28 +32,78 @@ if ($action === 'upload_artifact' && $is_admin) {
                 'ver' => $next_ver
             ]);
             
-            // 一次回答（inv_primary）アップロード時の自動ステータス進行処理
-            if ($file_category === 'inv_primary' && ($project['status'] ?? '') === 'primary_prep') {
-                $stmtUpdateStatus = $pdo->prepare("UPDATE projects SET status = 'contracted' WHERE id = :pid");
-                $stmtUpdateStatus->execute(['pid' => $project_id]);
+            // === スケジュール自動入力処理 ===
+            $today = date('Y-m-d');
+            $colsToUpdate = [];
+            $targetIndex = null;
+            $msgTitle = "";
+            
+            // 1. 初回提示（一次回答）の自動入力 (Index 2)
+            if ($file_category === 'inv_primary') {
+                $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+                $targetIndex = 2;
+                $msgTitle = "初回提示（一次回答）";
+            }
+            
+            // 2. 申請図書一式UPの自動入力
+            // 許容応力度 (Index 5)
+            if ($file_category === 'structural_dwg' && ($project['req_permit'] == 1 || $project['req_opt_kisohari'] == 1)) {
+                $colsToUpdate[] = 'schedule_actuals';
+                $targetIndex = 5;
+                $msgTitle = "構造図・申請図書一式";
+            }
+            // 壁量計算 (Index 4)
+            if (($file_category === 'wall_calc_doc' || $file_category === 'wall_spreadsheet') && $project['req_wall'] == 1) {
+                $colsToUpdate[] = 'schedule_actuals_wall';
+                $targetIndex = 4;
+                $msgTitle = "壁量計算・申請図書一式";
+            }
+            // 外皮計算 (Index 4)
+            if (($file_category === 'skin_calc_doc' || $file_category === 'skin_doc') && $project['req_skin'] == 1) {
+                $colsToUpdate[] = 'schedule_actuals_skin';
+                $targetIndex = 4;
+                $msgTitle = "外皮計算・申請図書一式";
+            }
+            // 外皮計算・初回提示 (Index 2) は WEBプログラム計算書をUPした時
+            if ($file_category === 'skin_web_prog' && $project['req_skin'] == 1) {
+                $colsToUpdate[] = 'schedule_actuals_skin';
+                $targetIndex = 2;
+                $msgTitle = "外皮計算・初回提示（WEBプログラム計算書）";
+            }
+            // 天空率 (Index 3)
+            if ($file_category === 'sky_dwg' && $project['req_sky'] == 1) {
+                $colsToUpdate[] = 'schedule_actuals_sky';
+                $targetIndex = 3;
+                $msgTitle = "天空率図書・申請図書一式";
+            }
+            
+            if (!empty($colsToUpdate) && $targetIndex !== null) {
+                $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+                $stmtAct->execute(['id' => $project_id]);
+                $current_actuals_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
                 
-                // スケジュールのインデックス1（着手基準日）に今日の日付を入れる
-                $current_actuals_json = $project['schedule_actuals'] ?? '{}';
-                $actuals = json_decode($current_actuals_json, true) ?: [];
-                if (empty($actuals[1])) {
-                    $actuals[1] = date('Y-m-d');
-                    $stmtUpdateSchedule = $pdo->prepare("UPDATE projects SET schedule_actuals = :act WHERE id = :pid");
-                    $stmtUpdateSchedule->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                $updated_any = false;
+                foreach (array_unique($colsToUpdate) as $col) {
+                    $actuals = json_decode($current_actuals_row[$col] ?? '{}', true) ?: [];
+                    if (empty($actuals[$targetIndex])) {
+                        $actuals[$targetIndex] = $today;
+                        $stmtUpdateSchedule = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                        $stmtUpdateSchedule->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                        $updated_any = true;
+                    }
                 }
                 
-                // チャット通知
-                $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
-                $stmtNotify->execute([
-                    'pid' => $project_id,
-                    'sid' => $_SESSION['user_id'],
-                    'msg' => "【自動通知】一次回答が提出されました。ステータスが進行し、スケジュール表の着手基準日が本日付けで設定されました。"
-                ]);
+                if ($updated_any) {
+                    // チャット通知
+                    $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                    $stmtNotify->execute([
+                        'pid' => $project_id,
+                        'sid' => $_SESSION['user_id'],
+                        'msg' => "【自動通知】{$msgTitle}が提出されました。該当スケジュールの実施日が自動設定されました。"
+                    ]);
+                }
             }
+            // ==================================
             
             $pdo->commit();
         } catch (Exception $e) {

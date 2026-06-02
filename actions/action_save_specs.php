@@ -156,6 +156,26 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             // Update status to doc_submitted and notify admin that design request is completed
             $projectRepo->updateStatus($project_id, 'doc_submitted');
             
+            // スケジュール（各計算）の「設計図書の受領（Index 0）」に今日の日付を入れる
+            $today = date('Y-m-d');
+            $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+            
+            // プロジェクトの現在のスケジュール実態を取得
+            $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+            $stmtAct->execute(['id' => $project_id]);
+            $current_actuals_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+            
+            if ($current_actuals_row) {
+                foreach ($colsToUpdate as $col) {
+                    $actuals = json_decode($current_actuals_row[$col] ?? '{}', true) ?: [];
+                    if (empty($actuals[0])) {
+                        $actuals[0] = $today;
+                        $stmtUpdate = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                        $stmtUpdate->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                    }
+                }
+            }
+            
             // 自動見積りの最新額を初期お見積額に設定
             $stmtEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
             $stmtEst->execute(['pid' => $project_id]);
