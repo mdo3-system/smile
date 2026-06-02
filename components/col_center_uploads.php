@@ -12,19 +12,23 @@
     // 1. 共通図書・CAD
     $common_docs = [];
     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-        $common_docs['cad_layout'] = '配置図';
-        $common_docs['cad_plan_1f'] = '1F平面図';
-        $common_docs['cad_plan_2f'] = '2F平面図';
-        $common_docs['cad_elevation'] = '立面図';
-        $common_docs['cad_section'] = '矩計図';
+        $common_docs['cad_layout'] = '配置図 ※正式依頼時必須';
+        $common_docs['cad_plan_1f'] = '1F平面図 ※正式依頼時必須';
+        $common_docs['cad_plan_2f'] = '2F平面図 ※正式依頼時必須';
+        $common_docs['cad_elevation'] = '立面図 ※正式依頼時必須';
+        $common_docs['cad_section'] = '矩計図 ※正式依頼時必須';
+    }
+    // 確認申請書は全依頼で必須（後出し可）
+    $common_docs['app_doc'] = '確認申請書（2〜5面）🟡後出し可';
+    // 地盤調査報告書は許容応力度・基礎梁許容応力度のみ必須（後出し可）
+    if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
+        $common_docs['soil_report'] = '地盤調査報告書 🟡後出し可';
     }
     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-        $common_docs['app_doc'] = '確認申請書（2〜5面）';
-        $common_docs['soil_report'] = '地盤調査資料';
         $common_docs['pdf_precut'] = 'プレカット図';
     }
     if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-        $common_docs['soil_impr'] = '地盤改良関連図書';
+        $common_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';
     }
     $upload_sections['共通図書・CADデータ'] = $common_docs;
 

@@ -142,6 +142,21 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                 throw new Exception("図面変更がある場合は、変更箇所を入力してください。");
             }
 
+            // ============================
+            // CADデータ必須チェック（正式依頼時に必ず必要）
+            // ============================
+            $stmtCadCheck = $pdo->prepare("
+                SELECT COUNT(*) FROM project_files 
+                WHERE project_id = :pid 
+                AND is_latest = 1 
+                AND file_category IN ('cad_design_all','cad_layout','cad_plan_1f','cad_plan_2f','cad_plan_3f','cad_plan_ph','cad_plan_rf','cad_elevation','cad_section','all_in_one_zip')
+            ");
+            $stmtCadCheck->execute(['pid' => $project_id]);
+            $cad_count = (int)$stmtCadCheck->fetchColumn();
+            if ($cad_count === 0) {
+                throw new Exception("正式依頼には意匠CADデータ（JWW/DXF等）のアップロードが必須です。CADデータをアップロードしてから再度お試しください。");
+            }
+
             // Save drawing change report to messages
             $change_msg = "【図面変更の有無報告】\n";
             $change_msg .= ($drawing_changed === 'yes') ? "見積時から変更あり\n詳細: " . $drawing_change_notes : "見積時から変更なし";
@@ -153,29 +168,48 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                 'msg' => $change_msg
             ]);
 
-            // Update status to doc_submitted and notify admin that design request is completed
-            $projectRepo->updateStatus($project_id, 'doc_submitted');
-            
-            // スケジュール（各計算）の「設計図書の受領（Index 0）」に今日の日付を入れる
+            // Update status to primary_prep (必要図書が揃うまでスケジュール起算保留)
+            $projectRepo->updateStatus($project_id, 'primary_prep');
+
+            // ============================
+            // 必須図書の充足チェック（確認申請書・地盤調査は後出し可）
+            // 全て揃っている場合のみ schedule_actuals[0] を今日の日付で記録する
+            // ============================
             $today = date('Y-m-d');
-            $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
-            
-            // プロジェクトの現在のスケジュール実態を取得
-            $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
-            $stmtAct->execute(['id' => $project_id]);
-            $current_actuals_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
-            
-            if ($current_actuals_row) {
-                foreach ($colsToUpdate as $col) {
-                    $actuals = json_decode($current_actuals_row[$col] ?? '{}', true) ?: [];
-                    if (empty($actuals[0])) {
-                        $actuals[0] = $today;
-                        $stmtUpdate = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
-                        $stmtUpdate->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+
+            // 後出し必須図書の揃い具合を判定するヘルパー
+            $hasFile = function($cat) use ($pdo, $project_id) {
+                $s = $pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat AND is_latest = 1");
+                $s->execute(['pid' => $project_id, 'cat' => $cat]);
+                return (int)$s->fetchColumn() > 0;
+            };
+
+            // 確認申請書は全依頼で必須（後出し可）
+            $has_app_doc = $hasFile('app_doc');
+            // 地盤調査報告書は許容応力度・基礎梁許容応力度の時のみ必須（後出し可）
+            $needs_soil = ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1);
+            $has_soil = $needs_soil ? $hasFile('soil_report') : true;
+
+            $all_docs_ready = $has_app_doc && $has_soil;
+
+            if ($all_docs_ready) {
+                // 全図書揃い → 即座にスケジュール起算
+                $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+                $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+                $stmtAct->execute(['id' => $project_id]);
+                $current_actuals_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+                if ($current_actuals_row) {
+                    foreach ($colsToUpdate as $col) {
+                        $actuals = json_decode($current_actuals_row[$col] ?? '{}', true) ?: [];
+                        if (empty($actuals[0])) {
+                            $actuals[0] = $today;
+                            $stmtUpdate = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                            $stmtUpdate->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                        }
                     }
                 }
             }
-            
+
             // 自動見積りの最新額を初期お見積額に設定
             $stmtEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
             $stmtEst->execute(['pid' => $project_id]);
@@ -184,19 +218,35 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                 $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid AND (initial_est_amount IS NULL OR initial_est_amount = 0)");
                 $stmtInit->execute(['amt' => $latest_est, 'dt' => date('Y-m-d'), 'pid' => $project_id]);
             }
+
+            // チャット通知メッセージ（図書の揃い状況に応じて変える）
+            if ($all_docs_ready) {
+                $notify_msg = "【通知】正式依頼が受理され、すべての必要図書が揃いました。図書の内容を確認の上、一次回答期日の設定をお願いします。";
+            } else {
+                $missing = [];
+                if (!$has_app_doc) $missing[] = '確認申請書（2〜5面）';
+                if ($needs_soil && !$has_soil) $missing[] = '地盤調査報告書';
+                $missing_str = implode('、', $missing);
+                $notify_msg = "【通知】正式依頼が受理されました（CADデータ確認済）。\n以下の図書がまだ未提出です。提出が完了した時点を一次回答の起算日とします。\n\n未提出図書: {$missing_str}";
+            }
             
             $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
             $stmtNotify->execute([
                 'pid' => $project_id,
                 'sid' => $_SESSION['user_id'],
-                'msg' => "【通知】依頼種別に応じた必要図書の提出がすべて完了し、設計開始が依頼されました。図書の内容を確認の上、一次回答期日の設定をお願いします。"
+                'msg' => $notify_msg
             ]);
 
             // 管理者へメール通知
             $project_name = $project_info['project_name'] ?? '案件名未定';
             $subject = "【設計依頼】案件「{$project_name}」の設計開始が依頼されました";
-            $body = "案件「{$project_name}」にて、依頼主から構造仕様の指定と必要図書の提出が完了し、設計開始が依頼されました。\n\n";
-            $body .= "以下のURLよりダッシュボードにログインし、図書を確認して一次回答期日を設定してください。\n";
+            if ($all_docs_ready) {
+                $body = "案件「{$project_name}」にて、正式依頼が受理され、すべての必要図書が提出されました。\n\n";
+                $body .= "以下のURLよりダッシュボードにログインし、図書を確認して一次回答期日を設定してください。\n";
+            } else {
+                $body = "案件「{$project_name}」にて、正式依頼が受理されました（CADデータ確認済）。\n未提出図書があります：{$missing_str}\n\n";
+                $body .= "未提出図書がすべて揃った時点が一次回答の起算日となります。\n";
+            }
             $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n";
             sendSystemEmail('info@thanks.work', $subject, $body);
         }

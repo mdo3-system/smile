@@ -203,6 +203,69 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
                 ]);
             }
 
+            // ============================
+            // 後出し図書充足トリガー：一次回答晱山の自動起算
+            // primary_prep状態の案件で、必須図書が全て揃った場合にスケジュール起算日を自動記録
+            // ============================
+            if (in_array($file_category, ['app_doc', 'soil_report', 'cad_design_all', 'cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_elevation', 'cad_section', 'all_in_one_zip'])) {
+                // 後出し起算チェックは primary_prep ステータスの案件のみ対象
+                $stmtStatus = $pdo->prepare("SELECT status, req_permit, req_opt_kisohari FROM projects WHERE id = :id");
+                $stmtStatus->execute(['id' => $project_id]);
+                $pj = $stmtStatus->fetch(PDO::FETCH_ASSOC);
+
+                if ($pj && $pj['status'] === 'primary_prep') {
+                    // スケジュール起算済みか確認（すでに actuals[0] があればスキップ）
+                    $stmtAct = $pdo->prepare("SELECT schedule_actuals FROM projects WHERE id = :id");
+                    $stmtAct->execute(['id' => $project_id]);
+                    $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+                    $already_started = false;
+                    if ($act_row) {
+                        $actuals_check = json_decode($act_row['schedule_actuals'] ?? '{}', true) ?: [];
+                        $already_started = !empty($actuals_check[0]);
+                    }
+
+                    if (!$already_started) {
+                        // 必須図書充足判定
+                        $hasFile2 = function($c) use ($pdo, $project_id) {
+                            $s = $pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat AND is_latest = 1");
+                            $s->execute(['pid' => $project_id, 'cat' => $c]);
+                            return (int)$s->fetchColumn() > 0;
+                        };
+                        $has_app_doc2 = $hasFile2('app_doc');
+                        $needs_soil2 = ($pj['req_permit'] == 1 || $pj['req_opt_kisohari'] == 1);
+                        $has_soil2 = $needs_soil2 ? $hasFile2('soil_report') : true;
+
+                        if ($has_app_doc2 && $has_soil2) {
+                            // 全図書揃い！ → 起算日を記録
+                            $today2 = date('Y-m-d');
+                            $allCols = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+                            $stmtAllAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+                            $stmtAllAct->execute(['id' => $project_id]);
+                            $all_act_row = $stmtAllAct->fetch(PDO::FETCH_ASSOC);
+                            if ($all_act_row) {
+                                foreach ($allCols as $col) {
+                                    $act = json_decode($all_act_row[$col] ?? '{}', true) ?: [];
+                                    if (empty($act[0])) {
+                                        $act[0] = $today2;
+                                        $stmtUpd = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                                        $stmtUpd->execute(['act' => json_encode($act), 'pid' => $project_id]);
+                                    }
+                                }
+                            }
+
+                            // 管理者へ自動チャット通知
+                            $stmtN2 = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                            $stmtN2->execute([
+                                'pid' => $project_id,
+                                'sid' => $_SESSION['user_id'] ?? 1,
+                                'msg' => "【自動通知】必要図書がすべて揃いました。本日（{$today2}）が一次回答の起算日となりました。図書の内容を確認の上、一次回答期日の設定をお願いします。"
+                            ]);
+                        }
+                    }
+                }
+            }
+            // ==================================
+
             $pdo->commit();
         } catch (Exception $e) {
             if ($pdo->inTransaction()) {

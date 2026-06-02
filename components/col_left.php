@@ -85,30 +85,53 @@
                 
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <?php 
-                    // 許容応力度・壁量（共通図書）
-                    if ($project_info['req_permit'] || $project_info['req_wall'] || (!($project_info['req_permit']||$project_info['req_wall']||$project_info['req_skin']||$project_info['req_sky']))) {
-                        echo '<div style="font-size:12px;"><strong>【共通図書（構造計算等）】</strong></div>';
+                    // ===== 共通: 確認申請書（全依頼で必須・後出し可）=====
+                    echo '<div style="font-size:11px; font-weight:bold; color:#d97706; margin-bottom:2px;">【確認申請書（全依頼共通・後出し可）】</div>';
+                    echo '<div style="font-size:11px; margin-left:10px;">';
+                    echo '・確認申請書: ' . (isset($files_by_cat['app_doc']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:#d97706;">⏳未提出（後出し可）</span>') . '<br>';
+                    echo '</div>';
+
+                    // ===== 許容応力度・壁量（共通図書）=====
+                    if ($project_info['req_permit'] || $project_info['req_wall']) {
+                        echo '<div style="font-size:11px; font-weight:bold; color:#374151; margin-top:5px; margin-bottom:2px;">【許容応力度・壁量計算 図書】</div>';
                         echo '<div style="font-size:11px; margin-left:10px;">';
-                        echo '・意匠CADデータ: ' . (isset($files_by_cat['cad_design_all']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
-                        echo '・確認申請書: ' . (isset($files_by_cat['app_doc']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
-                        echo '・地盤調査報告書: ' . (isset($files_by_cat['soil_report']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>');
+                        $has_cad_any = isset($files_by_cat['cad_design_all']) || isset($files_by_cat['cad_layout']) || isset($files_by_cat['cad_plan_1f']) || isset($files_by_cat['cad_elevation']) || isset($files_by_cat['all_in_one_zip']);
+                        echo '・意匠CADデータ: ' . ($has_cad_any ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出（依頼時必須）</span>') . '<br>';
+                        if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
+                            echo '・地盤調査報告書: ' . (isset($files_by_cat['soil_report']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:#d97706;">⏳未提出（後出し可）</span>');
+                        }
                         echo '</div>';
                     }
-                    // 天空率
+                    // ===== 天空率 =====
                     if ($project_info['req_sky']) {
-                        echo '<div style="font-size:12px; margin-top:5px;"><strong>【天空率計算図書】</strong></div>';
+                        echo '<div style="font-size:11px; font-weight:bold; color:#374151; margin-top:5px; margin-bottom:2px;">【天空率計算図書】</div>';
                         echo '<div style="font-size:11px; margin-left:10px;">';
-                        echo '・道路の資料: ' . (isset($files_by_cat['road_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
-                        echo '・真北の資料: ' . (isset($files_by_cat['true_north']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>');
+                        echo '・道路の資料: ' . (isset($files_by_cat['road_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
+                        echo '・真北の資料: ' . (isset($files_by_cat['true_north']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
                         echo '</div>';
                     }
-                    // 外皮計算
+                    // ===== 外皮計算 =====
                     if ($project_info['req_skin']) {
-                        echo '<div style="font-size:12px; margin-top:5px;"><strong>【外皮計算図書】</strong></div>';
+                        echo '<div style="font-size:11px; font-weight:bold; color:#374151; margin-top:5px; margin-bottom:2px;">【外皮計算図書】</div>';
                         echo '<div style="font-size:11px; margin-left:10px;">';
-                        echo '・断熱材/サッシ仕様: ' . (isset($files_by_cat['insulation_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>') . '<br>';
-                        echo '・設備仕様書: ' . (isset($files_by_cat['equipment_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">未提出</span>');
+                        echo '・断熱材/サッシ仕様: ' . (isset($files_by_cat['insulation_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
+                        echo '・設備仕様書: ' . (isset($files_by_cat['equipment_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
                         echo '</div>';
+                    }
+
+                    // ===== 後出し図書の未提出警告（primary_prep中のみ）=====
+                    if ($project_info['status'] === 'primary_prep') {
+                        $pending = [];
+                        if (!isset($files_by_cat['app_doc'])) $pending[] = '確認申請書';
+                        if (($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) && !isset($files_by_cat['soil_report'])) $pending[] = '地盤調査報告書';
+                        if (!empty($pending)) {
+                            $pending_str = implode('、', $pending);
+                            echo '<div style="margin-top:10px; padding:8px; background:#fff8e1; border:1px solid #f59e0b; border-radius:4px; font-size:11px; color:#92400e;">';
+                            echo '⚠️ <strong>一次回答期限の起算待ち</strong><br>';
+                            echo '未提出図書: ' . $pending_str . '<br>';
+                            echo '上記図書の提出が完了した時点を「一次回答期限」の起算日とします。';
+                            echo '</div>';
+                        }
                     }
                     ?>
                 </div>

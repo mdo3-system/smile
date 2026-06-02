@@ -162,38 +162,64 @@
             <?php if ($project_info['status'] === 'quote_req' || $project_info['status'] === 'primary_prep'): ?>
             <div class="box" style="background:#f8fafc; border-color:#e2e8f0; margin-top:15px;">
                 <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">📋 提出が必要な図書</h3>
+                <div style="font-size:11px; color:#6b7280; margin-bottom:8px; line-height:1.6;">
+                    <span style="color:#ef4444; font-weight:bold;">🔴 依頼時必須</span>：正式依頼前に提出が必要&nbsp;&nbsp;
+                    <span style="color:#d97706; font-weight:bold;">🟡 後出し可</span>：依頼後の提出OK（揃った時点が一次回答の起算日）
+                </div>
                 <div style="display:flex; flex-direction:column; gap:8px; font-size:12px; margin-bottom:15px;">
                     <?php
                     // 依頼内容に基づく必要図書の判定
-                    $req_docs = [];
-                    // 許容応力度の場合は意匠CAD必須（平面、立面、矩計、配置など。ここでは一括ZIPがあればOKとする判定も可能）
+                    $req_docs_required  = []; // 正式依頼時に必須
+                    $req_docs_deferred  = []; // 後出し可（必須だが後でOK）
+
+                    // CADデータは全依頼で正式依頼時に必須
                     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-                        $req_docs['cad_design_all'] = '意匠CAD一式 (または個別図面)';
-                    }
-                    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-                        $req_docs['app_doc'] = '確認申請書（2〜5面）';
-                        $req_docs['soil_report'] = '地盤調査資料';
-                    }
-                    // 地盤改良がある場合は追加
-                    if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-                        $req_docs['soil_impr'] = '地盤改良関連図書';
+                        $req_docs_required['cad_design_all'] = '意匠CAD一式（JWW/DXF等）';
                     }
 
-                    foreach ($req_docs as $key => $label) {
-                        $is_submitted = false;
-                        if (isset($files_by_cat[$key])) {
-                            $is_submitted = true;
-                        } else if ($key === 'cad_design_all') {
-                            // 個別のCAD図面でもOKとする
-                            if (isset($files_by_cat['cad_plan']) || isset($files_by_cat['cad_elevation']) || isset($files_by_cat['all_in_one_zip'])) {
+                    // 確認申請書は全依頼で必須（後出し可）
+                    $req_docs_deferred['app_doc'] = '確認申請書（2〜5面）';
+
+                    // 地盤調査報告書は許容応力度・基礎梁許容応力度のみ必須（後出し可）
+                    if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
+                        $req_docs_deferred['soil_report'] = '地盤調査報告書';
+                    }
+
+                    // 地盤改良がある場合は追加（後出し可）
+                    if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
+                        $req_docs_deferred['soil_impr'] = '地盤改良関連図書';
+                    }
+
+                    // 「必須」グループの表示
+                    if (!empty($req_docs_required)) {
+                        echo '<div style="font-weight:bold; font-size:11px; color:#ef4444; margin-bottom:4px;">🔴 依頼時必須（正式依頼前に提出）</div>';
+                        foreach ($req_docs_required as $key => $label) {
+                            $is_submitted = false;
+                            if (isset($files_by_cat[$key])) {
                                 $is_submitted = true;
+                            } elseif ($key === 'cad_design_all') {
+                                if (isset($files_by_cat['cad_layout']) || isset($files_by_cat['cad_plan_1f']) || isset($files_by_cat['cad_elevation']) || isset($files_by_cat['all_in_one_zip'])) {
+                                    $is_submitted = true;
+                                }
+                            }
+                            if ($is_submitted) {
+                                echo "<div style='margin-left:10px;'>✅ <span style='color:#10b981;'>{$label} (UP済)</span></div>";
+                            } else {
+                                echo "<div style='margin-left:10px;'>❌ <span style='color:#ef4444; font-weight:bold;'>{$label}</span> <span style='color:#999;'>(未提出)</span></div>";
                             }
                         }
-                        
-                        if ($is_submitted) {
-                            echo "<div>✅ {$label} <span style='color:#10b981;'>(UP済)</span></div>";
-                        } else {
-                            echo "<div>❌ <span style='color:#ef4444; font-weight:bold;'>{$label}</span> <span style='color:#999;'>(未提出)</span></div>";
+                    }
+
+                    // 「後出し可」グループの表示
+                    if (!empty($req_docs_deferred)) {
+                        echo '<div style="font-weight:bold; font-size:11px; color:#d97706; margin-top:8px; margin-bottom:4px;">🟡 後出し可（揃った時点が起算日）</div>';
+                        foreach ($req_docs_deferred as $key => $label) {
+                            $is_submitted = isset($files_by_cat[$key]);
+                            if ($is_submitted) {
+                                echo "<div style='margin-left:10px;'>✅ <span style='color:#10b981;'>{$label} (UP済)</span></div>";
+                            } else {
+                                echo "<div style='margin-left:10px;'>⏳ <span style='color:#d97706;'>{$label}</span> <span style='color:#999;'>(未提出)</span></div>";
+                            }
                         }
                     }
                     ?>
