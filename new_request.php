@@ -75,11 +75,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 4. ファイルアップロード処理 (Google Drive API)
             $upload_fields = [
+                // 共通
                 'file_pdf_plan'      => 'pdf_plan',
                 'file_pdf_elevation' => 'pdf_elevation',
                 'file_pdf_layout'    => 'pdf_layout',
                 'file_pdf_section'   => 'pdf_section',
-                'file_pdf_area'      => 'pdf_area_calc'
+                'file_pdf_area'      => 'pdf_area_calc',
+                'file_pdf_app_doc'   => 'app_doc',
+                // 構造・壁量
+                'file_pdf_soil'      => 'soil_report',
+                'file_pdf_precut'    => 'pdf_precut',
+                // 外皮
+                'file_pdf_spec'      => 'spec_doc',
+                'file_pdf_insulation'=> 'insulation_data',
+                'file_pdf_sash'      => 'sash_data',
+                'file_pdf_ventilation'=> 'ventilation_data',
+                'file_pdf_equip'     => 'equip_data',
+                // 天空率
+                'file_pdf_road'      => 'road_data',
+                'file_pdf_true_north'=> 'true_north',
             ];
 
             foreach ($upload_fields as $input_name => $cat_key) {
@@ -399,6 +413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ※見積依頼時はPDFまたはCADデータでご提出いただけますが、<strong>設計依頼時（見積後）には改めて「最新のCADデータ」の提出が必須</strong>となります。
                 </div>
                 
+                <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px;">共通必須図書</h3>
                 <div class="form-row">
                     <div class="form-col">
                         <div class="file-upload-box">
@@ -442,9 +457,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                     <div class="form-col">
-                        <!-- 空枠 -->
+                        <div class="file-upload-box">
+                            <input type="file" name="file_pdf_app_doc" accept=".pdf,.zip">
+                            <div class="file-label">確認申請書（2〜5面）</div>
+                            <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 構造・壁量計算用 -->
+                <div id="upload_grp_permit" style="display:none; margin-top:20px;">
+                    <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px; color:#c0392b;">許容応力度・壁量計算 用</h3>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_soil" accept=".pdf,.zip">
+                                <div class="file-label">地盤調査報告書</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_precut" accept=".pdf,.zip">
+                                <div class="file-label">プレカット図（ある場合）</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 外皮計算用 -->
+                <div id="upload_grp_skin" style="display:none; margin-top:20px;">
+                    <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px; color:#d35400;">外皮計算 用</h3>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_spec" accept=".pdf,.zip">
+                                <div class="file-label">仕様書</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_insulation" accept=".pdf,.zip">
+                                <div class="file-label">断熱材資料</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_sash" accept=".pdf,.zip">
+                                <div class="file-label">サッシ・玄関ドア仕様</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_ventilation" accept=".pdf,.zip">
+                                <div class="file-label">24時間換気計算書</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_equip" accept=".pdf,.zip">
+                                <div class="file-label">設備機器カタログ</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 天空率計算用 -->
+                <div id="upload_grp_sky" style="display:none; margin-top:20px;">
+                    <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px; color:#2980b9;">天空率 用</h3>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_road" accept=".pdf,.zip">
+                                <div class="file-label">道路斜線用資料</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="file-upload-box">
+                                <input type="file" name="file_pdf_true_north" accept=".pdf,.zip">
+                                <div class="file-label">北側斜線用資料（真北資料）</div>
+                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <button type="submit" class="btn-submit">
@@ -466,6 +576,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 alert('見積を依頼する計算・設計内容を最低1つ選択してください。');
             }
         });
+
+        // 依頼内容に基づくアップロード枠の表示切替
+        function toggleUploadGroups() {
+            const reqPermit = document.getElementById('req_permit').checked;
+            const reqWall = document.getElementById('req_wall').checked;
+            const reqSkin = document.getElementById('req_skin').checked;
+            const reqSky = document.getElementById('req_sky').checked;
+
+            document.getElementById('upload_grp_permit').style.display = (reqPermit || reqWall) ? 'block' : 'none';
+            document.getElementById('upload_grp_skin').style.display = reqSkin ? 'block' : 'none';
+            document.getElementById('upload_grp_sky').style.display = reqSky ? 'block' : 'none';
+        }
+
+        document.querySelectorAll('.calc-type-chk').forEach(chk => {
+            chk.addEventListener('change', toggleUploadGroups);
+        });
+        
+        // 初期表示時にも実行
+        toggleUploadGroups();
 
         // ファイル選択時のUI更新
         document.querySelectorAll('input[type="file"]').forEach(input => {

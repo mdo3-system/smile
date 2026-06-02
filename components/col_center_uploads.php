@@ -1,4 +1,4 @@
-﻿<div class="column col-center" style="flex: 1;">
+<div class="column col-center" style="flex: 1;">
     <h2 class="section-title" style="background:#3b82f6;">📂 依頼主アップロード図書</h2>
     <div style="font-size:12px; color:#555; margin-bottom:15px;">
         必要な図書を以下からアップロード・差し替えしてください。<br>
@@ -21,6 +21,7 @@
     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
         $common_docs['app_doc'] = '確認申請書（2〜5面）';
         $common_docs['soil_report'] = '地盤調査資料';
+        $common_docs['pdf_precut'] = 'プレカット図';
     }
     if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
         $common_docs['soil_impr'] = '地盤改良関連図書';

@@ -29,7 +29,7 @@
         </div>
 
         <!-- 1. 許容応力度計算用フォーム -->
-        <div id="container_permit" class="box" style="background:#ffffff; border:1px solid #ccc; display:block; padding:8px; margin:0;">
+        <div id="container_permit" class="box" style="background:#ffffff; border:1px solid #ccc; display:<?= ($project_info['req_permit'] == 1) ? 'block' : 'none' ?>; padding:8px; margin:0;">
             <strong style="color:#2e7d32;">【許容応力度計算オプション】</strong>
             <div style="margin-top:5px; display:grid; gap:6px;">
                 <div>
@@ -70,7 +70,7 @@
         </div>
 
         <!-- 2. 性能表示壁量計算用フォーム -->
-        <div id="container_wall" class="box" style="background:#ffffff; border:1px solid #ccc; display:none; padding:8px; margin:0;">
+        <div id="container_wall" class="box" style="background:#ffffff; border:1px solid #ccc; display:<?= ($project_info['req_wall'] == 1) ? 'block' : 'none' ?>; padding:8px; margin:0;">
             <strong style="color:#c0392b;">【性能表示壁量計算オプション】</strong>
             <div style="margin-top:5px; display:grid; gap:6px;">
                 <div>
@@ -116,7 +116,7 @@
         </div>
 
         <!-- 3. 外皮計算用フォーム -->
-        <div id="container_skin" class="box" style="background:#ffffff; border:1px solid #ccc; display:none; padding:8px; margin:0;">
+        <div id="container_skin" class="box" style="background:#ffffff; border:1px solid #ccc; display:<?= ($project_info['req_skin'] == 1) ? 'block' : 'none' ?>; padding:8px; margin:0;">
             <strong style="color:#d35400;">【外皮計算オプション】</strong>
             <div style="margin-top:5px; display:grid; gap:6px;">
                 <div>
@@ -146,7 +146,7 @@
         </div>
 
         <!-- 4. 天空率用フォーム -->
-        <div id="container_sky" class="box" style="background:#ffffff; border:1px solid #ccc; display:none; padding:8px; margin:0;">
+        <div id="container_sky" class="box" style="background:#ffffff; border:1px solid #ccc; display:<?= ($project_info['req_sky'] == 1) ? 'block' : 'none' ?>; padding:8px; margin:0;">
             <strong style="color:#2980b9;">【天空率計算オプション】</strong>
             <div style="margin-top:5px; display:grid; gap:6px;">
                 <div>

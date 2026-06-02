@@ -1,4 +1,4 @@
-﻿// project_detail.js
+// project_detail.js
 
 // ===== チャット自動スクロール =====
 function scrollToBottom() {
@@ -360,6 +360,200 @@ function saveAndPrintEstimate() {
         btn.innerText = 'PDF発行中...';
     }
     
+function previewSubFile(input) {
+    const preview = document.getElementById('subFilePreview');
+    if (input.files && input.files[0]) {
+        preview.innerHTML = `📎 ${input.files[0].name}`;
+    } else {
+        preview.innerHTML = '';
+    }
+}
+
+function sendGreeting() {
+    const textEl = document.getElementById('greetingText');
+    if (textEl) {
+        const text = textEl.innerText;
+        document.getElementById('greetingModal').classList.remove('active');
+        sendMessage(text);
+    }
+}
+
+// ===== 見積計算ロジック =====
+let currentEstimate = 0, currentTax = 0, currentTotal = 0;
+let estimateItems = [];
+
+function toggleEstContainers() {
+    if(document.getElementById('container_permit')) {
+        document.getElementById('container_permit').style.display = document.getElementById('est_active_permit').checked ? 'block' : 'none';
+    }
+    if(document.getElementById('container_wall')) {
+        document.getElementById('container_wall').style.display = document.getElementById('est_active_wall').checked ? 'block' : 'none';
+    }
+    if(document.getElementById('container_skin')) {
+        document.getElementById('container_skin').style.display = document.getElementById('est_active_skin').checked ? 'block' : 'none';
+    }
+    if(document.getElementById('container_sky')) {
+        document.getElementById('container_sky').style.display = document.getElementById('est_active_sky').checked ? 'block' : 'none';
+    }
+}
+
+// ヘルパー: 全アイテムをestimateItemsに追加する。checkedかどうかに応じてamountを変える
+function pushEstimateItem(name, qty, unit, price, isActive) {
+    let amount = isActive ? price * qty : 0;
+    estimateItems.push({ name: name, qty: qty, unit: unit, price: price, amount: amount, is_active: isActive });
+    return amount;
+}
+
+function calcClientEstimate() {
+    currentEstimate = 0;
+    estimateItems = [];
+    
+    const el_permit = document.getElementById('est_active_permit');
+    const permit_active = el_permit ? el_permit.checked : false;
+    const el_wall = document.getElementById('est_active_wall');
+    const wall_active = el_wall ? el_wall.checked : false;
+    const el_skin = document.getElementById('est_active_skin');
+    const skin_active = el_skin ? el_skin.checked : false;
+    const el_sky = document.getElementById('est_active_sky');
+    const sky_active = el_sky ? el_sky.checked : false;
+    
+    // 1. 許容応力度計算
+    if (permit_active) {
+        let base = parseInt(document.getElementById('est_base_permit').value) || 0;
+        let area = parseFloat(document.getElementById('est_area_permit').value) || 0;
+        let area_qty = area > 150 ? Math.ceil(area - 150) : 0;
+        let base_with_area = base + (area_qty * 600);
+        
+        currentEstimate += pushEstimateItem("許容応力度計算 基本料金", 1, "式", base, true);
+        currentEstimate += pushEstimateItem("許容応力度計算 構造床面積割増 (150㎡超)", area_qty, "㎡", 600, area_qty > 0);
+        
+        // 形状加算 (基本料金+面積割増に乗算)
+        document.querySelectorAll('.est_mult_permit').forEach(cb => {
+            let labelText = cb.parentElement.innerText.trim(); // e.g. "準耐火/耐火構造 (+20%)"
+            let rate = parseFloat(cb.value);
+            let opt_price = Math.round(base_with_area * rate);
+            currentEstimate += pushEstimateItem(labelText, 1, "式", opt_price, cb.checked);
+        });
+
+        let grade = parseInt(document.getElementById('est_grade_permit').value) || 0;
+        let kanamono = parseInt(document.getElementById('est_kanamono_permit').value) || 0;
+        let special = parseInt(document.getElementById('est_special_permit').value) || 0;
+        
+        // 全部の等級をリストアップしたいが、selectなので選ばれたものだけが確定。他もリストアップするか？
+        // Selectは選択されたもの以外は「0円」などのオプションなので、選択されたものだけを表示でOKとする。
+        // もし全部見せたいなら固定でリストアップする必要がある。
+        // "等級加算なし" でも行としては出す
+        let gradeName = "許容応力度計算 目標等級加算";
+        if(grade == 40000) gradeName = "許容応力度計算 目標等級加算 (耐震3/耐風2等)";
+        if(grade == 20000) gradeName = "許容応力度計算 目標等級加算 (耐震2)";
+        currentEstimate += pushEstimateItem(gradeName, 1, "式", grade, grade > 0);
+
+        currentEstimate += pushEstimateItem("許容応力度計算 金物工法割増", kanamono > 0 ? kanamono : 1, "階", 15000, kanamono > 0);
+        currentEstimate += pushEstimateItem("許容応力度計算 特殊箇所割増", special > 0 ? special : 1, "箇所", 15000, special > 0);
+    }
+    
+    // 2. 性能表示壁量計算
+    if (wall_active) {
+        let base = parseInt(document.getElementById('est_base_wall').value) || 0;
+        let area = parseFloat(document.getElementById('est_area_wall').value) || 0;
+        let area_qty = area > 150 ? Math.ceil(area - 150) : 0;
+        let base_with_area = base + (area_qty * 500);
+        
+        currentEstimate += pushEstimateItem("性能表示壁量計算 基本料金", 1, "式", base, true);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 構造床面積割増 (150㎡超)", area_qty, "㎡", 500, area_qty > 0);
+        
+        document.querySelectorAll('.est_mult_wall').forEach(cb => {
+            let labelText = cb.parentElement.innerText.trim();
+            let rate = parseFloat(cb.value);
+            let opt_price = Math.round(base_with_area * rate);
+            currentEstimate += pushEstimateItem("性能表示壁量計算 " + labelText, 1, "式", opt_price, cb.checked);
+        });
+
+        let dwg = parseInt(document.getElementById('est_dwg_wall').value) || 0;
+        let jintsu = parseInt(document.getElementById('est_jintsu_wall').value) || 0;
+        
+        currentEstimate += pushEstimateItem("性能表示壁量計算 構造図(基礎伏図)作成", 1, "式", dwg, dwg > 0);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 人通孔箇所数割増", 1, "式", jintsu, jintsu > 0);
+        
+        let kisohari = document.getElementById('est_kisohari_wall').checked;
+        let kisohari_price = 20000 + (area > 150 ? Math.ceil(area - 150) * 500 : 0);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 基礎梁許容応力度計算", 1, "式", kisohari_price, kisohari);
+    }
+    
+    // 3. 外皮計算
+    if (skin_active) {
+        let base = parseInt(document.getElementById('est_base_skin').value) || 0;
+        let area = parseFloat(document.getElementById('est_area_skin').value) || 0;
+        let area_qty = area > 100 ? Math.ceil(area - 100) : 0;
+        let base_with_area = base + (area_qty * 500);
+        
+        currentEstimate += pushEstimateItem("外皮計算 基本料金", 1, "式", base, true);
+        currentEstimate += pushEstimateItem("外皮計算 外皮床面積割増 (100㎡超)", area_qty, "㎡", 500, area_qty > 0);
+        
+        document.querySelectorAll('.est_mult_skin').forEach(cb => {
+            let labelText = cb.parentElement.innerText.trim();
+            let rate = parseFloat(cb.value);
+            let opt_price = Math.round(base_with_area * rate);
+            currentEstimate += pushEstimateItem("外皮計算 " + labelText, 1, "式", opt_price, cb.checked);
+        });
+        
+        let kisotachi = parseInt(document.getElementById('est_kisotachi_skin').value) || 0;
+        currentEstimate += pushEstimateItem("外皮計算 基礎立上り400超割増", kisotachi > 0 ? kisotachi : 1, "箇所", 15000, kisotachi > 0);
+        
+        let setsumei = document.getElementById('est_setsumei_skin').checked;
+        currentEstimate += pushEstimateItem("外皮計算 設計内容説明書を作成する", 1, "式", 15000, setsumei);
+        
+        currentEstimate += pushEstimateItem("一次消費エネルギー量計算", 1, "式", 15000, true);
+    }
+    
+    // 4. 天空率計算
+    if (sky_active) {
+        let road = document.getElementById('est_road_sky').checked;
+        let north = document.getElementById('est_north_sky').checked;
+        currentEstimate += pushEstimateItem("天空率 道路斜線", 1, "式", 50000, road);
+        currentEstimate += pushEstimateItem("天空率 北側斜線", 1, "式", 50000, north);
+        
+        let extra = parseInt(document.getElementById('est_extra_sky').value) || 0;
+        currentEstimate += pushEstimateItem("天空率 追加斜線面検討", extra > 0 ? extra : 1, "面", 25000, extra > 0);
+        
+        let site_area = parseFloat(document.getElementById('est_site_area_sky').value) || 0;
+        let site_area_qty = site_area > 150 ? Math.ceil(site_area - 150) : 0;
+        currentEstimate += pushEstimateItem("天空率 敷地面積割増 (150㎡超)", site_area_qty > 0 ? site_area_qty : 1, "㎡", 200, site_area_qty > 0);
+        
+        let building_area = parseFloat(document.getElementById('est_building_area_sky').value) || 0;
+        let building_area_qty = building_area > 150 ? Math.ceil(building_area - 150) : 0;
+        currentEstimate += pushEstimateItem("天空率 建物床面積割増 (150㎡超)", building_area_qty > 0 ? building_area_qty : 1, "㎡", 200, building_area_qty > 0);
+        
+        let detail = document.getElementById('est_detail_sky').checked;
+        currentEstimate += pushEstimateItem("天空率 詳細モデル検討", 1, "式", 15000, detail);
+    }
+    
+    currentTax = Math.round(currentEstimate * 0.1);
+    currentTotal = currentEstimate + currentTax;
+    
+    const elTotal = document.getElementById('est_total_disp');
+    if (elTotal) elTotal.innerText = currentEstimate.toLocaleString();
+    
+    const elTax = document.getElementById('est_tax_disp');
+    if (elTax) elTax.innerText = currentTax.toLocaleString();
+    
+    const elGrand = document.getElementById('est_grand_total_disp');
+    if (elGrand) elGrand.innerText = currentTotal.toLocaleString();
+}
+
+function saveAndPrintEstimate() {
+    calcClientEstimate();
+    if (currentEstimate === 0) {
+        alert('計算する対象を選択してください。');
+        return;
+    }
+    
+    const btn = document.getElementById('pdf_issue_btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'PDF発行中...';
+    }
+    
     const formData = new FormData();
     formData.append('project_id', window.APP_PROJECT_ID);
     formData.append('total_price', currentEstimate);
@@ -402,49 +596,48 @@ function saveAndPrintEstimate() {
             }
         });
 }
- 
- / /   = = = = =   ]~j�g~b�]~k�g~�g~d�]~��V�t�A�p�]~"I0]~�0Q0  ( A u t o - R e l o a d   /   N o t i f i c a t i o n )   = = = = =  
- l e t   a u t o P o l l I n t e r v a l   =   n u l l ;  
- l e t   l a s t M a x M s g I d   =   w i n d o w . A P P _ L A S T _ M S G _ I D   | |   0 ;  
-  
- f u n c t i o n   c h e c k U p d a t e s ( )   {  
-         i f   ( ! w i n d o w . A P P _ P R O J E C T _ I D )   r e t u r n ;  
-          
-         / /   ]~"�]~�0�0�e�	�^x�m��0;S�0g~i�]~|�g~k�g~y�s�m�:~~�:~�n�0A��0m��R`"g~GY|��\� ]~"I0]~�0Q0 
-         c o n s t   c h a t I n p u t   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' c h a t I n p u t ' ) ;  
-         c o n s t   i s T y p i n g   =   c h a t I n p u t   & &   ( d o c u m e n t . a c t i v e E l e m e n t   = = =   c h a t I n p u t   | |   c h a t I n p u t . v a l u e . t r i m ( ) . l e n g t h   >   0 ) ;  
-          
-         f e t c h ( ' a p i _ c h e c k _ u p d a t e s . p h p ? p r o j e c t _ i d = '   +   w i n d o w . A P P _ P R O J E C T _ I D )  
-                 . t h e n ( r   = >   r . j s o n ( ) )  
-                 . t h e n ( d a t a   = >   {  
-                         i f   ( d a t a . m a x _ m e s s a g e _ i d   >   l a s t M a x M s g I d )   {  
-                                 i f   ( i s T y p i n g )   {  
-                                         s h o w U p d a t e T o a s t ( ) ;  
-                                 }   e l s e   {  
-                                         w i n d o w . l o c a t i o n . r e l o a d ( ) ;  
-                                 }  
-                         }  
-                 } )  
-                 . c a t c h ( e   = >   c o n s o l e . e r r o r ( " P o l l   e r r o r " ,   e ) ) ;  
- }  
-  
- f u n c t i o n   s h o w U p d a t e T o a s t ( )   {  
-         i f   ( d o c u m e n t . g e t E l e m e n t B y I d ( ' u p d a t e T o a s t ' ) )   r e t u r n ;  
-          
-         c o n s t   t o a s t   =   d o c u m e n t . c r e a t e E l e m e n t ( ' d i v ' ) ;  
-         t o a s t . i d   =   ' u p d a t e T o a s t ' ;  
-         t o a s t . i n n e r H T M L   =   `  
-                 < d i v   s t y l e = " p o s i t i o n : f i x e d ;   b o t t o m : 2 0 p x ;   r i g h t : 2 0 p x ;   b a c k g r o u n d : # 1 0 b 9 8 1 ;   c o l o r : w h i t e ;   p a d d i n g : 1 5 p x   2 0 p x ;   b o r d e r - r a d i u s : 8 p x ;   b o x - s h a d o w : 0   4 p x   6 p x   r g b a ( 0 , 0 , 0 , 0 . 1 ) ;   z - i n d e x : 9 9 9 9 ;   d i s p l a y : f l e x ;   a l i g n - i t e m s : c e n t e r ;   g a p : 1 5 p x ; " >  
-                         < s p a n   s t y l e = " f o n t - s i z e : 1 4 p x ;   f o n t - w e i g h t : b o l d ; " > ^�|  A�p�:~�R�]~a�]~�0]0]~|�g~x�g~�0�\A�p�:~�_`"g~�*":~�0/ s p a n >  
-                         < b u t t o n   o n c l i c k = " w i n d o w . l o c a t i o n . r e l o a d ( ) "   s t y l e = " b a c k g r o u n d : w h i t e ;   c o l o r : # 1 0 b 9 8 1 ;   b o r d e r : n o n e ;   p a d d i n g : 5 p x   1 0 p x ;   b o r d e r - r a d i u s : 4 p x ;   f o n t - w e i g h t : b o l d ;   c u r s o r : p o i n t e r ; " > V�t�A�p�:~6TK�< / b u t t o n >  
-                         < b u t t o n   o n c l i c k = " t h i s . p a r e n t E l e m e n t . r e m o v e ( ) "   s t y l e = " b a c k g r o u n d : t r a n s p a r e n t ;   c o l o r : w h i t e ;   b o r d e r : 1 p x   s o l i d   w h i t e ;   p a d d i n g : 5 p x ;   b o r d e r - r a d i u s : 4 p x ;   c u r s o r : p o i n t e r ; " > ({�0/ b u t t o n >  
-                 < / d i v >  
-         ` ;  
-         d o c u m e n t . b o d y . a p p e n d C h i l d ( t o a s t ) ;  
- }  
-  
- / /   1 5 X�uP�!1 W��i�0g~g�]~�0Q0 
- i f   ( w i n d o w . A P P _ P R O J E C T _ I D )   {  
-         a u t o P o l l I n t e r v a l   =   s e t I n t e r v a l ( c h e c k U p d a t e s ,   1 5 0 0 0 ) ;  
- }  
- 
+
+// ===== 自動リロード/通知ポーリング =====
+let autoPollInterval = null;
+let lastMaxMsgId = window.APP_LAST_MSG_ID || 0;
+
+function checkUpdates() {
+    if (!window.APP_PROJECT_ID) return;
+    
+    // 入力中かどうか判定
+    const chatInput = document.getElementById('chatInput');
+    const isTyping = chatInput && (document.activeElement === chatInput || chatInput.value.trim().length > 0);
+    
+    fetch('api_check_updates.php?project_id=' + window.APP_PROJECT_ID)
+        .then(r => r.json())
+        .then(data => {
+            if (data.max_message_id > lastMaxMsgId) {
+                if (isTyping) {
+                    showUpdateToast();
+                } else {
+                    window.location.reload();
+                }
+            }
+        })
+        .catch(e => console.error("Poll error", e));
+}
+
+function showUpdateToast() {
+    if (document.getElementById('updateToast')) return;
+    
+    const toast = document.createElement('div');
+    toast.id = 'updateToast';
+    toast.innerHTML = `
+        <div style="position:fixed; bottom:20px; right:20px; background:#10b981; color:white; padding:15px 20px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:9999; display:flex; align-items:center; gap:15px;">
+            <span style="font-size:14px; font-weight:bold;">新着メッセージがあります</span>
+            <button onclick="window.location.reload()" style="background:white; color:#10b981; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer;">更新</button>
+            <button onclick="this.parentElement.remove()" style="background:transparent; color:white; border:1px solid white; padding:5px; border-radius:4px; cursor:pointer;">閉じる</button>
+        </div>
+    `;
+    document.body.appendChild(toast);
+}
+
+// 15秒ごとにポーリング
+if (window.APP_PROJECT_ID) {
+    autoPollInterval = setInterval(checkUpdates, 15000);
+}
