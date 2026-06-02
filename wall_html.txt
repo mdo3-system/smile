@@ -1,0 +1,755 @@
+﻿<!DOCTYPE html>
+<html lang="ja" class="html_stretched responsive av-preloader-disabled av-default-lightbox  html_header_top html_logo_right html_main_nav_header html_menu_left html_slim html_header_sticky_disabled html_header_shrinking_disabled html_header_topbar_active html_mobile_menu_tablet html_header_searchicon_disabled html_content_align_center html_header_unstick_top_disabled html_header_stretch html_minimal_header html_av-submenu-hidden html_av-submenu-display-click html_av-overlay-side html_av-overlay-side-classic html_av-submenu-noclone html_entry_id_1638 av-cookies-no-cookie-consent av-no-preview html_text_menu_active ">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="index, follow" />
+
+
+<!-- mobile setting -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Scripts/CSS and wp_head hook -->
+<title>壁量計算　お見積り &#8211; 木造住宅設計サポート</title>
+<meta name='robots' content='max-image-preview:large' />
+<link rel="alternate" type="application/rss+xml" title="木造住宅設計サポート &raquo; フィード" href="https://thanks.work/feed" />
+<link rel="alternate" type="application/rss+xml" title="木造住宅設計サポート &raquo; コメントフィード" href="https://thanks.work/comments/feed" />
+		<!-- This site uses the Google Analytics by ExactMetrics plugin v8.0.1 - Using Analytics tracking - https://www.exactmetrics.com/ -->
+							<script src="//www.googletagmanager.com/gtag/js?id=G-03CKT56LHX"  data-cfasync="false" data-wpfc-render="false" type="text/javascript" async></script>
+			<script data-cfasync="false" data-wpfc-render="false" type="text/javascript">
+				var em_version = '8.0.1';
+				var em_track_user = true;
+				var em_no_track_reason = '';
+								var ExactMetricsDefaultLocations = {"page_location":"https:\/\/thanks.work\/%e5%a3%81%e9%87%8f%e8%a8%88%e7%ae%97%e3%80%80%e3%81%8a%e8%a6%8b%e7%a9%8d%e3%82%8a\/"};
+				if ( typeof ExactMetricsPrivacyGuardFilter === 'function' ) {
+					var ExactMetricsLocations = (typeof ExactMetricsExcludeQuery === 'object') ? ExactMetricsPrivacyGuardFilter( ExactMetricsExcludeQuery ) : ExactMetricsPrivacyGuardFilter( ExactMetricsDefaultLocations );
+				} else {
+					var ExactMetricsLocations = (typeof ExactMetricsExcludeQuery === 'object') ? ExactMetricsExcludeQuery : ExactMetricsDefaultLocations;
+				}
+
+								var disableStrs = [
+										'ga-disable-G-03CKT56LHX',
+									];
+
+				/* Function to detect opted out users */
+				function __gtagTrackerIsOptedOut() {
+					for (var index = 0; index < disableStrs.length; index++) {
+						if (document.cookie.indexOf(disableStrs[index] + '=true') > -1) {
+							return true;
+						}
+					}
+
+					return false;
+				}
+
+				/* Disable tracking if the opt-out cookie exists. */
+				if (__gtagTrackerIsOptedOut()) {
+					for (var index = 0; index < disableStrs.length; index++) {
+						window[disableStrs[index]] = true;
+					}
+				}
+
+				/* Opt-out function */
+				function __gtagTrackerOptout() {
+					for (var index = 0; index < disableStrs.length; index++) {
+						document.cookie = disableStrs[index] + '=true; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/';
+						window[disableStrs[index]] = true;
+					}
+				}
+
+				if ('undefined' === typeof gaOptout) {
+					function gaOptout() {
+						__gtagTrackerOptout();
+					}
+				}
+								window.dataLayer = window.dataLayer || [];
+
+				window.ExactMetricsDualTracker = {
+					helpers: {},
+					trackers: {},
+				};
+				if (em_track_user) {
+					function __gtagDataLayer() {
+						dataLayer.push(arguments);
+					}
+
+					function __gtagTracker(type, name, parameters) {
+						if (!parameters) {
+							parameters = {};
+						}
+
+						if (parameters.send_to) {
+							__gtagDataLayer.apply(null, arguments);
+							return;
+						}
+
+						if (type === 'event') {
+														parameters.send_to = exactmetrics_frontend.v4_id;
+							var hookName = name;
+							if (typeof parameters['event_category'] !== 'undefined') {
+								hookName = parameters['event_category'] + ':' + name;
+							}
+
+							if (typeof ExactMetricsDualTracker.trackers[hookName] !== 'undefined') {
+								ExactMetricsDualTracker.trackers[hookName](parameters);
+							} else {
+								__gtagDataLayer('event', name, parameters);
+							}
+							
+						} else {
+							__gtagDataLayer.apply(null, arguments);
+						}
+					}
+
+					__gtagTracker('js', new Date());
+					__gtagTracker('set', {
+						'developer_id.dNDMyYj': true,
+											});
+					if ( ExactMetricsLocations.page_location ) {
+						__gtagTracker('set', ExactMetricsLocations);
+					}
+										__gtagTracker('config', 'G-03CKT56LHX', {"forceSSL":"true"} );
+															window.gtag = __gtagTracker;										(function () {
+						/* https://developers.google.com/analytics/devguides/collection/analyticsjs/ */
+						/* ga and __gaTracker compatibility shim. */
+						var noopfn = function () {
+							return null;
+						};
+						var newtracker = function () {
+							return new Tracker();
+						};
+						var Tracker = function () {
+							return null;
+						};
+						var p = Tracker.prototype;
+						p.get = noopfn;
+						p.set = noopfn;
+						p.send = function () {
+							var args = Array.prototype.slice.call(arguments);
+							args.unshift('send');
+							__gaTracker.apply(null, args);
+						};
+						var __gaTracker = function () {
+							var len = arguments.length;
+							if (len === 0) {
+								return;
+							}
+							var f = arguments[len - 1];
+							if (typeof f !== 'object' || f === null || typeof f.hitCallback !== 'function') {
+								if ('send' === arguments[0]) {
+									var hitConverted, hitObject = false, action;
+									if ('event' === arguments[1]) {
+										if ('undefined' !== typeof arguments[3]) {
+											hitObject = {
+												'eventAction': arguments[3],
+												'eventCategory': arguments[2],
+												'eventLabel': arguments[4],
+												'value': arguments[5] ? arguments[5] : 1,
+											}
+										}
+									}
+									if ('pageview' === arguments[1]) {
+										if ('undefined' !== typeof arguments[2]) {
+											hitObject = {
+												'eventAction': 'page_view',
+												'page_path': arguments[2],
+											}
+										}
+									}
+									if (typeof arguments[2] === 'object') {
+										hitObject = arguments[2];
+									}
+									if (typeof arguments[5] === 'object') {
+										Object.assign(hitObject, arguments[5]);
+									}
+									if ('undefined' !== typeof arguments[1].hitType) {
+										hitObject = arguments[1];
+										if ('pageview' === hitObject.hitType) {
+											hitObject.eventAction = 'page_view';
+										}
+									}
+									if (hitObject) {
+										action = 'timing' === arguments[1].hitType ? 'timing_complete' : hitObject.eventAction;
+										hitConverted = mapArgs(hitObject);
+										__gtagTracker('event', action, hitConverted);
+									}
+								}
+								return;
+							}
+
+							function mapArgs(args) {
+								var arg, hit = {};
+								var gaMap = {
+									'eventCategory': 'event_category',
+									'eventAction': 'event_action',
+									'eventLabel': 'event_label',
+									'eventValue': 'event_value',
+									'nonInteraction': 'non_interaction',
+									'timingCategory': 'event_category',
+									'timingVar': 'name',
+									'timingValue': 'value',
+									'timingLabel': 'event_label',
+									'page': 'page_path',
+									'location': 'page_location',
+									'title': 'page_title',
+									'referrer' : 'page_referrer',
+								};
+								for (arg in args) {
+																		if (!(!args.hasOwnProperty(arg) || !gaMap.hasOwnProperty(arg))) {
+										hit[gaMap[arg]] = args[arg];
+									} else {
+										hit[arg] = args[arg];
+									}
+								}
+								return hit;
+							}
+
+							try {
+								f.hitCallback();
+							} catch (ex) {
+							}
+						};
+						__gaTracker.create = newtracker;
+						__gaTracker.getByName = newtracker;
+						__gaTracker.getAll = function () {
+							return [];
+						};
+						__gaTracker.remove = noopfn;
+						__gaTracker.loaded = true;
+						window['__gaTracker'] = __gaTracker;
+					})();
+									} else {
+										console.log("");
+					(function () {
+						function __gtagTracker() {
+							return null;
+						}
+
+						window['__gtagTracker'] = __gtagTracker;
+						window['gtag'] = __gtagTracker;
+					})();
+									}
+			</script>
+				<!-- / Google Analytics by ExactMetrics -->
+		
+<!-- google webfont font replacement -->
+
+			<script type='text/javascript'>
+
+				(function() {
+					
+					/*	check if webfonts are disabled by user setting via cookie - or user must opt in.	*/
+					var html = document.getElementsByTagName('html')[0];
+					var cookie_check = html.className.indexOf('av-cookies-needs-opt-in') >= 0 || html.className.indexOf('av-cookies-can-opt-out') >= 0;
+					var allow_continue = true;
+					var silent_accept_cookie = html.className.indexOf('av-cookies-user-silent-accept') >= 0;
+
+					if( cookie_check && ! silent_accept_cookie )
+					{
+						if( ! document.cookie.match(/aviaCookieConsent/) || html.className.indexOf('av-cookies-session-refused') >= 0 )
+						{
+							allow_continue = false;
+						}
+						else
+						{
+							if( ! document.cookie.match(/aviaPrivacyRefuseCookiesHideBar/) )
+							{
+								allow_continue = false;
+							}
+							else if( ! document.cookie.match(/aviaPrivacyEssentialCookiesEnabled/) )
+							{
+								allow_continue = false;
+							}
+							else if( document.cookie.match(/aviaPrivacyGoogleWebfontsDisabled/) )
+							{
+								allow_continue = false;
+							}
+						}
+					}
+					
+					if( allow_continue )
+					{
+						var f = document.createElement('link');
+					
+						f.type 	= 'text/css';
+						f.rel 	= 'stylesheet';
+						f.href 	= '//fonts.googleapis.com/css?family=Open+Sans:400,600';
+						f.id 	= 'avia-google-webfont';
+
+						document.getElementsByTagName('head')[0].appendChild(f);
+					}
+				})();
+			
+			</script>
+			<script type="text/javascript">
+/* <![CDATA[ */
+window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/15.0.3\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/15.0.3\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/thanks.work\/wp-includes\/js\/wp-emoji-release.min.js?ver=6.5.8"}};
+/*! This file is auto-generated */
+!function(i,n){var o,s,e;function c(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(o,JSON.stringify(t))}catch(e){}}function p(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data),r=(e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0),new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data));return t.every(function(e,t){return e===r[t]})}function u(e,t,n){switch(t){case"flag":return n(e,"\ud83c\udff3\ufe0f\u200d\u26a7\ufe0f","\ud83c\udff3\ufe0f\u200b\u26a7\ufe0f")?!1:!n(e,"\ud83c\uddfa\ud83c\uddf3","\ud83c\uddfa\u200b\ud83c\uddf3")&&!n(e,"\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f","\ud83c\udff4\u200b\udb40\udc67\u200b\udb40\udc62\u200b\udb40\udc65\u200b\udb40\udc6e\u200b\udb40\udc67\u200b\udb40\udc7f");case"emoji":return!n(e,"\ud83d\udc26\u200d\u2b1b","\ud83d\udc26\u200b\u2b1b")}return!1}function f(e,t,n){var r="undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):i.createElement("canvas"),a=r.getContext("2d",{willReadFrequently:!0}),o=(a.textBaseline="top",a.font="600 32px Arial",{});return e.forEach(function(e){o[e]=t(a,e,n)}),o}function t(e){var t=i.createElement("script");t.src=e,t.defer=!0,i.head.appendChild(t)}"undefined"!=typeof Promise&&(o="wpEmojiSettingsSupports",s=["flag","emoji"],n.supports={everything:!0,everythingExceptFlag:!0},e=new Promise(function(e){i.addEventListener("DOMContentLoaded",e,{once:!0})}),new Promise(function(t){var n=function(){try{var e=JSON.parse(sessionStorage.getItem(o));if("object"==typeof e&&"number"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&"object"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if("undefined"!=typeof Worker&&"undefined"!=typeof OffscreenCanvas&&"undefined"!=typeof URL&&URL.createObjectURL&&"undefined"!=typeof Blob)try{var e="postMessage("+f.toString()+"("+[JSON.stringify(s),u.toString(),p.toString()].join(",")+"));",r=new Blob([e],{type:"text/javascript"}),a=new Worker(URL.createObjectURL(r),{name:"wpTestEmojiSupports"});return void(a.onmessage=function(e){c(n=e.data),a.terminate(),t(n)})}catch(e){}c(n=f(s,u,p))}t(n)}).then(function(e){for(var t in e)n.supports[t]=e[t],n.supports.everything=n.supports.everything&&n.supports[t],"flag"!==t&&(n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&n.supports[t]);n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&!n.supports.flag,n.DOMReady=!1,n.readyCallback=function(){n.DOMReady=!0}}).then(function(){return e}).then(function(){var e;n.supports.everything||(n.readyCallback(),(e=n.source||{}).concatemoji?t(e.concatemoji):e.wpemoji&&e.twemoji&&(t(e.twemoji),t(e.wpemoji)))}))}((window,document),window._wpemojiSettings);
+/* ]]> */
+</script>
+<link rel='stylesheet' id='avia-grid-css' href='https://thanks.work/wp-content/themes/enfold/css/grid.css?ver=4.7.4' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-base-css' href='https://thanks.work/wp-content/themes/enfold/css/base.css?ver=4.7.4' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-layout-css' href='https://thanks.work/wp-content/themes/enfold/css/layout.css?ver=4.7.4' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-audioplayer-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/audio-player/audio-player.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-blog-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/blog/blog.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-postslider-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/postslider/postslider.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-button-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/buttons/buttons.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-buttonrow-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/buttonrow/buttonrow.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-button-fullwidth-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/buttons_fullwidth/buttons_fullwidth.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-catalogue-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/catalogue/catalogue.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-comments-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/comments/comments.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-contact-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/contact/contact.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow/slideshow.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-contentpartner-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/contentslider/contentslider.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-countdown-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/countdown/countdown.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-gallery-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/gallery/gallery.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-gallery-hor-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/gallery_horizontal/gallery_horizontal.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-maps-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/google_maps/google_maps.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-gridrow-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/grid_row/grid_row.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-heading-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/heading/heading.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-rotator-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/headline_rotator/headline_rotator.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-hr-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/hr/hr.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-icon-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/icon/icon.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-iconbox-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/iconbox/iconbox.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-icongrid-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/icongrid/icongrid.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-iconlist-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/iconlist/iconlist.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-image-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/image/image.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-hotspot-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/image_hotspots/image_hotspots.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-magazine-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/magazine/magazine.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-masonry-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/masonry_entries/masonry_entries.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-siteloader-css' href='https://thanks.work/wp-content/themes/enfold/css/avia-snippet-site-preloader.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-menu-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/menu/menu.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-modfule-notification-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/notification/notification.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-numbers-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/numbers/numbers.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-portfolio-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/portfolio/portfolio.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-progress-bar-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/progressbar/progressbar.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-promobox-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/promobox/promobox.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-sc-search-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/search/search.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-accordion-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_accordion/slideshow_accordion.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-feature-image-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_feature_image/slideshow_feature_image.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-fullsize-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_fullsize/slideshow_fullsize.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-fullscreen-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_fullscreen/slideshow_fullscreen.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-slideshow-ls-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_layerslider/slideshow_layerslider.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-social-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/social_share/social_share.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-tabsection-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/tab_section/tab_section.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-table-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/table/table.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-tabs-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/tabs/tabs.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-team-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/team/team.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-testimonials-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/testimonials/testimonials.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-timeline-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/timeline/timeline.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-toggles-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/toggles/toggles.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-module-video-css' href='https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/video/video.css?ver=6.5.8' type='text/css' media='all' />
+<style id='wp-emoji-styles-inline-css' type='text/css'>
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+</style>
+<link rel='stylesheet' id='contact-form-7-css' href='https://thanks.work/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=5.9.8' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-scs-css' href='https://thanks.work/wp-content/themes/enfold/css/shortcodes.css?ver=4.7.4' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-popup-css-css' href='https://thanks.work/wp-content/themes/enfold/js/aviapopup/magnific-popup.css?ver=4.7.4' type='text/css' media='screen' />
+<link rel='stylesheet' id='avia-lightbox-css' href='https://thanks.work/wp-content/themes/enfold/css/avia-snippet-lightbox.css?ver=4.7.4' type='text/css' media='screen' />
+<link rel='stylesheet' id='avia-widget-css-css' href='https://thanks.work/wp-content/themes/enfold/css/avia-snippet-widget.css?ver=4.7.4' type='text/css' media='screen' />
+<link rel='stylesheet' id='avia-dynamic-css' href='https://thanks.work/wp-content/uploads/dynamic_avia/enfold_child.css?ver=67c94f5eb7b8f' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-custom-css' href='https://thanks.work/wp-content/themes/enfold/css/custom.css?ver=4.7.4' type='text/css' media='all' />
+<link rel='stylesheet' id='avia-style-css' href='https://thanks.work/wp-content/themes/enfold-child/style.css?ver=4.7.4' type='text/css' media='all' />
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/jquery/jquery.min.js?ver=3.7.1" id="jquery-core-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1" id="jquery-migrate-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/plugins/google-analytics-dashboard-for-wp/assets/js/frontend-gtag.min.js?ver=8.0.1" id="exactmetrics-frontend-script-js"></script>
+<script data-cfasync="false" data-wpfc-render="false" type="text/javascript" id='exactmetrics-frontend-script-js-extra'>/* <![CDATA[ */
+var exactmetrics_frontend = {"js_events_tracking":"true","download_extensions":"zip,mp3,mpeg,pdf,docx,pptx,xlsx,rar","inbound_paths":"[{\"path\":\"\\\/go\\\/\",\"label\":\"affiliate\"},{\"path\":\"\\\/recommend\\\/\",\"label\":\"affiliate\"}]","home_url":"https:\/\/thanks.work","hash_tracking":"false","v4_id":"G-03CKT56LHX"};/* ]]> */
+</script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/avia-compat.js?ver=4.7.4" id="avia-compat-js"></script>
+<link rel="https://api.w.org/" href="https://thanks.work/wp-json/" /><link rel="alternate" type="application/json" href="https://thanks.work/wp-json/wp/v2/pages/1638" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://thanks.work/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress 6.5.8" />
+<link rel="canonical" href="https://thanks.work/%e5%a3%81%e9%87%8f%e8%a8%88%e7%ae%97%e3%80%80%e3%81%8a%e8%a6%8b%e7%a9%8d%e3%82%8a" />
+<link rel='shortlink' href='https://thanks.work/?p=1638' />
+<link rel="alternate" type="application/json+oembed" href="https://thanks.work/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fthanks.work%2F%25e5%25a3%2581%25e9%2587%258f%25e8%25a8%2588%25e7%25ae%2597%25e3%2580%2580%25e3%2581%258a%25e8%25a6%258b%25e7%25a9%258d%25e3%2582%258a" />
+<link rel="alternate" type="text/xml+oembed" href="https://thanks.work/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fthanks.work%2F%25e5%25a3%2581%25e9%2587%258f%25e8%25a8%2588%25e7%25ae%2597%25e3%2580%2580%25e3%2581%258a%25e8%25a6%258b%25e7%25a9%258d%25e3%2582%258a&#038;format=xml" />
+<link rel="profile" href="http://gmpg.org/xfn/11" />
+<link rel="alternate" type="application/rss+xml" title="木造住宅設計サポート RSS2 Feed" href="https://thanks.work/feed" />
+<link rel="pingback" href="https://thanks.work/xmlrpc.php" />
+<!--[if lt IE 9]><script src="https://thanks.work/wp-content/themes/enfold/js/html5shiv.js"></script><![endif]-->
+<link rel="icon" href="https://thanks.work/wp-content/uploads/2017/09/favicon-300x273.png" type="image/png">
+<style type='text/css'>
+@font-face {font-family: 'entypo-fontello'; font-weight: normal; font-style: normal; font-display: auto;
+src: url('https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-template-builder/assets/fonts/entypo-fontello.eot');
+src: url('https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-template-builder/assets/fonts/entypo-fontello.eot?#iefix') format('embedded-opentype'), 
+url('https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-template-builder/assets/fonts/entypo-fontello.woff') format('woff'),
+url('https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-template-builder/assets/fonts/entypo-fontello.woff2') format('woff2'),
+url('https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-template-builder/assets/fonts/entypo-fontello.ttf') format('truetype'), 
+url('https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-template-builder/assets/fonts/entypo-fontello.svg#entypo-fontello') format('svg');
+} #top .avia-font-entypo-fontello, body .avia-font-entypo-fontello, html body [data-av_iconfont='entypo-fontello']:before{ font-family: 'entypo-fontello'; }
+
+@font-face {font-family: 'medical'; font-weight: normal; font-style: normal; font-display: auto;
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/medical/medical.eot');
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/medical/medical.eot?#iefix') format('embedded-opentype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/medical/medical.woff') format('woff'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/medical/medical.woff2') format('woff2'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/medical/medical.ttf') format('truetype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/medical/medical.svg#medical') format('svg');
+} #top .avia-font-medical, body .avia-font-medical, html body [data-av_iconfont='medical']:before{ font-family: 'medical'; }
+
+@font-face {font-family: 'light_'; font-weight: normal; font-style: normal; font-display: auto;
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/light_/light_.eot');
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/light_/light_.eot?#iefix') format('embedded-opentype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/light_/light_.woff') format('woff'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/light_/light_.woff2') format('woff2'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/light_/light_.ttf') format('truetype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/light_/light_.svg#light_') format('svg');
+} #top .avia-font-light_, body .avia-font-light_, html body [data-av_iconfont='light_']:before{ font-family: 'light_'; }
+
+@font-face {font-family: 'lifestyles'; font-weight: normal; font-style: normal; font-display: auto;
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/lifestyles/lifestyles.eot');
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/lifestyles/lifestyles.eot?#iefix') format('embedded-opentype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/lifestyles/lifestyles.woff') format('woff'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/lifestyles/lifestyles.woff2') format('woff2'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/lifestyles/lifestyles.ttf') format('truetype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/lifestyles/lifestyles.svg#lifestyles') format('svg');
+} #top .avia-font-lifestyles, body .avia-font-lifestyles, html body [data-av_iconfont='lifestyles']:before{ font-family: 'lifestyles'; }
+
+@font-face {font-family: 'Flaticon'; font-weight: normal; font-style: normal; font-display: auto;
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/Flaticon/Flaticon.eot');
+src: url('https://thanks.work/wp-content/uploads/avia_fonts/Flaticon/Flaticon.eot?#iefix') format('embedded-opentype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/Flaticon/Flaticon.woff') format('woff'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/Flaticon/Flaticon.woff2') format('woff2'),
+url('https://thanks.work/wp-content/uploads/avia_fonts/Flaticon/Flaticon.ttf') format('truetype'), 
+url('https://thanks.work/wp-content/uploads/avia_fonts/Flaticon/Flaticon.svg#Flaticon') format('svg');
+} #top .avia-font-Flaticon, body .avia-font-Flaticon, html body [data-av_iconfont='Flaticon']:before{ font-family: 'Flaticon'; }
+</style>
+
+<!--
+Debugging Info for Theme support: 
+
+Theme: Enfold
+Version: 4.7.4
+Installed: enfold
+AviaFramework Version: 5.0
+AviaBuilder Version: 4.7.1.1
+aviaElementManager Version: 1.0.1
+- - - - - - - - - - -
+ChildTheme: Enfold Child
+ChildTheme Version: 1.0
+ChildTheme Installed: enfold
+
+ML:1G-PU:12-PLA:10
+WP:6.5.8
+Compress: CSS:disabled - JS:disabled
+Updates: disabled
+PLAu:8
+-->
+</head>
+
+
+
+
+<body id="top" class="page-template-default page page-id-1638  rtl_columns stretched open_sans no_sidebar_border" itemscope="itemscope" itemtype="https://schema.org/WebPage" >
+
+	
+	<div id='wrap_all'>
+
+	
+<header id='header' class='all_colors header_color light_bg_color  av_header_top av_logo_right av_main_nav_header av_menu_left av_slim av_header_sticky_disabled av_header_shrinking_disabled av_header_stretch av_mobile_menu_tablet av_header_searchicon_disabled av_header_unstick_top_disabled av_seperator_big_border av_minimal_header av_bottom_nav_disabled '  role="banner" itemscope="itemscope" itemtype="https://schema.org/WPHeader" >
+
+		<div id='header_meta' class='container_wrap container_wrap_meta  av_icon_active_main av_secondary_right av_extra_header_active av_phone_active_left av_entry_id_1638'>
+		
+			      <div class='container'>
+			      <nav class='sub_menu'  role="navigation" itemscope="itemscope" itemtype="https://schema.org/SiteNavigationElement" ><ul id="avia2-menu" class="menu"><li id="menu-item-1325" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-1325"><a href="#">Customer Login</a></li>
+<li id="menu-item-1326" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-1326"><a href="#">Registration</a></li>
+</ul></nav><div class='phone-info with_nav'><span>Phone: 070-8305-8480</span></div>			      </div>
+		</div>
+
+		<div  id='header_main' class='container_wrap container_wrap_logo'>
+	
+        <div class='container av-logo-container'><div class='inner-container'><span class='logo'><a href='https://thanks.work/'><img height='100' width='300' src='https://thanks.work/wp-content/uploads/2017/09/logo-300x300.png' alt='木造住宅設計サポート' title='' /></a></span><nav class='main_menu' data-selectname='Select a page'  role="navigation" itemscope="itemscope" itemtype="https://schema.org/SiteNavigationElement" ><div class="avia-menu av-main-nav-wrap av_menu_icon_beside"><ul id="avia-menu" class="menu av-main-nav"><li id="menu-item-1446" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-home menu-item-top-level menu-item-top-level-1"><a href="https://thanks.work/" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">TOP</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a></li>
+<li id="menu-item-1191" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-top-level menu-item-top-level-2"><a itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">設計サービス</span><span class="avia-menu-subtext">What we can do for you</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a>
+
+
+<ul class="sub-menu">
+	<li id="menu-item-1424" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/kozokeisan" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">日本人建築士による格安・短納期の許容応力度計算「構造計算」サービス</span></a></li>
+	<li id="menu-item-1422" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/gaihi" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">日本人建築士による格安・短納期の「外皮・一次エネルギー消費量計算」・「エネルギーパス発行」</span></a></li>
+	<li id="menu-item-1427" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/tyoki" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">長期優良住宅認定申請サポート</span></a></li>
+	<li id="menu-item-1421" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/kaberyo" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">日本人建築士による格安・短納期の「壁量計算」</span></a></li>
+	<li id="menu-item-1425" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/kakunin" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">日本人建築士による格安・短納期の「確認申請サポート」</span></a></li>
+	<li id="menu-item-1423" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/shadow" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">日本人建築士による格安・短納期の「天空率計算」</span></a></li>
+	<li id="menu-item-1428" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/tyoseikuiki" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">開発許可申請・建築許可申請・農地転用許可申請</span></a></li>
+	<li id="menu-item-1426" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/taisin" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">耐震診断・補強計画</span></a></li>
+</ul>
+</li>
+<li id="menu-item-1637" class="menu-item menu-item-type-custom menu-item-object-custom current-menu-ancestor current-menu-parent menu-item-has-children menu-item-top-level menu-item-top-level-3"><a itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">自動見積り</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a>
+
+
+<ul class="sub-menu">
+	<li id="menu-item-1648" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/%e8%a8%b1%e5%ae%b9%e5%bf%9c%e5%8a%9b%e5%ba%a6%e8%a8%88%e7%ae%97%e3%80%80%e3%81%8a%e8%a6%8b%e7%a9%8d%e3%82%8a" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">許容応力度計算　お見積り</span></a></li>
+	<li id="menu-item-1649" class="menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-1638 current_page_item"><a href="https://thanks.work/%e5%a3%81%e9%87%8f%e8%a8%88%e7%ae%97%e3%80%80%e3%81%8a%e8%a6%8b%e7%a9%8d%e3%82%8a" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">壁量計算　お見積り</span></a></li>
+	<li id="menu-item-1647" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/%e5%a4%96%e7%9a%ae%e8%a8%88%e7%ae%97%e3%80%80%e3%81%8a%e8%a6%8b%e7%a9%8d%e3%82%8a" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">外皮計算　お見積り</span></a></li>
+	<li id="menu-item-1646" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/%e5%a4%a9%e7%a9%ba%e7%8e%87%e3%80%80%e3%81%8a%e8%a6%8b%e7%a9%8d%e3%82%8a" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">天空率　お見積り</span></a></li>
+</ul>
+</li>
+<li id="menu-item-1480" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-top-level menu-item-top-level-4"><a itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">申込フォーム</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a>
+
+
+<ul class="sub-menu">
+	<li id="menu-item-1432" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/kozokeisan_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">構造計算（許容応力度計算）　見積依頼フォーム</span></a></li>
+	<li id="menu-item-1430" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/gaihi_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">外皮計算・一次消費エネルギー量計算　見積依頼フォーム</span></a></li>
+	<li id="menu-item-1431" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/taisin_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">性能表示壁量計算用　発注依頼フォーム</span></a></li>
+	<li id="menu-item-1435" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/tyoki_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">長期優良住宅認定申請　発注依頼フォーム</span></a></li>
+	<li id="menu-item-1429" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/kaberyo_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">壁量計算（基準法・性能表示）　見積依頼フォーム</span></a></li>
+	<li id="menu-item-1433" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children"><a href="https://thanks.work/kakunin_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">確認申請　発注依頼フォーム</span></a>
+	<ul class="sub-menu">
+		<li id="menu-item-1439" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/tenkuritu_form1" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">天空率　見積依頼フォーム</span></a></li>
+	</ul>
+</li>
+	<li id="menu-item-1440" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/tenkuritu_form2" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">天空率　発注依頼フォーム（構造依頼有り）</span></a></li>
+	<li id="menu-item-1436" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/tyosei_form" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">開発許可・建築許可・農地転用許可申請　発注依頼フォーム</span></a></li>
+	<li id="menu-item-1434" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/taisin_form-2" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">耐震診断　発注依頼フォーム</span></a></li>
+	<li id="menu-item-1686" class="menu-item menu-item-type-post_type menu-item-object-page"><a href="https://thanks.work/kozokeisan_form-2" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">構造計算（許容応力度計算）　構造仕様入力フォーム</span></a></li>
+</ul>
+</li>
+<li id="menu-item-1489" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-top-level menu-item-top-level-5"><a href="https://thanks.work/services" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">ビルダー様向け</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a></li>
+<li id="menu-item-1707" class="menu-item menu-item-type-post_type menu-item-object-page av-menu-button av-menu-button-colored menu-item-top-level menu-item-top-level-6"><a href="https://thanks.work/video_course" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">構造計算　習得サポート</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a></li>
+<li id="menu-item-1447" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-top-level menu-item-top-level-7"><a href="https://thanks.work/about" itemprop="url"><span class="avia-bullet"></span><span class="avia-menu-text">About</span><span class="avia-menu-fx"><span class="avia-arrow-wrap"><span class="avia-arrow"></span></span></span></a></li>
+<li class="av-burger-menu-main menu-item-avia-special ">
+	        			<a href="#" aria-label="Menu" aria-hidden="false">
+							<span class="av-hamburger av-hamburger--spin av-js-hamburger">
+								<span class="av-hamburger-box">
+						          <span class="av-hamburger-inner"></span>
+						          <strong>Menu</strong>
+								</span>
+							</span>
+							<span class="avia_hidden_link_text">Menu</span>
+						</a>
+	        		   </li></ul></div><ul class='noLightbox social_bookmarks icon_count_3'><li class='social_bookmarks_facebook av-social-link-facebook social_icon_1'><a  aria-label="Link to Facebook" href='#' aria-hidden='false' data-av_icon='' data-av_iconfont='entypo-fontello' title='Facebook'><span class='avia_hidden_link_text'>Facebook</span></a></li><li class='social_bookmarks_instagram av-social-link-instagram social_icon_2'><a target="_blank" aria-label="Link to Instagram" href='https://www.instagram.com/koki_sugawara/' aria-hidden='false' data-av_icon='' data-av_iconfont='entypo-fontello' title='Instagram' rel="noopener"><span class='avia_hidden_link_text'>Instagram</span></a></li><li class='social_bookmarks_mail av-social-link-mail social_icon_3'><a  aria-label="Link to Mail" href='https://thanks.work/contact-3' aria-hidden='false' data-av_icon='' data-av_iconfont='entypo-fontello' title='Mail'><span class='avia_hidden_link_text'>Mail</span></a></li></ul></nav></div> </div> 
+		<!-- end container_wrap-->
+		</div>
+		<div class='header_bg'></div>
+
+<!-- end header -->
+</header>
+		
+	<div id='main' class='all_colors' data-scroll-offset='0'>
+
+	
+		<div class='container_wrap container_wrap_first main_color fullsize'>
+
+			<div class='container'>
+
+				<main class='template-page content  av-content-full alpha units'  role="main" itemprop="mainContentOfPage" >
+
+                    
+		<article class='post-entry post-entry-type-page post-entry-1638'  itemscope="itemscope" itemtype="https://schema.org/CreativeWork" >
+
+			<div class="entry-content-wrapper clearfix">
+                <header class="entry-content-header"></header><div class="entry-content"  itemprop="text" ><h2>壁量計算　概算見積作成</h2>
+<p>下記フォームにご入力いただき　→ 確認画面へ→ 送信　の流れでご入力されたメールアドレスへ概算見積りを送信いたします。<br />
+<div id="root"></div>
+
+<div class="wq-Dialog" id="wq-dialog">
+  <div class="wq--frame">
+    <p class="wq--message" id="wq-dialog-message"></p>
+    <div class="wq--actions">
+        <a class="wq-Button wq-belongs-dialog wq-for-link" id="wq-link-button" href="" target="_blank"></a>
+        <button type="button" class="wq-Button wq-belongs-dialog wq-for-ok" id="wq-ok-button"></button>
+    </div>
+  </div>
+</div>
+<script>
+window.aformsDialog = (function () {
+  var opener = document.getElementById('wq-dialog');
+  var p = document.getElementById('wq-dialog-message');
+  var linkButton = document.getElementById('wq-link-button');
+  var okButton = document.getElementById('wq-ok-button');
+  var kontinue = null;
+  linkButton.addEventListener('click', function () {
+    window.setTimeout(function () {hide(true);}, 100);
+  });
+  okButton.addEventListener('click', function () {
+    hide(false);
+  });
+  function show(message, url, linkText, k, okText) {
+    kontinue = k;
+    p.innerText = message;
+    if (url) {
+      linkButton.href = url;
+      linkButton.innerText = linkText;
+    } else {
+      linkButton.style.display = "none";
+    }
+    okButton.innerText = okText ? okText : 'OK';
+    opener.style.display = 'block';
+    document.documentElement.classList.add('wq-x-suspended');
+    window.setTimeout(function () {
+      opener.classList.add('wq-is-shown');
+    }, 100);
+  }
+  function hide(res) {
+    var k = kontinue;
+    kontinue = null;
+    opener.classList.remove('wq-is-shown');
+    window.setTimeout(function () {
+      document.documentElement.classList.remove('wq-x-suspended');
+      opener.style.display = 'none';
+      k(res);
+    }, 100);
+  }
+  return show;
+})();
+</script>
+</p>
+</div><footer class="entry-footer"></footer>			</div>
+
+		</article><!--end post-entry-->
+
+
+
+				<!--end content-->
+				</main>
+
+				
+			</div><!--end container-->
+
+		</div><!-- close default .container_wrap element -->
+
+
+
+						<div class='container_wrap footer_color' id='footer'>
+
+					<div class='container'>
+
+						<div class='flex_column av_one_third  first el_before_av_one_third'><section id="text-3" class="widget clearfix widget_text"><h3 class="widgettitle">木造住宅の性能を数値化！</h3>			<div class="textwidget"><p>木造住宅もちゃんと設計してちゃんと建てれば高性能で安全で快適に健康に暮らせます。意匠に自信のある建築士さんや技術に自信のある工務店さんの建物の構造や省エネ性能の数値化を低価格でサポートするサイトです。</p>
+</div>
+		<span class="seperator extralight-border"></span></section></div><div class='flex_column av_one_third  el_after_av_one_third  el_before_av_one_third '><section id="text-4" class="widget clearfix widget_text"><h3 class="widgettitle">木造住宅設計サポート</h3>			<div class="textwidget"><p>東京都練馬区練馬1-20-8-2Ｆ<br />
+担当：菅原・渡辺<br />
+070-8305-8480<br />
+info@thanks.work</p>
+</div>
+		<span class="seperator extralight-border"></span></section></div><div class='flex_column av_one_third  el_after_av_one_third  el_before_av_one_third '><section id="text-5" class="widget clearfix widget_text"><h3 class="widgettitle">対応時間</h3>			<div class="textwidget"><p>月-金: 9:00-18:00<br />
+日: 9:00-13:00<br />
+水・土: 定休日<br />
+時間外・定休日・年末年始・盆休み・GW等休日は対応できませんのでご容赦ください</p>
+</div>
+		<span class="seperator extralight-border"></span></section></div>
+
+					</div>
+
+
+				<!-- ####### END FOOTER CONTAINER ####### -->
+				</div>
+
+	
+
+
+			
+
+			
+				<footer class='container_wrap socket_color' id='socket'  role="contentinfo" itemscope="itemscope" itemtype="https://schema.org/WPFooter" >
+                    <div class='container'>
+
+                        <span class='copyright'>© Copyright - 木造住宅設計サポート </span>
+
+                        <ul class='noLightbox social_bookmarks icon_count_3'><li class='social_bookmarks_facebook av-social-link-facebook social_icon_1'><a  aria-label="Link to Facebook" href='#' aria-hidden='false' data-av_icon='' data-av_iconfont='entypo-fontello' title='Facebook'><span class='avia_hidden_link_text'>Facebook</span></a></li><li class='social_bookmarks_instagram av-social-link-instagram social_icon_2'><a target="_blank" aria-label="Link to Instagram" href='https://www.instagram.com/koki_sugawara/' aria-hidden='false' data-av_icon='' data-av_iconfont='entypo-fontello' title='Instagram' rel="noopener"><span class='avia_hidden_link_text'>Instagram</span></a></li><li class='social_bookmarks_mail av-social-link-mail social_icon_3'><a  aria-label="Link to Mail" href='https://thanks.work/contact-3' aria-hidden='false' data-av_icon='' data-av_iconfont='entypo-fontello' title='Mail'><span class='avia_hidden_link_text'>Mail</span></a></li></ul>
+                    </div>
+
+	            <!-- ####### END SOCKET CONTAINER ####### -->
+				</footer>
+
+
+					<!-- end main -->
+		</div>
+		
+		<!-- end wrap_all --></div>
+
+<a href='#top' title='Scroll to top' id='scroll-top-link' aria-hidden='true' data-av_icon='' data-av_iconfont='entypo-fontello'><span class="avia_hidden_link_text">Scroll to top</span></a>
+
+<div id="fb-root"></div>
+
+
+ <script type='text/javascript'>
+ /* <![CDATA[ */  
+var avia_framework_globals = avia_framework_globals || {};
+    avia_framework_globals.frameworkUrl = 'https://thanks.work/wp-content/themes/enfold/framework/';
+    avia_framework_globals.installedAt = 'https://thanks.work/wp-content/themes/enfold/';
+    avia_framework_globals.ajaxurl = 'https://thanks.work/wp-admin/admin-ajax.php';
+/* ]]> */ 
+</script>
+ 
+ <link rel='stylesheet' id='dashicons-css' href='https://thanks.work/wp-includes/css/dashicons.min.css?ver=6.5.8' type='text/css' media='all' />
+<link rel='stylesheet' id='front-css-css' href='https://thanks.work/wp-content/plugins/aforms-form-builder-for-price-calculator-cost-estimation/asset/front.css?ver=2.2.7' type='text/css' media='all' />
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/avia.js?ver=4.7.4" id="avia-default-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/shortcodes.js?ver=4.7.4" id="avia-shortcodes-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/audio-player/audio-player.js?ver=6.5.8" id="avia-module-audioplayer-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/contact/contact.js?ver=6.5.8" id="avia-module-contact-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow/slideshow.js?ver=6.5.8" id="avia-module-slideshow-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/countdown/countdown.js?ver=6.5.8" id="avia-module-countdown-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/gallery/gallery.js?ver=6.5.8" id="avia-module-gallery-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/gallery_horizontal/gallery_horizontal.js?ver=6.5.8" id="avia-module-gallery-hor-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/headline_rotator/headline_rotator.js?ver=6.5.8" id="avia-module-rotator-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/icongrid/icongrid.js?ver=6.5.8" id="avia-module-icongrid-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/iconlist/iconlist.js?ver=6.5.8" id="avia-module-iconlist-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/image_hotspots/image_hotspots.js?ver=6.5.8" id="avia-module-hotspot-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/magazine/magazine.js?ver=6.5.8" id="avia-module-magazine-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/portfolio/isotope.js?ver=6.5.8" id="avia-module-isotope-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/masonry_entries/masonry_entries.js?ver=6.5.8" id="avia-module-masonry-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/menu/menu.js?ver=6.5.8" id="avia-module-menu-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/notification/notification.js?ver=6.5.8" id="avia-mofdule-notification-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/numbers/numbers.js?ver=6.5.8" id="avia-module-numbers-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/portfolio/portfolio.js?ver=6.5.8" id="avia-module-portfolio-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/progressbar/progressbar.js?ver=6.5.8" id="avia-module-progress-bar-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow/slideshow-video.js?ver=6.5.8" id="avia-module-slideshow-video-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_accordion/slideshow_accordion.js?ver=6.5.8" id="avia-module-slideshow-accordion-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_fullscreen/slideshow_fullscreen.js?ver=6.5.8" id="avia-module-slideshow-fullscreen-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/slideshow_layerslider/slideshow_layerslider.js?ver=6.5.8" id="avia-module-slideshow-ls-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/tab_section/tab_section.js?ver=6.5.8" id="avia-module-tabsection-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/tabs/tabs.js?ver=6.5.8" id="avia-module-tabs-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/testimonials/testimonials.js?ver=6.5.8" id="avia-module-testimonials-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/timeline/timeline.js?ver=6.5.8" id="avia-module-timeline-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/toggles/toggles.js?ver=6.5.8" id="avia-module-toggles-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-templatebuilder/avia-shortcodes/video/video.js?ver=6.5.8" id="avia-module-video-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/dist/vendor/wp-polyfill-inert.min.js?ver=3.1.2" id="wp-polyfill-inert-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/dist/vendor/regenerator-runtime.min.js?ver=0.14.0" id="regenerator-runtime-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/dist/vendor/wp-polyfill.min.js?ver=3.15.0" id="wp-polyfill-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/dist/hooks.min.js?ver=2810c76e705dd1a53b18" id="wp-hooks-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-includes/js/dist/i18n.min.js?ver=5e580eb46a90c2b997e6" id="wp-i18n-js"></script>
+<script type="text/javascript" id="wp-i18n-js-after">
+/* <![CDATA[ */
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://thanks.work/wp-content/plugins/contact-form-7/includes/swv/js/index.js?ver=5.9.8" id="swv-js"></script>
+<script type="text/javascript" id="contact-form-7-js-extra">
+/* <![CDATA[ */
+var wpcf7 = {"api":{"root":"https:\/\/thanks.work\/wp-json\/","namespace":"contact-form-7\/v1"}};
+/* ]]> */
+</script>
+<script type="text/javascript" id="contact-form-7-js-translations">
+/* <![CDATA[ */
+( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "contact-form-7", {"translation-revision-date":"2024-07-17 08:16:16+0000","generator":"GlotPress\/4.0.1","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=1; plural=0;","lang":"ja_JP"},"This contact form is placed in the wrong place.":["\u3053\u306e\u30b3\u30f3\u30bf\u30af\u30c8\u30d5\u30a9\u30fc\u30e0\u306f\u9593\u9055\u3063\u305f\u4f4d\u7f6e\u306b\u7f6e\u304b\u308c\u3066\u3044\u307e\u3059\u3002"],"Error:":["\u30a8\u30e9\u30fc:"]}},"comment":{"reference":"includes\/js\/index.js"}} );
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://thanks.work/wp-content/plugins/contact-form-7/includes/js/index.js?ver=5.9.8" id="contact-form-7-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/aviapopup/jquery.magnific-popup.min.js?ver=4.7.4" id="avia-popup-js-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/avia-snippet-lightbox.js?ver=4.7.4" id="avia-lightbox-activation-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/avia-snippet-megamenu.js?ver=4.7.4" id="avia-megamenu-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/js/avia-snippet-widget.js?ver=4.7.4" id="avia-widget-js-js"></script>
+<script type="text/javascript" src="https://thanks.work/wp-content/themes/enfold/config-gutenberg/js/avia_blocks_front.js?ver=4.7.4" id="avia_blocks_front_script-js"></script>
+<script type="text/javascript" id="aforms-front-js-js-extra">
+/* <![CDATA[ */
+var wqData = {"form":{"id":2,"title":"\u58c1\u91cf\u8a08\u7b97","author":{"id":1,"name":"admin"},"modified":1667803775,"navigator":"horizontal","doConfirm":true,"thanksUrl":"","detailItems":[{"id":26,"type":"Quantity","image":"","name":"\u65b0\u3057\u3044\u6570\u91cf\u9805\u76ee","format":"none","suffix":"","note":[],"depends":{},"allowFraction":true,"initial":1,"minimum":null,"maximum":null},{"id":11,"type":"Selector","image":"","name":"\u57fa\u6e96\u6cd5-\u6027\u80fd\u8868\u793a\u58c1\u91cf\u8a08\u7b97","note":[],"multiple":false,"quantity":-1,"options":[{"id":1,"type":"Option","image":"","name":"\u57fa\u6e96\u6cd5\u58c1\u91cf\u8a08\u7b97-\u5e73\u5c4b\u5efa","note":[],"normalPrice":null,"price":20000,"taxRate":null,"ribbons":{},"labels":{"kijun":true},"depends":{},"format":"regular"},{"id":2,"type":"Option","image":"","name":"\u57fa\u6e96\u6cd5\u58c1\u91cf\u8a08\u7b97-2\u968e\u5efa","note":[],"normalPrice":null,"price":35000,"taxRate":null,"ribbons":{},"labels":{"kijun":true},"depends":{},"format":"regular"},{"id":3,"type":"Option","image":"","name":"\u6027\u80fd\u8868\u793a\u58c1\u91cf\u8a08\u7b97-\u5e73\u5c4b\u5efa","note":[],"normalPrice":null,"price":35000,"taxRate":null,"ribbons":{},"labels":{"seino":true},"depends":{},"format":"regular"},{"id":4,"type":"Option","image":"","name":"\u6027\u80fd\u8868\u793a\u58c1\u91cf\u8a08\u7b97-2\u968e\u5efa","note":[],"normalPrice":null,"price":50000,"taxRate":null,"ribbons":{},"labels":{"seino":true},"depends":{},"format":"regular"}]},{"id":16,"type":"Quantity","image":"","name":"\u69cb\u9020\u5e8a\u9762\u7a4d\u52a0\u7b97","suffix":"","note":[{"nodeName":"p","attributes":{},"children":["\uff8a\uff9e\uff99\uff7a\uff86\uff70\u30fb\uff8e\uff9f\uff70\uff81\u30fb\u5439\u629c\u30fb\u5c0f\u5c4b\u88cf\u53ce\u7d0d\u30fbPH\u7b49\u5168\u3066\u3092\u52a0\u7b97\u3057\u305f\u9762\u7a4d\u304b\u3089150\u33a1\u3092\u9664\u7b97\u3001150\u33a1\u672a\u6e80\u306f0\u3068\u3057\u3066\u304f\u3060\u3055\u3044"]}],"depends":{},"allowFraction":true,"initial":0,"minimum":null,"maximum":350,"format":"none"},{"id":17,"type":"Adjustment","category":"","name":"\u57fa\u6e96\u6cd5\u58c1\u91cf\u8a08\u7b97\u3000\u9762\u7a4d\u52a0\u7b97","normalPrice":null,"price":"400","priceAst":400,"priceVars":[],"taxRate":null,"depends":{"kijun":true},"quantity":16},{"id":18,"type":"Adjustment","category":"","name":"\u6027\u80fd\u8868\u793a\u58c1\u91cf\u8a08\u7b97\u3000\u9762\u7a4d\u52a0\u7b97","normalPrice":null,"price":"500","priceAst":500,"priceVars":[],"taxRate":null,"depends":{"seino":true},"quantity":16},{"id":13,"type":"Selector","image":"","name":"\u76ee\u6a19\u7b49\u7d1a","note":[],"multiple":true,"quantity":-1,"options":[{"id":15,"type":"Option","image":"","name":"\u8010\u9707\u7b49\u7d1a2","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":16,"type":"Option","image":"","name":"\u8010\u9707\u7b49\u7d1a3","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":17,"type":"Option","image":"","name":"\u8010\u98a8\u7b49\u7d1a1","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":18,"type":"Option","image":"","name":"\u8010\u98a8\u7b49\u7d1a2","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":19,"type":"Option","image":"","name":"\u6e96\u8010\u706b\u69cb\u9020","note":[{"nodeName":"p","attributes":{},"children":["\u5730\u9707\u529b\u30fb\u98a8\u5727\u529b\u306b\u5bfe\u3059\u308b\u57fa\u6e96\u6cd5\u5fc5\u8981\u58c1\u91cf\u306e1.25\u500d"]}],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"}]},{"id":12,"type":"Selector","image":"","name":"\u69cb\u9020\u56f3","note":[{"nodeName":"em","attributes":{},"children":["\u57fa\u790e\u6881\u8a31\u5bb9\u5fdc\u529b\u5ea6\u8a08\u7b97\u3092\u3054\u4f9d\u983c\u306e\u5834\u5408\u306f\u4e0d\u8981\u3067\u3059"]}],"multiple":false,"quantity":-1,"options":[{"id":26,"type":"Option","image":"","name":"\u4f9d\u983c\u306a\u3057","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"none"},{"id":5,"type":"Option","image":"","name":"\u57fa\u790e\u4f0f\u56f3\u3000\u5efa\u7bc9\u9762\u7a4d50\u33a1\u672a\u6e80","note":[],"normalPrice":null,"price":15000,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":7,"type":"Option","image":"","name":"\u57fa\u790e\u4f0f\u56f3\u3000\u5efa\u7bc9\u9762\u7a4d100\u33a1\u672a\u6e80","note":[],"normalPrice":null,"price":20000,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":8,"type":"Option","image":"","name":"\u57fa\u790e\u4f0f\u56f3\u3000\u5efa\u7bc9\u9762\u7a4d150\u33a1\u672a\u6e80","note":[],"normalPrice":null,"price":25000,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"},{"id":13,"type":"Option","image":"","name":"\u57fa\u790e\u4f0f\u56f3\u3000\u5efa\u7bc9\u9762\u7a4d150\u33a1\u4ee5\u4e0a","note":[],"normalPrice":null,"price":30000,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"regular"}]},{"id":25,"type":"Selector","image":"","name":"\u4eba\u901a\u5b54\u7b87\u6240\u6570","note":[],"multiple":false,"quantity":-1,"options":[{"id":28,"type":"Option","image":"","name":"5\u7b87\u6240\u672a\u6e80","note":[],"format":"regular","normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{}},{"id":29,"type":"Option","image":"","name":"5\u7b87\u6240\u4ee5\u4e0a10\u7b87\u6240\u672a\u6e80","note":[],"format":"regular","normalPrice":null,"price":5000,"taxRate":null,"ribbons":{},"labels":{},"depends":{}},{"id":30,"type":"Option","image":"","name":"10\u7b87\u6240\u4ee5\u4e0a","note":[],"format":"regular","normalPrice":null,"price":10000,"taxRate":null,"ribbons":{},"labels":{},"depends":{}}]},{"id":19,"type":"Selector","image":"","name":"\u57fa\u790e\u6881\u8a31\u5bb9\u5fdc\u529b\u5ea6\u8a08\u7b97","note":[{"nodeName":"p","attributes":{},"children":["\uff7d\uff8a\uff9f\uff9d\u8868\u9069\u7528\u9664\u5916\u306e\u5834\u5408\uff08\u5c0f\u5c4b\u88cf\u53ce\u7d0d\u3001\u8ed2\u306e\u51fa\u3001\u5c4b\u6839\u52fe\u914d\u7b49\u306e\u9069\u7528\u6761\u4ef6\u304b\u3089\u5916\u308c\u308b\u5834\u5408)"]}],"multiple":false,"quantity":-1,"options":[{"id":25,"type":"Option","image":"","name":"\u4f9d\u983c\u306a\u3057","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{},"depends":{},"format":"none"},{"id":20,"type":"Option","image":"","name":"\u69cb\u9020\u5e8a\u9762\u7a4d150\u33a1\u672a\u6e80","note":[],"normalPrice":null,"price":20000,"taxRate":null,"ribbons":{},"labels":{"kisohari":true},"depends":{"seino":true},"format":"regular"}]},{"id":20,"type":"Adjustment","category":"","name":"\u57fa\u790e\u6881\u8a31\u5bb9\u5fdc\u529b\u5ea6\u3000\u9762\u7a4d\u52a0\u7b97","normalPrice":null,"price":"500","priceAst":500,"priceVars":[],"taxRate":null,"depends":{"kisohari":true},"quantity":16},{"id":21,"type":"Selector","image":"","name":"\u5f62\u72b6\u52a0\u7b97","note":[],"multiple":true,"quantity":-1,"options":[{"id":23,"type":"Option","image":"","name":"PH\u968e\u304c\u3042\u308b","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{"ph":true},"depends":{},"format":"none"},{"id":22,"type":"Option","image":"","name":"\u5c0f\u5c4b\u88cf\u53ce\u7d0d\u304c\u3042\u308b","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{"koya":true},"depends":{},"format":"none"},{"id":24,"type":"Option","image":"","name":"\uff8a\uff9e\uff99\uff7a\uff86\uff70\u7b49\u306e\uff7d\uff97\uff8c\uff9e\uff9a\uff8d\uff9e\uff99\u9055\u3044\u304c\u3042\u308b","note":[],"normalPrice":null,"price":0,"taxRate":null,"ribbons":{},"labels":{"level":true},"depends":{},"format":"none"}]},{"id":24,"type":"Adjustment","category":"","name":"\u5c0f\u5c4b\u88cf\u53ce\u7d0d","normalPrice":null,"price":"A*0.1","priceAst":["*","A",0.1000000000000000055511151231257827021181583404541015625],"priceVars":[{"sym":"A","ref":-1}],"taxRate":null,"depends":{"koya":true},"quantity":-1},{"id":22,"type":"Adjustment","category":"","name":"PH","normalPrice":null,"price":"A*0.2","priceAst":["*","A",0.200000000000000011102230246251565404236316680908203125],"priceVars":[{"sym":"A","ref":-1}],"taxRate":null,"depends":{"ph":true},"quantity":-1},{"id":23,"type":"Adjustment","category":"","name":"\u6c34\u5e73\u69cb\u9762\uff9a\uff8d\uff9e\uff99\u9055\u3044","normalPrice":null,"price":"A*0.1","priceAst":["*","A",0.1000000000000000055511151231257827021181583404541015625],"priceVars":[{"sym":"A","ref":-1}],"taxRate":null,"depends":{"level":true},"quantity":-1}],"attrItems":[{"id":1,"type":"Name","required":true,"name":"\u304a\u898b\u7a4d\u5b9b\u540d","note":[],"divided":false,"pattern":"none"},{"id":2,"type":"Email","required":true,"name":"\u8cb4\u30e1\u30fc\u30eb\u30a2\u30c9\u30ec\u30b9","note":[],"repeated":false},{"id":3,"type":"Tel","required":true,"name":"\u96fb\u8a71\u756a\u53f7","note":[],"divided":false},{"id":4,"type":"Address","required":true,"name":"\u8cb4\u4f4f\u6240","note":[],"autoFill":"yubinbango"},{"id":11,"type":"Address","required":false,"name":"\u5efa\u8a2d\u5730","note":[],"autoFill":"yubinbango"},{"id":9,"type":"Text","required":false,"name":"\u8cea\u7591\u7b49","note":[],"multiline":true,"size":"normal"}],"mail":{},"extensions":[]},"mode":"execute","actionSpecMap":{"input":[{"label":"\u78ba\u8a8d\u753b\u9762\u3078","buttonType":"primary","action":"confirm","id":null}],"confirm":[{"label":"\u9001\u4fe1","buttonType":"primary","action":"submit","id":null}]},"catalog":{"No":"#","Category":"\u30ab\u30c6\u30b4\u30ea\u30fc","Entry":"\u9805\u76ee","Unit Price":"\u5358\u4fa1","Quantity":"\u6570\u91cf","Price":"\u91d1\u984d","Subtotal":"\u5c0f\u8a08","Tax":"\u6d88\u8cbb\u7a0e","Total":"\u5408\u8a08","required":"\u5fc5\u9808","Input here":"\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044","Invalid":"\u5f62\u5f0f\u304c\u6b63\u3057\u304f\u3042\u308a\u307e\u305b\u3093","Check here":"\u30c1\u30a7\u30c3\u30af\u3092\u5165\u308c\u3066\u304f\u3060\u3055\u3044","Select here":"\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044","Repeat here":"\u540c\u3058\u6587\u5b57\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044","Zip":"\u90f5\u4fbf\u756a\u53f7","To Confirmation Screen":"\u78ba\u8a8d\u753b\u9762\u3078","Your Name":" ","First Name":"\u59d3","Last Name":"\u540d","info@example.com":"info@example.com","Confirm again":"\u78ba\u8a8d\u306e\u305f\u3081\u3082\u3046\u4e00\u5ea6","03-1111-2222":"03-1111-2222","000-0000":"000-0000","Tokyo":"\u6771\u4eac\u90fd","Chiyoda-ku":"\u5343\u4ee3\u7530\u533a","1-1-1, Chiyoda":"\u5343\u4ee3\u75301-1-1","Chiyoda mansion 8F":"\u5343\u4ee3\u7530\u30de\u30f3\u30b7\u30e7\u30f38F","Processing stopped due to preview mode.":"\u30d7\u30ec\u30d3\u30e5\u30fc\u306a\u306e\u3067\u51e6\u7406\u3092\u4e2d\u65ad\u3057\u307e\u3057\u305f\u3002","Submit":"\u9001\u4fe1","Back":"\u623b\u308b","Please check your entry.":"\u5165\u529b\u5185\u5bb9\u3092\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044\u3002","Hide Monitor":"\u30e2\u30cb\u30bf\u30fc\u3092\u975e\u8868\u793a","Show Monitor":"\u30e2\u30cb\u30bf\u30fc\u3092\u8868\u793a","Start Order":"\u6ce8\u6587\u3092\u59cb\u3081\u308b","Close":"\u9589\u3058\u308b","Previous":"\u524d\u3078","Next":"\u6b21\u3078","There exists uninput item.":"\u672a\u5165\u529b\u306e\u9805\u76ee\u304c\u3042\u308a\u307e\u3059\u3002","The form has been successfully submitted.":"\u30d5\u30a9\u30fc\u30e0\u306e\u9001\u4fe1\u306b\u6210\u529f\u3057\u307e\u3057\u305f\u3002","^[0-9]{3}-?[0-9]{4}$":"^[0-9]{3}-?[0-9]{4}$","Checked":"\u30c1\u30a7\u30c3\u30af\u3057\u307e\u3057\u305f","Too small":"\u5c0f\u3055\u3059\u304e\u307e\u3059","Too large":"\u5927\u304d\u3059\u304e\u307e\u3059","Please select":"\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044","Input in Hiragana":"\u3072\u3089\u304c\u306a\u3067\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044","Input in Katakana":"\u30ab\u30bf\u30ab\u30ca\u3067\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044","optional":"\u4efb\u610f","SALE":"SALE","RECOMMENDED":"\u304a\u3059\u3059\u3081","Tax Class":"\u7a0e\u533a\u5206","(%s%% applied)":"(%s%%\u9069\u7528)","Tax (%s%%)":"\u6d88\u8cbb\u7a0e(%s%%)","(common %s%% applied)":" ","Tax (common %s%%)":"\u6d88\u8cbb\u7a0e(%s%%)","%s (x %s) %s %s":"%s (x %s) %s  %s","%s: %s":"%s\uff1a%s","== %s ==\n%s":"\u25a0 %s\n%s",", ":"\u3001","$%s":"%s\u5186",".":".",",":",","Regular Unit Price":"\u901a\u5e38\u5358\u4fa1","Quotation Details":"\u898b\u7a4d\u306e\u8a73\u7d30","Deselect":"\u9078\u629e\u89e3\u9664","evaluation error: overflow in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u3067\u30aa\u30fc\u30d0\u30fc\u30d5\u30ed\u30fc\u304c\u767a\u751f %s","evaluation error: no-variable in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u3067\u672a\u5b9a\u7fa9\u306e\u5909\u6570\u3092\u53c2\u7167 %s","evaluation error: no-quantity in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u3067\u672a\u5b9a\u7fa9\u306e\u6570\u91cf\u3092\u53c2\u7167 %s","evaluation error: undefined-calculation in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u3067\u672a\u5b9a\u7fa9\u306e\u8a08\u7b97\u304c\u767a\u751f %s","evaluation error: no-function in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u3067\u672a\u5b9a\u7fa9\u306e\u95a2\u6570\u3092\u53c2\u7167 %s","evaluation error: unknown-term in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u3067\u672a\u5b9a\u7fa9\u306e\u53e5\u306b\u906d\u9047 %s","OK":"OK","Your document is ready.":"\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8\u306e\u6e96\u5099\u304c\u3067\u304d\u307e\u3057\u305f\u3002","Open":"\u958b\u304f","Skip":"\u30b9\u30ad\u30c3\u30d7","Removing the file. Are you sure?":"\u30d5\u30a1\u30a4\u30eb\u3092\u53d6\u308a\u9664\u304d\u307e\u3059\u3002\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f","Drop files here or click":"\u30d5\u30a1\u30a4\u30eb\u3092\u30c9\u30ed\u30c3\u30d7 or \u30af\u30ea\u30c3\u30af","Wait for upload":"\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u3092\u304a\u5f85\u3061\u304f\u3060\u3055\u3044","x%s":"x%s","evaluation error: no matching clause in %s":"\u8a08\u7b97\u30a8\u30e9\u30fc: \u53f3\u306e\u5f0f\u306b\u3066\u4e00\u81f4\u3059\u308b\u53e5\u304c\u3042\u308a\u307e\u305b\u3093 %s","%s %s (x %s) %s %s":"%s %s (x %s) %s %s","%s %s":"%s %s","Internal error has occurred. Please reload the page and try again.":"\u5185\u90e8\u30a8\u30e9\u30fc\u304c\u767a\u751f\u3057\u307e\u3057\u305f\u3002\u30da\u30fc\u30b8\u3092\u30ea\u30ed\u30fc\u30c9\u3057\u3066\u3084\u308a\u76f4\u3057\u3066\u304f\u3060\u3055\u3044\u3002","%s":"%s"},"rule":{"taxIncluded":false,"taxRate":10,"taxNormalizer":"trunc","taxPrecision":0},"behavior":{"smoothScroll":true},"customUrl":"https:\/\/thanks.work\/wp-admin\/admin-ajax.php?action=wq-custom&path=placeholder&wq_nonce=17229fa750","submitUrl":"https:\/\/thanks.work\/wp-admin\/admin-ajax.php?action=wq-order-new&wq_nonce=8697f5d566","sidebarSelector":""};
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://thanks.work/wp-content/plugins/aforms-form-builder-for-price-calculator-cost-estimation/asset/front.js?ver=6.5.8" id="aforms-front-js-js"></script>
+</body>
+</html>
+
