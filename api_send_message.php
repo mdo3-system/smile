@@ -32,10 +32,11 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
 
 $container = AppContainer::getInstance();
 $chatService = $container->getChatService();
+$threadType = $_POST['thread_type'] ?? 'client_admin';
 $success = $chatService->sendMessage(
     (int)$projectId,
     (int)$_SESSION['user_id'],
-    'client_admin',
+    $threadType,
     $messageText,
     $uploadedDriveId,
     $fileType,
