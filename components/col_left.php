@@ -21,7 +21,11 @@
                     $has_cad = isset($files_by_cat['cad_design_all']) || isset($files_by_cat['all_in_one_zip']);
                     $contract_badge = '';
                     if ($has_cad) {
-                        $contract_badge = '<span class="badge" style="background:#8b5cf6; margin-left:5px;">✅ 契約完了 (納期未定)</span>';
+                        if (!empty($project_info['primary_due_date'])) {
+                            $contract_badge = '<span class="badge" style="background:#8b5cf6; margin-left:5px;">✅ 契約完了</span>';
+                        } else {
+                            $contract_badge = '<span class="badge" style="background:#8b5cf6; margin-left:5px;">✅ 契約完了 (着手日未定)</span>';
+                        }
                     }
 
                     // 依頼内容の文字列化

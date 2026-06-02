@@ -23,7 +23,6 @@ if ($action === 'upload_artifact' && $is_admin) {
             $stmtVer->execute(['pid' => $project_id, 'cat' => $file_category]);
             $next_ver = intval($stmtVer->fetchColumn()) + 1;
             
-            // 新規ファイルを登録
             $stmtNew = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :fname, :fid, :ver, 1)");
             $stmtNew->execute([
                 'pid' => $project_id,
@@ -32,6 +31,30 @@ if ($action === 'upload_artifact' && $is_admin) {
                 'fid' => $drive_file_id,
                 'ver' => $next_ver
             ]);
+            
+            // 一次回答（inv_primary）アップロード時の自動ステータス進行処理
+            if ($file_category === 'inv_primary' && ($project['status'] ?? '') === 'primary_prep') {
+                $stmtUpdateStatus = $pdo->prepare("UPDATE projects SET status = 'contracted' WHERE id = :pid");
+                $stmtUpdateStatus->execute(['pid' => $project_id]);
+                
+                // スケジュールのインデックス1（着手基準日）に今日の日付を入れる
+                $current_actuals_json = $project['schedule_actuals'] ?? '{}';
+                $actuals = json_decode($current_actuals_json, true) ?: [];
+                if (empty($actuals[1])) {
+                    $actuals[1] = date('Y-m-d');
+                    $stmtUpdateSchedule = $pdo->prepare("UPDATE projects SET schedule_actuals = :act WHERE id = :pid");
+                    $stmtUpdateSchedule->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                }
+                
+                // チャット通知
+                $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                $stmtNotify->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => "【自動通知】一次回答が提出されました。ステータスが進行し、スケジュール表の着手基準日が本日付けで設定されました。"
+                ]);
+            }
+            
             $pdo->commit();
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
