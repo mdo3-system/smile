@@ -32,6 +32,7 @@
 // 1.1.1: 協力業者ポータル機能拡充（ファイル納品分離、チャット機能追加、25日締め月次請求）
 // 1.1.2: 新規依頼画面の動的UI化、見積シミュレーターの表示バグとJS文字化けエラーの解消
 // 1.1.3: 見積シミュレーターのJS（project_detail.js）の関数重複・構文エラーを完全修復し再計算・PDF出力を復旧
+// 1.1.12: PHP側(functions.php)とJS側(Version.js)でズレていたバージョン管理表記を統合
 
-window.APP_VERSION = "1.1.3";
+window.APP_VERSION = "1.1.12";
 const APP_LAST_UPDATED = '2026-06-02';
