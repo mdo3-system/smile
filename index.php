@@ -59,7 +59,7 @@ $status_labels = [
 <body>
 
     <div class="header">
-        <h1>💼 案件ダッシュボード</h1>
+        <h1>💼 <?= ($_SESSION['role'] === 'client') ? '木造住宅設計サポート案件ダッシュボード' : '案件ダッシュボード' ?></h1>
         <div style="display:flex; align-items:center; gap:15px;">
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
             <?php if ($_SESSION['role'] === 'admin'): ?>
