@@ -43,6 +43,10 @@ if ($action === 'upload_artifact' && $is_admin) {
                 $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
                 $targetIndex = 2;
                 $msgTitle = "初回提示（一次回答）";
+                
+                // ステータスを自動更新 (受注済へ)
+                $stmtStatus = $pdo->prepare("UPDATE projects SET status = 'contracted' WHERE id = :pid");
+                $stmtStatus->execute(['pid' => $project_id]);
             }
             
             // 2. 申請図書一式UPの自動入力

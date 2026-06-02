@@ -1,4 +1,4 @@
-<div class="column col-center" style="flex: 1;">
+﻿<div class="column col-center" style="flex: 1;">
     <h2 class="section-title" style="background:#3b82f6;">📂 依頼主アップロード図書</h2>
     <div style="font-size:12px; color:#555; margin-bottom:15px;">
         必要な図書を以下からアップロード・差し替えしてください。<br>
@@ -135,7 +135,7 @@
 
                         <!-- アップロードフォーム -->
                         <?php if ($project_info['status'] !== 'quote_req' && !$is_admin): ?>
-                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:5px; display:flex; flex-direction:column; gap:3px; border-top:1px dashed #e2e8f0; padding-top:5px;">
+                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:2px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:3px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
                                 <input type="hidden" name="action_type" value="single_upload">
                                 
@@ -163,3 +163,4 @@
         </div>
     <?php endforeach; ?>
 </div>
+
