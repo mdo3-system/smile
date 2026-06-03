@@ -81,6 +81,18 @@ class EstimateController
                 }
             }
 
+            // is_formal = 1 の場合、本見積額 (formal_est_amount) と本見積日 (formal_est_date) を更新
+            $isFormal = isset($_POST['is_formal']) && $_POST['is_formal'] === '1';
+            if ($isFormal) {
+                $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice > 0) {
+                    $tax = round($totalPrice * 0.1);
+                    $grandTotal = $totalPrice + $tax;
+                    $stmtFormal = $pdo->prepare("UPDATE projects SET formal_est_amount = :amt, formal_est_date = :dt WHERE id = :pid");
+                    $stmtFormal->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
+                }
+            }
+
             $debug = ob_get_clean();
             header('Content-Type: application/json');
             echo json_encode([

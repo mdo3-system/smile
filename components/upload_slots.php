@@ -7,6 +7,7 @@ if (!function_exists('renderUploadSlot')) {
         $reqSpan = $isRequired ? '<span style="color:red;">*</span>' : '<span style="color:#d97706; font-size:10px;">(後出し可)</span>';
         $requiredAttr = $isRequired ? 'required' : '';
         $noteHtml = $note ? "<div style='font-size:10px; color:#64748b; margin-top:3px;'>{$note}</div>" : '';
+        $jsRequired = $isRequired ? 'true' : 'false';
         return <<<HTML
         <div style="margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
@@ -14,7 +15,7 @@ if (!function_exists('renderUploadSlot')) {
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                 <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').checked && (this.required=false);">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
-                    <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="document.getElementById('file_{$name}').required = !this.checked;"> 他ﾌｧｲﾙに記載
+                    <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="if ({$jsRequired}) { document.getElementById('file_{$name}').required = !this.checked; }"> 他ﾌｧｲﾙに記載
                 </label>
             </div>
         </div>

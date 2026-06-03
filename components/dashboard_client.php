@@ -135,6 +135,15 @@
 
                         $total_req = $formal + $add;
                         $balance = $total_req - $deposit;
+
+                        // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
+                        $primary_invoice_amount = 0;
+                        if ($formal > 0) {
+                            $base_formal = round($formal / 1.1);
+                            $subtotal_primary = round($base_formal * 0.5);
+                            $tax_primary = round($subtotal_primary * 0.1);
+                            $primary_invoice_amount = $subtotal_primary + $tax_primary;
+                        }
                     ?>
                     <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
                         <span>初期お見積額 (<?= htmlspecialchars($initial_date) ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
@@ -148,13 +157,18 @@
                     </div>
                     <?php endif; ?>
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-                        <span>ご請求総額:</span> <strong><?= number_format($total_req) ?> 円</strong>
+                        <span>合計ご請求額 (本見積＋追加):</span> <strong><?= number_format($total_req) ?> 円</strong>
                     </div>
+                    <?php if ($formal > 0): ?>
+                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 5px;">
+                        <span>一次請求額 (着手金50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
+                    </div>
+                    <?php endif; ?>
                     <div style="display:flex; justify-content:space-between; color:#28a745;">
                         <span>入金済額 (<?= htmlspecialchars($deposit_date) ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
-                        <span>現在の残金:</span> <span><?= number_format($balance) ?> 円</span>
+                        <span>最終ご請求額 (残金精算額):</span> <span><?= number_format($balance) ?> 円</span>
                     </div>
                 </div>
             </div>

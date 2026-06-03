@@ -71,6 +71,16 @@
                 <?php endif; ?>
             </div>
 
+            <?php if (isset($files_by_cat['inv_primary'])): ?>
+            <div class="box" style="background:#eff6ff; border-color:#bfdbfe; margin-top:10px;">
+                <h3 style="margin-top:0; font-size:14px; color:#1e40af; border-bottom:1px solid #bfdbfe; padding-bottom:5px;">📄 最新の一次請求書 (50%分)</h3>
+                <div style="font-size:12px; color:#666; margin-bottom:10px;">発行された一次請求書（着手金50%）をPDFとして表示・印刷できます。</div>
+                <a href="https://drive.google.com/file/d/<?= $files_by_cat['inv_primary']['drive_file_id'] ?>/view?usp=drivesdk" target="_blank" style="display:block; width:100%; text-align:center; background:#2563eb; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold;">
+                    📄 一次請求書PDFを表示
+                </a>
+            </div>
+            <?php endif; ?>
+
             <?php require __DIR__ . '/col_estimate_files.php'; ?>
 
             <?php if ($is_admin && $project_info['status'] !== 'completed'): ?>
@@ -173,6 +183,15 @@
 
                     $total_req = $formal + $add;
                     $balance = $total_req - $deposit;
+
+                    // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
+                    $primary_invoice_amount = 0;
+                    if ($formal > 0) {
+                        $base_formal = round($formal / 1.1);
+                        $subtotal_primary = round($base_formal * 0.5);
+                        $tax_primary = round($subtotal_primary * 0.1);
+                        $primary_invoice_amount = $subtotal_primary + $tax_primary;
+                    }
                 ?>
                 <div style="font-size:13px; line-height:1.8; margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
@@ -187,15 +206,62 @@
                     </div>
                     <?php endif; ?>
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-                        <span>ご請求総額:</span> <strong><?= number_format($total_req) ?> 円</strong>
+                        <span>合計ご請求額 (本見積＋追加):</span> <strong><?= number_format($total_req) ?> 円</strong>
                     </div>
+                    <?php if ($formal > 0): ?>
+                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 5px;">
+                        <span>一次請求額 (着手金50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
+                    </div>
+                    <?php endif; ?>
                     <div style="display:flex; justify-content:space-between; color:#28a745;">
                         <span>入金済額 (<?= $deposit_date ? htmlspecialchars($deposit_date) : '-' ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
-                        <span>現在の残金:</span> <span><?= number_format($balance) ?> 円</span>
+                        <span>最終ご請求額 (残金精算額):</span> <span><?= number_format($balance) ?> 円</span>
                     </div>
                 </div>
+
+                <?php if ($formal > 0): ?>
+                    <div style="margin-top: 10px; margin-bottom: 10px;">
+                        <button type="button" id="issue_primary_invoice_btn" onclick="issuePrimaryInvoice()" style="width:100%; background:#dc3545; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">
+                            <?= isset($files_by_cat['inv_primary']) ? '一次請求書(50%)を再発行' : '一次請求書(50%)を発行' ?>
+                        </button>
+                    </div>
+                    
+                    <script>
+                    function issuePrimaryInvoice() {
+                        if (!confirm('本見積額の50%分（消費税加算前50%＋消費税）の一次請求書を発行しますか？\n（発行するとGoogle Driveへアップロードされ、クライアントチャットに自動通知されます）')) {
+                            return;
+                        }
+                        const btn = document.getElementById('issue_primary_invoice_btn');
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.innerText = '一次請求書発行中...';
+                        }
+                        const formData = new FormData();
+                        formData.append('project_id', <?= (int)$project_id ?>);
+                        
+                        fetch('api_issue_primary_invoice.php', { method: 'POST', body: formData })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success && data.drive_file_id) {
+                                    alert('一次請求書(50%)を発行しました。');
+                                    window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
+                                    location.reload();
+                                } else {
+                                    alert('一次請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                                }
+                            })
+                            .catch(e => alert('通信エラー: ' + e))
+                            .finally(() => {
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerText = '一次請求書(50%)を発行';
+                                }
+                            });
+                    }
+                    </script>
+                <?php endif; ?>
 
                 <details>
                     <summary style="cursor:pointer; font-weight:bold; font-size:12px; color:#856404; border-top:1px dashed #ffeeba; padding-top:10px;">編集する (金銭データの更新)</summary>

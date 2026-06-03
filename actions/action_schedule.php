@@ -8,6 +8,21 @@ if ($action === 'set_primary_due_date') {
         if ($due_date) {
             $projectRepo->updatePrimaryDueDate($project_id, $due_date);
             
+            // スケジュール実績JSONのインデックス 1 (着手基準日・一次回答) に同日を保存
+            $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+            $stmtAct->execute(['id' => $project_id]);
+            $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+
+            if ($act_row) {
+                $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+                foreach ($colsToUpdate as $col) {
+                    $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+                    $actuals[1] = $due_date;
+                    $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                    $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                }
+            }
+            
             // 設計着手・スケジュール確定のステータスへ進める
             // primary_prep → contracted (スケジュール確定済み)
             if (($project_info['status'] ?? '') === 'primary_prep') {
