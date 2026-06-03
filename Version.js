@@ -39,7 +39,8 @@
 // 1.1.17: functions.php の定数 SYSTEM_VERSION が 1.1.14 のままだったバグを修正、expected_delivery_date カラム追加のDB移行を実施
 // 1.1.18: 協力業者ポータルにおける発注辞退機能の実装、およびステータスバッジの追加
 // 1.1.19: 協力業者発注処理のモジュール化（SubcontractorOrderService新設）、依存性の注入（DI）、および単体テストの追加
+// 1.2.0: リファクタリング、モジュール化、DI適用、PHPUnit自動テスト導入の完了
 
-window.APP_VERSION = "1.1.19";
+window.APP_VERSION = "1.2.0";
 const APP_LAST_UPDATED = '2026-06-03';
 
