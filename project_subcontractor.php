@@ -2,28 +2,24 @@
 // project_subcontractor.php
 require_once 'auth.php';
 require_once 'functions.php';
+require_once __DIR__ . '/vendor/autoload.php';
+
+use App\Services\SubcontractorOrderService;
+
 check_auth(['admin', 'subcontractor']);
 
 // セッションからログイン中のユーザー情報を取得
 $user_id = $_SESSION['user_id']; 
 $is_admin = ($_SESSION['role'] === 'admin');
 
+$subcontractorOrderService = new SubcontractorOrderService($pdo);
+
 // 承諾処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset($_POST['action']) && isset($_POST['expected_delivery_date'])) {
     $order_id = intval($_POST['order_id']);
     $expected_delivery_date = $_POST['expected_delivery_date'];
-    $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'accepted', expected_delivery_date = :edate WHERE id = :id AND subcontractor_id = :sub_id");
-    $stmt->execute(['edate' => $expected_delivery_date, 'id' => $order_id, 'sub_id' => $user_id]);
-
-    $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
-    $stmtP->execute(['id' => $order_id]);
-    $p_id = $stmtP->fetchColumn();
-
-    if ($p_id) {
-        $msg = "発注を承諾しました。完了予定日: " . date('Y年m月d日', strtotime($expected_delivery_date));
-        $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
-        $stmtMsg->execute(['pid' => $p_id, 'sid' => $user_id, 'msg' => $msg]);
-    }
+    
+    $subcontractorOrderService->acceptOrder($order_id, $user_id, $expected_delivery_date);
 
     header("Location: project_subcontractor.php");
     exit;
@@ -32,18 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
 // 拒否処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['action']) && $_POST['action'] === 'reject_order') {
     $order_id = intval($_POST['order_id']);
-    $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'rejected' WHERE id = :id AND subcontractor_id = :sub_id");
-    $stmt->execute(['id' => $order_id, 'sub_id' => $user_id]);
-
-    $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
-    $stmtP->execute(['id' => $order_id]);
-    $p_id = $stmtP->fetchColumn();
-
-    if ($p_id) {
-        $msg = "発注を辞退（拒否）しました。";
-        $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
-        $stmtMsg->execute(['pid' => $p_id, 'sid' => $user_id, 'msg' => $msg]);
-    }
+    
+    $subcontractorOrderService->rejectOrder($order_id, $user_id);
 
     header("Location: subcontractor_portal.php");
     exit;

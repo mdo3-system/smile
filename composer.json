@@ -11,7 +11,8 @@
         "tecnickcom/tcpdf": "^6.11"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.5"
+        "phpunit/phpunit": "^9.5",
+        "doctrine/instantiator": "^1.4"
     },
     "config": {
         "platform-check": false,

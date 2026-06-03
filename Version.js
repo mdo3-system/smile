@@ -38,7 +38,8 @@
 // 1.1.16: 一次請求書(inv_primary)表示時の配列オフセット参照エラーを修正、project_subcontractor.php の破損を過去コミットから復旧
 // 1.1.17: functions.php の定数 SYSTEM_VERSION が 1.1.14 のままだったバグを修正、expected_delivery_date カラム追加のDB移行を実施
 // 1.1.18: 協力業者ポータルにおける発注辞退機能の実装、およびステータスバッジの追加
+// 1.1.19: 協力業者発注処理のモジュール化（SubcontractorOrderService新設）、依存性の注入（DI）、および単体テストの追加
 
-window.APP_VERSION = "1.1.18";
+window.APP_VERSION = "1.1.19";
 const APP_LAST_UPDATED = '2026-06-03';
 
