@@ -71,11 +71,11 @@
                 <?php endif; ?>
             </div>
 
-            <?php if (isset($files_by_cat['inv_primary'])): ?>
+            <?php if (isset($files_by_cat['inv_primary'][0])): ?>
             <div class="box" style="background:#eff6ff; border-color:#bfdbfe; margin-top:10px;">
                 <h3 style="margin-top:0; font-size:14px; color:#1e40af; border-bottom:1px solid #bfdbfe; padding-bottom:5px;">📄 最新の一次請求書 (50%分)</h3>
                 <div style="font-size:12px; color:#666; margin-bottom:10px;">発行された一次請求書（着手金50%）をPDFとして表示・印刷できます。</div>
-                <a href="https://drive.google.com/file/d/<?= $files_by_cat['inv_primary']['drive_file_id'] ?>/view?usp=drivesdk" target="_blank" style="display:block; width:100%; text-align:center; background:#2563eb; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold;">
+                <a href="https://drive.google.com/file/d/<?= htmlspecialchars($files_by_cat['inv_primary'][0]['drive_file_id'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="display:block; width:100%; text-align:center; background:#2563eb; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold;">
                     📄 一次請求書PDFを表示
                 </a>
             </div>
@@ -224,7 +224,7 @@
                 <?php if ($formal > 0): ?>
                     <div style="margin-top: 10px; margin-bottom: 10px;">
                         <button type="button" id="issue_primary_invoice_btn" onclick="issuePrimaryInvoice()" style="width:100%; background:#dc3545; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">
-                            <?= isset($files_by_cat['inv_primary']) ? '一次請求書(50%)を再発行' : '一次請求書(50%)を発行' ?>
+                            <?= isset($files_by_cat['inv_primary'][0]) ? '一次請求書(50%)を再発行' : '一次請求書(50%)を発行' ?>
                         </button>
                     </div>
                     
