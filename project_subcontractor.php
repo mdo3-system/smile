@@ -29,6 +29,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
     exit;
 }
 
+// 拒否処理 (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['action']) && $_POST['action'] === 'reject_order') {
+    $order_id = intval($_POST['order_id']);
+    $stmt = $pdo->prepare("UPDATE subcontractor_orders SET status = 'rejected' WHERE id = :id AND subcontractor_id = :sub_id");
+    $stmt->execute(['id' => $order_id, 'sub_id' => $user_id]);
+
+    $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
+    $stmtP->execute(['id' => $order_id]);
+    $p_id = $stmtP->fetchColumn();
+
+    if ($p_id) {
+        $msg = "発注を辞退（拒否）しました。";
+        $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
+        $stmtMsg->execute(['pid' => $p_id, 'sid' => $user_id, 'msg' => $msg]);
+    }
+
+    header("Location: subcontractor_portal.php");
+    exit;
+}
+
 // 納品処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'deliver_task') {
     $order_id = intval($_POST['order_id']);
@@ -382,14 +402,23 @@ if ($is_admin) {
             </div>
         </div>
         <?php foreach ($my_tasks as $task): 
-            // 該当案件の最新かつ「業者公開済み」のCADファイルを取得
-            $stmtFiles = $pdo->prepare("
-                SELECT * FROM project_files 
-                WHERE project_id = :project_id 
-                AND file_category LIKE 'cad_%' 
-                AND is_latest = 1 
-                AND is_published_to_sub = 1
-            ");
+            // 該当案件の最新CADファイルを取得 (承諾前[requested]または承諾済[accepted]の期間は一時的に強制表示)
+            if ($task['status'] === 'requested' || $task['status'] === 'accepted') {
+                $stmtFiles = $pdo->prepare("
+                    SELECT * FROM project_files 
+                    WHERE project_id = :project_id 
+                    AND file_category LIKE 'cad_%' 
+                    AND is_latest = 1
+                ");
+            } else {
+                $stmtFiles = $pdo->prepare("
+                    SELECT * FROM project_files 
+                    WHERE project_id = :project_id 
+                    AND file_category LIKE 'cad_%' 
+                    AND is_latest = 1 
+                    AND is_published_to_sub = 1
+                ");
+            }
             $stmtFiles->execute(['project_id' => $task['project_id']]);
             $cad_files = $stmtFiles->fetchAll();
         ?>

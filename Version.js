@@ -37,7 +37,8 @@
 // 1.1.15: 一次回答期日設定時の「実施日」同日保存、本見積確定ボタン、一次請求書(50%)発行機能、残金精算額（再集金）減額ロジックを追加
 // 1.1.16: 一次請求書(inv_primary)表示時の配列オフセット参照エラーを修正、project_subcontractor.php の破損を過去コミットから復旧
 // 1.1.17: functions.php の定数 SYSTEM_VERSION が 1.1.14 のままだったバグを修正、expected_delivery_date カラム追加のDB移行を実施
+// 1.1.18: 協力業者ポータルにおける発注辞退機能の実装、およびステータスバッジの追加
 
-window.APP_VERSION = "1.1.17";
+window.APP_VERSION = "1.1.18";
 const APP_LAST_UPDATED = '2026-06-03';
 

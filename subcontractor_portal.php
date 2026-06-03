@@ -185,8 +185,10 @@ $global_messages = $stmtChat->fetchAll();
                             <strong style="font-size:16px;"><?= htmlspecialchars($t['project_name']) ?></strong>
                             <?php 
                                 if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b;">承諾待ち</span>';
-                                elseif ($t['status'] === 'accepted') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';
+                                elseif ($t['status'] === 'accepted' || $t['status'] === 'in_progress') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';
                                 elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#10b981;">納品済</span>';
+                                elseif ($t['status'] === 'completed') echo '<span class="badge" style="background:#059669;">完了</span>';
+                                elseif ($t['status'] === 'rejected') echo '<span class="badge" style="background:#ef4444;">辞退済</span>';
                             ?>
                         </div>
                         <p style="margin: 8px 0; font-size: 13px; color: #555;">依頼内容: <?= htmlspecialchars($t['task_title']) ?></p>
@@ -194,13 +196,18 @@ $global_messages = $stmtChat->fetchAll();
                         
                         <!-- 案件ごとの詳細へ飛ぶリンク -->
                         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                            <div>
+                            <div style="display:flex; gap:10px; align-items:center;">
                                 <?php if ($t['status'] === 'requested' && !$is_admin): ?>
-                                    <form method="POST" action="project_subcontractor.php" style="background:#fff3cd; padding:8px; border-radius:4px; border:1px solid #ffeeba; display:flex; gap:10px; align-items:center;">
+                                    <form method="POST" action="project_subcontractor.php" style="background:#fff3cd; padding:8px; border-radius:4px; border:1px solid #ffeeba; display:flex; gap:10px; align-items:center; margin:0;">
                                         <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
                                         <span style="font-size:12px; font-weight:bold; color:#856404;">完了納期予定:</span>
                                         <input type="date" name="expected_delivery_date" required style="padding:4px; font-size:12px;">
-                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:12px; cursor:pointer;">承諾する</button>
+                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:6px 12px; border-radius:3px; font-size:12px; cursor:pointer; font-weight:bold;">承諾する</button>
+                                    </form>
+                                    <form method="POST" action="project_subcontractor.php" onsubmit="return confirm('この発注を辞退しますか？')" style="margin:0;">
+                                        <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
+                                        <input type="hidden" name="action" value="reject_order">
+                                        <button type="submit" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:3px; font-size:12px; cursor:pointer; font-weight:bold;">辞退する</button>
                                     </form>
                                 <?php endif; ?>
                             </div>
