@@ -68,11 +68,11 @@ if (!$data['total_price']) {
         body { font-family: "MS Mincho", "Noto Serif JP", serif; color: #333; line-height: 1.6; margin: 0; padding: 0; background: #fff; }
         .container { width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; }
         .header { text-align: center; font-size: 28px; letter-spacing: 8px; margin-bottom: 40px; }
-        .info-section { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .client-info { width: 50%; }
+        .info-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .client-info { flex: 1; }
         .client-name { font-size: 20px; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 10px; display: inline-block; }
         .project-desc { font-size: 14px; margin-top: 15px; }
-        .company-info { width: 40%; font-size: 14px; text-align: right; }
+        .company-info { width: 42%; font-size: 13px; text-align: right; border-left: 1px solid #ddd; padding-left: 20px; }
         .company-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
         .total-block { margin-top: 30px; margin-bottom: 20px; width: 80%; border-bottom: 3px solid #000; padding-bottom: 5px; }
         .total-label { font-size: 16px; }
@@ -120,11 +120,11 @@ if (!$data['total_price']) {
                     <span style="font-size:12px;">(税込)</span>
                 </div>
             </div>
-            <div class="company-info" style="width: 45%; text-align: right;">
-                <div style="margin-bottom: 10px;">発行日: <?= date('Y年m月d日') ?></div>
-                <div style="line-height: 1.6; font-size: 13px; text-align: left; display: inline-block;">
-                    <span style="font-size: 18px; font-weight: bold;">株式会社住ま居る</span><br>
-                    <span style="font-size: 15px;">代表取締役 菅原 功樹</span><br>
+            <div class="company-info">
+                <div style="margin-bottom: 10px; font-size:13px;">発行日: <?= date('Y年m月d日') ?></div>
+                <div style="font-size:18px; font-weight:bold; margin-bottom:4px;">株式会社住ま居る</div>
+                <div style="font-size:14px; margin-bottom:4px;">代表取締役 菅原 功樹</div>
+                <div style="font-size:12px; line-height:1.8; color:#444;">
                     〒350-2224<br>
                     埼玉県鶴ヶ島市町屋176-5<br>
                     TEL : 049-271-2350<br>

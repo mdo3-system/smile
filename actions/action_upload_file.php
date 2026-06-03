@@ -110,6 +110,25 @@ if ($action === 'upload_artifact' && $is_admin) {
             // ==================================
             
             $pdo->commit();
+
+            // 依頼主へメール通知（管理者が成果物をUPした場合）
+            try {
+                $stmtClientEmail = $pdo->prepare("
+                    SELECT u.email FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
+                ");
+                $stmtClientEmail->execute(['pid' => $project_id]);
+                $client_email = $stmtClientEmail->fetchColumn();
+                if ($client_email && filter_var($client_email, FILTER_VALIDATE_EMAIL)) {
+                    $pname = $project_info['project_name'] ?? 'your project';
+                    $subj = "【設計サポート】案件「{$pname}」に新しい成果物が登録されました";
+                    $body  = "案件「{$pname}」に完成成果物・図書が登録されました。\n\n";
+                    $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
+                    $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n\n";
+                    $body .= "※このメールに返信いただいてもお返事できません。ご不明な点は担当まで直接お問い合わせください。";
+                    sendSystemEmail($client_email, $subj, $body);
+                }
+            } catch (Exception $e) { /* 通知エラーは無視 */ }
+
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             die("アップロードに失敗しました: " . $e->getMessage());

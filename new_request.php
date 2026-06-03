@@ -74,26 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // 4. ファイルアップロード処理 (Google Drive API)
+            // ★見積依頼時は「意匠図のPDF」のみ受け付ける
             $upload_fields = [
-                // 共通
                 'file_pdf_plan'      => 'pdf_plan',
                 'file_pdf_elevation' => 'pdf_elevation',
                 'file_pdf_layout'    => 'pdf_layout',
                 'file_pdf_section'   => 'pdf_section',
                 'file_pdf_area'      => 'pdf_area_calc',
-                'file_pdf_app_doc'   => 'app_doc',
-                // 構造・壁量
-                'file_pdf_soil'      => 'soil_report',
-                'file_pdf_precut'    => 'pdf_precut',
-                // 外皮
-                'file_pdf_spec'      => 'spec_doc',
-                'file_pdf_insulation'=> 'insulation_data',
-                'file_pdf_sash'      => 'sash_data',
-                'file_pdf_ventilation'=> 'ventilation_data',
-                'file_pdf_equip'     => 'equip_data',
-                // 天空率
-                'file_pdf_road'      => 'road_data',
-                'file_pdf_true_north'=> 'true_north',
             ];
 
             foreach ($upload_fields as $input_name => $cat_key) {
@@ -123,6 +110,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
             
+            // メールアドレスをDBに保存（users.email）
+            $email_input = filter_var(trim($_POST['contact_email'] ?? ''), FILTER_VALIDATE_EMAIL);
+            if ($email_input) {
+                $stmtEmail = $pdo->prepare("UPDATE users SET email = :email WHERE id = :uid");
+                $stmtEmail->execute(['email' => $email_input, 'uid' => $current_user_id]);
+            }
+
             // 管理者へメール通知
             $subject = "【新規案件】新しい見積依頼がありました: {$project_name}";
             $body = "依頼主から新しい見積依頼（案件名: {$project_name}）が届きました。\n\n";
@@ -130,7 +124,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $body .= "https://thanks.work/system/project_detail.php?id={$new_project_id}\n";
             sendSystemEmail('info@thanks.work', $subject, $body);
 
-            header("Location: index.php");
+            // 依頼主へ確認メールを送信
+            if ($email_input) {
+                $confirm_subject = "【設計サポート】見積依頼を受け付けました - {$project_name}";
+                $confirm_body  = "この度は見積依頼をいただきありがとうございます。\n\n";
+                $confirm_body .= "案件名: {$project_name}\n";
+                $confirm_body .= "依頼内容を確認次第、折り返しご連絡いたします。\n\n";
+                $confirm_body .= "▼ダッシュボードへのアクセス\n";
+                $confirm_body .= "https://thanks.work/system/project_detail.php?id={$new_project_id}\n\n";
+                $confirm_body .= "------\n";
+                $confirm_body .= "※このメールが届いていれば通知が正常に機能しています。\n";
+                $confirm_body .= "※このメールに返信いただいてもお返事できません。\n";
+                $confirm_body .= "担当: 菅原 070-8305-8480（SMS可）";
+                sendSystemEmail($email_input, $confirm_subject, $confirm_body);
+            }
+
+            // メールが登録されたかどうかをセッションに保存してモーダル表示
+            $_SESSION['show_email_confirm'] = $email_input ? $email_input : '';
+
+            header("Location: index.php?email_confirmed=1");
             exit;
 
         } catch (Exception $e) {
@@ -368,9 +380,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <div class="form-group">
-                    <label for="contact_notify">見積完了の通知先（Email または SMS用電話番号）※任意</label>
-                    <input type="text" id="contact_notify" name="contact_notify" placeholder="例: sample@example.com または 090-1234-5678">
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">※ご入力いただくと、見積完了時にこちらへ通知をお送りします。</div>
+                    <label for="contact_email">📧 メールアドレス（必須・通知やダッシュボードURLの受け取りに使用）</label>
+                    <input type="email" id="contact_email" name="contact_email" placeholder="例: sample@example.com" style="width:100%; padding:12px 16px; background:#fff; border:1px solid var(--border-color); border-radius:8px; font-size:15px; box-sizing:border-box;">
+                    <div style="font-size:12px; color:#d97706; margin-top:5px; background:#fff8e1; padding:8px; border-radius:6px; border:1px solid #f59e0b;">
+                        ⚠️ <strong>重要</strong>: 見積完了時・担当者からのメッセージ送信時などに通知メールをお送りします。<br>
+                        送信後、このアドレスへ確認メールをお送りします。<strong>迷惑メールフォルダをご確認ください</strong>（送信元: system@antigravity-jp.net）。
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact_notify">📱 SMS通知先電話番号（任意・SMSでも通知を受け取る場合）</label>
+                    <input type="text" id="contact_notify" name="contact_notify" placeholder="例: 090-1234-5678（SMSを希望する場合のみ）">
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">※メール通知のみでよい場合は未入力で構いません。</div>
                 </div>
                 
                 <div class="form-group">
@@ -403,17 +424,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
-            <!-- 3. 見積用図面アップロード -->
+            <!-- 3. 見積用意匠図PDFアップロード -->
             <div class="card">
                 <h2 class="section-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                    見積用図面（PDF推奨・CAD可）
+                    見積用意匠図（PDFのみ）
                 </h2>
-                <div style="font-size: 13px; color: #dc2626; font-weight: 600; margin-bottom: 15px; background: #fef2f2; border: 1px solid #fecaca; padding: 10px; border-radius: 8px;">
-                    ※見積依頼時はPDFまたはCADデータでご提出いただけますが、<strong>設計依頼時（見積後）には改めて「最新のCADデータ」の提出が必須</strong>となります。
+                <div style="font-size:13px; background:#eff6ff; border:1px solid #bfdbfe; padding:12px; border-radius:8px; margin-bottom:20px; color:#1d4ed8;">
+                    📌 <strong>見積依頼時は意匠図のPDFのみ</strong>で構いません。初期見積は最低限の資料で概算します。<br>
+                    CADデータ・確認申請書・地盤調査報告書等は、<strong>見積後の正式依頼時</strong>にアップロードしていただきます。
                 </div>
-                
-                <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px;">共通必須図書</h3>
                 <div class="form-row">
                     <div class="form-col">
                         <div class="file-upload-box">
@@ -430,7 +450,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                 </div>
-                
                 <div class="form-row">
                     <div class="form-col">
                         <div class="file-upload-box">
@@ -447,7 +466,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                 </div>
-
                 <div class="form-row">
                     <div class="form-col">
                         <div class="file-upload-box">
@@ -456,105 +474,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
                         </div>
                     </div>
-                    <div class="form-col">
-                        <div class="file-upload-box">
-                            <input type="file" name="file_pdf_app_doc" accept=".pdf,.zip">
-                            <div class="file-label">確認申請書（2〜5面）</div>
-                            <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                        </div>
-                    </div>
+                    <div class="form-col"></div>
                 </div>
-
-                <!-- 構造・壁量計算用 -->
-                <div id="upload_grp_permit" style="display:none; margin-top:20px;">
-                    <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px; color:#c0392b;">許容応力度・壁量計算 用</h3>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_soil" accept=".pdf,.zip">
-                                <div class="file-label">地盤調査報告書</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_precut" accept=".pdf,.zip">
-                                <div class="file-label">プレカット図（ある場合）</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 外皮計算用 -->
-                <div id="upload_grp_skin" style="display:none; margin-top:20px;">
-                    <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px; color:#d35400;">外皮計算 用</h3>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_spec" accept=".pdf,.zip">
-                                <div class="file-label">仕様書</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_insulation" accept=".pdf,.zip">
-                                <div class="file-label">断熱材資料</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_sash" accept=".pdf,.zip">
-                                <div class="file-label">サッシ・玄関ドア仕様</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_ventilation" accept=".pdf,.zip">
-                                <div class="file-label">24時間換気計算書</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_equip" accept=".pdf,.zip">
-                                <div class="file-label">設備機器カタログ</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 天空率計算用 -->
-                <div id="upload_grp_sky" style="display:none; margin-top:20px;">
-                    <h3 style="font-size:15px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:15px; color:#2980b9;">天空率 用</h3>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_road" accept=".pdf,.zip">
-                                <div class="file-label">道路斜線用資料</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="file-upload-box">
-                                <input type="file" name="file_pdf_true_north" accept=".pdf,.zip">
-                                <div class="file-label">北側斜線用資料（真北資料）</div>
-                                <div class="file-hint">クリックまたはドラッグ＆ドロップ</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
             <button type="submit" class="btn-submit">
@@ -564,59 +485,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-        // 送信時のバリデーション（計算タイプを最低1つ選択させる）
+        // 送信時のバリデーション
         document.querySelector('form').addEventListener('submit', function(e) {
             const checkboxes = document.querySelectorAll('.calc-type-chk');
             let checkedOne = false;
-            checkboxes.forEach(chk => {
-                if (chk.checked) checkedOne = true;
-            });
+            checkboxes.forEach(chk => { if (chk.checked) checkedOne = true; });
             if (!checkedOne) {
                 e.preventDefault();
                 alert('見積を依頼する計算・設計内容を最低1つ選択してください。');
             }
         });
 
-        // 依頼内容に基づくアップロード枠の表示切替
-        function toggleUploadGroups() {
-            const reqPermit = document.getElementById('req_permit').checked;
-            const reqWall = document.getElementById('req_wall').checked;
-            const reqSkin = document.getElementById('req_skin').checked;
-            const reqSky = document.getElementById('req_sky').checked;
-
-            document.getElementById('upload_grp_permit').style.display = (reqPermit || reqWall) ? 'block' : 'none';
-            document.getElementById('upload_grp_skin').style.display = reqSkin ? 'block' : 'none';
-            document.getElementById('upload_grp_sky').style.display = reqSky ? 'block' : 'none';
-        }
-
-        document.querySelectorAll('.calc-type-chk').forEach(chk => {
-            chk.addEventListener('change', toggleUploadGroups);
-        });
-        
-        // 初期表示時にも実行
-        toggleUploadGroups();
-
         // ファイル選択時のUI更新
         document.querySelectorAll('input[type="file"]').forEach(input => {
             input.addEventListener('change', function(e) {
                 const box = this.closest('.file-upload-box');
+                if (!box) return;
                 const label = box.querySelector('.file-label');
                 if (this.files.length > 0) {
                     label.textContent = this.files[0].name;
                     label.style.color = '#10b981';
                     box.style.borderColor = '#10b981';
                     box.style.background = 'rgba(16, 185, 129, 0.05)';
-                } else {
-                    label.textContent = label.getAttribute('data-default') || 'ファイルを選択';
-                    label.style.color = '';
-                    box.style.borderColor = '';
-                    box.style.background = '';
                 }
             });
-            // 初期ラベルの保存
-            const label = input.closest('.file-upload-box').querySelector('.file-label');
-            label.setAttribute('data-default', label.textContent);
         });
+
+        // 迷惑メール確認モーダル
+        <?php if (!empty($_SESSION['show_email_confirm'])): ?>
+        window.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('emailConfirmModal').style.display = 'flex';
+            <?php unset($_SESSION['show_email_confirm']); ?>
+        });
+        <?php endif; ?>
     </script>
+
+    <!-- 確認メール送信完了モーダル -->
+    <div id="emailConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#fff; border-radius:16px; padding:32px; max-width:500px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+            <div style="font-size:48px; margin-bottom:16px;">📧</div>
+            <h2 style="font-size:20px; margin-bottom:12px; color:#1e293b;">確認メールを送信しました</h2>
+            <p style="font-size:14px; color:#475569; line-height:1.8; margin-bottom:20px;">
+                見積依頼を受け付けました。<br>
+                《<strong><?= htmlspecialchars($_SESSION['show_email_confirm'] ?? '', ENT_QUOTES) ?></strong>》宛に確認メールを送信しました。<br><br>
+                <span style="color:#ef4444; font-weight:bold;">※迷惑メールフォルダもご確認ください</span><br>
+                送信元: <code>system@antigravity-jp.net</code><br>
+                このアドレスを送信許可リストに追加すると、以後の通知が途切れずに届きます。
+            </p>
+            <button onclick="document.getElementById('emailConfirmModal').style.display='none'; window.location.href='index.php';" style="padding:12px 30px; background:#3b82f6; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer;">
+                メールを確認しました
+            </button>
+        </div>
+    </div>
 </body>
 </html>

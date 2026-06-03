@@ -25,27 +25,25 @@ if ($action === 'send_message') {
             'msg' => $message_text
         ]);
 
-        // 管理者が送信した場合、依頼主のEmail通知先があればメールを飛ばす
+        // 管理者が送信した場合、依頼主のEmail（users.email）へメール通知
         if ($is_admin) {
-            $stmtNotify = $pdo->prepare("SELECT message_text FROM messages WHERE project_id = :pid AND message_text LIKE '%【見積完了時の通知先（SMS/Email）】%' ORDER BY id ASC LIMIT 1");
-            $stmtNotify->execute(['pid' => $project_id]);
-            $notifyMsg = $stmtNotify->fetchColumn();
-            $to_email = '';
-            if ($notifyMsg) {
-                preg_match('/【見積完了時の通知先（SMS\/Email）】\n([^\n]+)/', $notifyMsg, $matches);
-                if (!empty($matches[1]) && filter_var(trim($matches[1]), FILTER_VALIDATE_EMAIL)) {
-                    $to_email = trim($matches[1]);
+            try {
+                $stmtEmail = $pdo->prepare("
+                    SELECT u.email FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
+                ");
+                $stmtEmail->execute(['pid' => $project_id]);
+                $to_email = $stmtEmail->fetchColumn();
+                if ($to_email && filter_var($to_email, FILTER_VALIDATE_EMAIL)) {
+                    $project_name = $project_info['project_name'];
+                    $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
+                    $body  = "案件「{$project_name}」にて、担当者から新着メッセージが届きました。\n\n";
+                    $body .= "▼ダッシュボードでご確認ください\n";
+                    $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n\n";
+                    $body .= "------\n";
+                    $body .= "※このメールに返信いただいてもお返事できません。担当: 菅原 070-8305-8480（SMS可）";
+                    sendSystemEmail($to_email, $subject, $body);
                 }
-            }
-            if ($to_email) {
-                $project_name = $project_info['project_name'];
-                $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
-                $body = "案件「{$project_name}」にて、管理者から新着メッセージが届きました。\n\n";
-                $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
-                $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n\n";
-                $body .= "※本メールは送信専用です。";
-                sendSystemEmail($to_email, $subject, $body);
-            }
+            } catch (Exception $e) { /* 通知エラーは無視 */ }
         }
     }
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;

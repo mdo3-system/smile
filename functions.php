@@ -1,6 +1,7 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.1.12');
+define('SYSTEM_VERSION', 'v1.1.14');
+
 
 // ==========================================
 // 1. 各種マスターデータ定義（プルダウンの選択肢等）
