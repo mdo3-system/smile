@@ -247,7 +247,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                 $body = "案件「{$project_name}」にて、正式依頼が受理されました（CADデータ確認済）。\n未提出図書があります：{$missing_str}\n\n";
                 $body .= "未提出図書がすべて揃った時点が一次回答の起算日となります。\n";
             }
-            $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n";
+            $body .= "https://system.thanks.work/project_detail.php?id={$project_id}\n";
             sendSystemEmail('info@thanks.work', $subject, $body);
         }
 

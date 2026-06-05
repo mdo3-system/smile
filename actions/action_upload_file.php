@@ -123,7 +123,7 @@ if ($action === 'upload_artifact' && $is_admin) {
                     $subj = "【設計サポート】案件「{$pname}」に新しい成果物が登録されました";
                     $body  = "案件「{$pname}」に完成成果物・図書が登録されました。\n\n";
                     $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
-                    $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n\n";
+                    $body .= "https://system.thanks.work/project_detail.php?id={$project_id}\n\n";
                     $body .= "※このメールに返信いただいてもお返事できません。ご不明な点は担当まで直接お問い合わせください。";
                     sendSystemEmail($client_email, $subj, $body);
                 }

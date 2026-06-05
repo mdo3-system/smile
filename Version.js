@@ -40,7 +40,8 @@
 // 1.1.18: 協力業者ポータルにおける発注辞退機能の実装、およびステータスバッジの追加
 // 1.1.19: 協力業者発注処理のモジュール化（SubcontractorOrderService新設）、依存性の注入（DI）、および単体テストの追加
 // 1.2.0: リファクタリング、モジュール化、DI適用、PHPUnit自動テスト導入の完了
+// 1.2.1: 通知メールに記載されるダッシュボードURLを一斉にサブドメイン（system.thanks.work）へ修正
 
-window.APP_VERSION = "1.2.0";
-const APP_LAST_UPDATED = '2026-06-03';
+window.APP_VERSION = "1.2.1";
+const APP_LAST_UPDATED = '2026-06-05';
 

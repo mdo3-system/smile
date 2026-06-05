@@ -38,7 +38,7 @@ if ($action === 'send_message') {
                     $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
                     $body  = "案件「{$project_name}」にて、担当者から新着メッセージが届きました。\n\n";
                     $body .= "▼ダッシュボードでご確認ください\n";
-                    $body .= "https://thanks.work/system/project_detail.php?id={$project_id}\n\n";
+                    $body .= "https://system.thanks.work/project_detail.php?id={$project_id}\n\n";
                     $body .= "------\n";
                     $body .= "※このメールに返信いただいてもお返事できません。担当: 菅原 070-8305-8480（SMS可）";
                     sendSystemEmail($to_email, $subject, $body);

@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $subject = "【新規案件】新しい見積依頼がありました: {$project_name}";
             $body = "依頼主から新しい見積依頼（案件名: {$project_name}）が届きました。\n\n";
             $body .= "以下のURLよりダッシュボードにログインして確認し、見積りを作成してください。\n";
-            $body .= "https://thanks.work/system/project_detail.php?id={$new_project_id}\n";
+            $body .= "https://system.thanks.work/project_detail.php?id={$new_project_id}\n";
             sendSystemEmail('info@thanks.work', $subject, $body);
 
             // 依頼主へ確認メールを送信
@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $confirm_body .= "案件名: {$project_name}\n";
                 $confirm_body .= "依頼内容を確認次第、折り返しご連絡いたします。\n\n";
                 $confirm_body .= "▼ダッシュボードへのアクセス\n";
-                $confirm_body .= "https://thanks.work/system/project_detail.php?id={$new_project_id}\n\n";
+                $confirm_body .= "https://system.thanks.work/project_detail.php?id={$new_project_id}\n\n";
                 $confirm_body .= "------\n";
                 $confirm_body .= "※このメールが届いていれば通知が正常に機能しています。\n";
                 $confirm_body .= "※このメールに返信いただいてもお返事できません。\n";
