@@ -6,6 +6,20 @@ if ($action === 'set_primary_due_date') {
     if ($is_admin) {
         $due_date = $_POST['primary_due_date'] ?? null;
         if ($due_date) {
+            // 外皮計算依頼（req_skin = 1）の場合、仕様書(spec_doc)がアップロードされているかチェック
+            if (($project_info['req_skin'] ?? 0) == 1) {
+                $stmtCheckSpec = $pdo->prepare("
+                    SELECT COUNT(*) FROM project_files 
+                    WHERE project_id = :pid 
+                    AND file_category = 'spec_doc' 
+                    AND is_latest = 1
+                ");
+                $stmtCheckSpec->execute(['pid' => $project_id]);
+                if ((int)$stmtCheckSpec->fetchColumn() === 0) {
+                    die("処理に失敗しました: 一次回答期日の設定には仕様書のアップロードが必須です。依頼主にアップロードを依頼するか、仕様書をアップロードした後に再度設定してください。");
+                }
+            }
+
             $projectRepo->updatePrimaryDueDate($project_id, $due_date);
             
             // スケジュール実績JSONのインデックス 1 (着手基準日・一次回答) に同日を保存

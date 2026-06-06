@@ -165,7 +165,7 @@ if ($is_admin) {
 <body>
     <?php if ($is_admin && $project_info): ?>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
-            <h1 style="margin:0; font-size:24px;">🏢 協力業者への発注・管理ダッシュボード</h1>
+            <h1 style="margin:0; font-size:24px;">🏢 協力業者への発注依頼・管理ダッシュボード</h1>
             <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
                 <span>案件名: <strong><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></strong></span>
                 <span style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></span>
@@ -176,7 +176,7 @@ if ($is_admin) {
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <!-- 発注フォーム -->
             <div class="task-card">
-                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">🤝 新規発注（自動算出）</h2>
+                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">🤝 新規発注依頼（自動算出）</h2>
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
                     <input type="hidden" name="action" value="order_subcontractor">
                     <input type="hidden" name="project_id" value="<?= $project_id ?>">
@@ -217,7 +217,7 @@ if ($is_admin) {
                         <input type="date" name="due_date" required style="flex:1; padding:5px; font-size:14px; border:1px solid #ccc; border-radius:3px;">
                     </div>
 
-                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:10px; font-size:16px; font-weight:bold; cursor:pointer; border-radius:4px;" onclick="return confirm('発注してよろしいですか？')">発注を確定・送信</button>
+                    <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:10px; font-size:16px; font-weight:bold; cursor:pointer; border-radius:4px;" onclick="return confirm('発注依頼を送信してよろしいですか？')">発注依頼を送信</button>
                 </form>
 
                 <script>
@@ -289,15 +289,15 @@ if ($is_admin) {
 
             <!-- 発注履歴 -->
             <div class="task-card">
-                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">📋 発注履歴・ステータス</h2>
+                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">📋 発注依頼履歴・ステータス</h2>
                 <?php if (empty($admin_orders)): ?>
-                    <p style="color:#666;">まだ発注履歴はありません。</p>
+                    <p style="color:#666;">まだ発注依頼履歴はありません。</p>
                 <?php else: ?>
                     <?php foreach($admin_orders as $o): 
                         $badge_bg = '#6c757d'; 
                         $status_label = $o['status'];
                         if ($o['status'] === 'requested') {
-                            $badge_bg = '#ffc107'; $status_label = '発注済 (未承諾)';
+                            $badge_bg = '#ffc107'; $status_label = '依頼済 (未承諾)';
                         } elseif ($o['status'] === 'accepted') {
                             $badge_bg = '#007bff'; $status_label = '作業中 (承諾済)';
                         } elseif ($o['status'] === 'delivered') {
@@ -313,8 +313,8 @@ if ($is_admin) {
                             </div>
                             <div style="font-size:13px; color:#444;">
                                 依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
-                                発注額: <?= number_format($o['order_amount']) ?>円<br>
-                                発注日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
+                                依頼額: <?= number_format($o['order_amount']) ?>円<br>
+                                依頼日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
                                 希望納品日: <?= !empty($o['due_date']) ? date('Y年m月d日', strtotime($o['due_date'])) : '未設定' ?><br>
                                 完了予定日 (業者回答): <?= !empty($o['expected_delivery_date']) ? '<strong style="color:#e67e22;">'.date('Y年m月d日', strtotime($o['expected_delivery_date'])).'</strong>' : '<span style="color:#999;">未定</span>' ?>
                             </div>

@@ -320,9 +320,9 @@
                 </script>
                 <?php endif; ?>
 
-                <h2 class="section-title" style="background:#e67e22; margin-top:20px;">🤝 協力業者への発注・タスク管理</h2>
+                <h2 class="section-title" style="background:#e67e22; margin-top:20px;">🤝 協力業者への発注依頼・タスク管理</h2>
                 <div class="box" style="background:#fff9f0;">
-                    <div style="font-size:11px; margin-bottom:5px;"><strong>自動発注額算出</strong></div>
+                    <div style="font-size:11px; margin-bottom:5px;"><strong>自動発注依頼額算出</strong></div>
                     <div style="display:flex; gap:5px;">
                         <input type="number" id="sub_area" placeholder="面積(㎡)" style="width:60px; font-size:12px;">
                         <button type="button" onclick="calcSubcontractorEstimate()" style="font-size:11px; padding:2px 5px;">算出</button>
@@ -336,7 +336,7 @@
                         const basePrice = 30000;
                         const total = basePrice + Math.round(area * pricePerSqm);
                         document.getElementById('sub_calc_result').innerHTML = 
-                            '<span style="color:#28a745;font-size:12px;font-weight:bold;">推奨発注額: ' + total.toLocaleString() + '円</span>';
+                            '<span style="color:#28a745;font-size:12px;font-weight:bold;">推奨発注依頼額: ' + total.toLocaleString() + '円</span>';
                         document.querySelector('input[name="order_amount"]').value = total;
                     }
                     </script>
@@ -350,12 +350,12 @@
                         </select>
                         <input type="text" name="task_title" placeholder="依頼内容（例：構造図作図）" style="width:100%; margin-bottom:5px; font-size:12px;">
                         <input type="number" name="order_amount" placeholder="金額(税込)" style="width:100%; margin-bottom:5px; font-size:12px;">
-                        <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:5px; font-size:12px; cursor:pointer;">発注を確定・送信</button>
+                        <button type="submit" style="width:100%; background:#e67e22; color:white; border:none; padding:5px; font-size:12px; cursor:pointer;">発注依頼を送信</button>
                     </form>
                 </div>
                 
                 <div style="font-size:11px; color:#555; margin-top:10px;">
-                    <h3 style="font-size:12px; border-bottom:1px solid #ccc; margin-top:0;">発注履歴</h3>
+                    <h3 style="font-size:12px; border-bottom:1px solid #ccc; margin-top:0;">発注依頼履歴</h3>
                     <?php foreach($orders as $o): ?>
                         <div style="padding:4px 0; border-bottom:1px solid #eee;">
                             <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?>: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?> (<?= number_format($o['order_amount']) ?>円)

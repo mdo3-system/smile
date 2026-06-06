@@ -63,7 +63,7 @@ function get_google_drive_service() {
     $token_path = __DIR__ . '/token.json';
     if (file_exists($token_path)) {
         $accessToken = json_decode(file_get_contents($token_path), true);
-        if ($accessToken) {
+        if (is_array($accessToken) && isset($accessToken['access_token'])) {
             $client->setAccessToken($accessToken);
         }
     }

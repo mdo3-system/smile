@@ -122,12 +122,12 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
          【外皮計算】必要図書
     ============================================ -->
     <div style="margin-bottom:15px; border:1px solid #059669; padding:12px; border-radius:6px; background:#ecfdf5;">
-        <strong style="display:block; margin-bottom:8px; color:#065f46;">🟢 【外皮計算】必要図書</strong>
-        <?= renderUploadSlot('仕様書', 'spec_doc', true) ?>
-        <?= renderUploadSlot('断熱材資料（屋根・天井・外壁・基礎）', 'insulation_data', true) ?>
-        <?= renderUploadSlot('サッシ・玄関ドア仕様', 'sash_data', true) ?>
-        <?= renderUploadSlot('24時間換気計算図書', 'ventilation_data', true) ?>
-        <?= renderUploadSlot('設備機器カタログ（エコキュート・照明等）', 'equip_data', true) ?>
+        <strong style="display:block; margin-bottom:8px; color:#065f46;">🟢 【外皮計算】必要図書（後出し可）</strong>
+        <?= renderUploadSlot('仕様書', 'spec_doc', false) ?>
+        <?= renderUploadSlot('断熱材資料（屋根・天井・外壁・基礎）', 'insulation_data', false) ?>
+        <?= renderUploadSlot('サッシ・玄関ドア仕様', 'sash_data', false) ?>
+        <?= renderUploadSlot('24時間換気計算図書', 'ventilation_data', false) ?>
+        <?= renderUploadSlot('設備機器カタログ（エコキュート・照明等）', 'equip_data', false) ?>
     </div>
     <?php endif; ?>
 
