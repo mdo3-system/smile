@@ -263,9 +263,9 @@
                     </script>
                 <?php endif; ?>
 
-                <details>
-                    <summary style="cursor:pointer; font-weight:bold; font-size:12px; color:#856404; border-top:1px dashed #ffeeba; padding-top:10px;">編集する (金銭データの更新)</summary>
-                    <form method="POST" action="actions/admin_finance_post.php" style="font-size:12px; margin-top:10px;">
+                <div style="border-top:1px dashed #ffeeba; padding-top:10px; margin-top:10px;">
+                    <strong style="display:block; font-size:12px; color:#856404; margin-bottom:10px;">✏️ 金銭データの更新（管理者・経理用）</strong>
+                    <form method="POST" action="actions/admin_finance_post.php" style="font-size:12px;">
                         <input type="hidden" name="project_id" value="<?= $project_id ?>">
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
                             <div>
@@ -303,7 +303,7 @@
                         </div>
                         <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745;">金銭データを保存</button>
                     </form>
-                </details>
+                </div>
             </div>
             <?php endif; ?>
         </div>

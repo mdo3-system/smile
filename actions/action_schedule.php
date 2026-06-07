@@ -44,15 +44,20 @@ if ($action === 'set_primary_due_date') {
             }
             
             // Auto message
+            $msg = "【通知】一次回答の基準日（期日）が {$due_date} に設定され、スケジュールが確定しました。左パネルのスケジュール表をご確認ください。\n\n";
+            $msg .= "【今後の進め方について】\n";
+            $msg .= "・図書の修正やご要望などがある場合は、こちらのチャットにメッセージの入力やファイルの添付をお願いいたします。\n";
+            $msg .= "・修正がなくそのまま進める場合は、チャット欄に「GO」とご返信ください。ご返信を確認後、申請図書一式を作成いたします。";
+
             $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
             $stmtMsg->execute([
                 'pid' => $project_id,
                 'sid' => $_SESSION['user_id'],
-                'msg' => "【通知】一次回答の基準日（期日）が {$due_date} に設定され、スケジュールが確定しました。左パネルのスケジュール表をご確認ください。"
+                'msg' => $msg
             ]);
         }
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    header("Location: project_detail.php?id=" . $project_id . "&show_billing_modal=1&t=" . time()); exit;
 }
 
 // スケジュール実施日（実績）の更新

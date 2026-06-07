@@ -50,15 +50,56 @@
                 </div>
             </div>
 
+            <?php
+            $base_days = getScheduleBaseDays($project_info);
+            $primary_due_date = $project_info['primary_due_date'] ?? null;
+
+            $schedulesToRender = [];
+
+            if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '許容応力度・基礎横架材計算',
+                    'steps' => getScheduleSteps($base_days),
+                    'actuals_col' => 'schedule_actuals'
+                ];
+            }
+            if (($project_info['req_wall'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '壁量計算',
+                    'steps' => getScheduleStepsWall($base_days),
+                    'actuals_col' => 'schedule_actuals_wall'
+                ];
+            }
+            if (($project_info['req_skin'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '外皮計算',
+                    'steps' => getScheduleStepsSkin($base_days),
+                    'actuals_col' => 'schedule_actuals_skin'
+                ];
+            }
+            if (($project_info['req_sky'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '天空率',
+                    'steps' => getScheduleStepsSky($base_days),
+                    'actuals_col' => 'schedule_actuals_sky'
+                ];
+            }
+
+            if (empty($schedulesToRender)) {
+                $schedulesToRender[] = [
+                    'title' => '構造計算・基本スケジュール',
+                    'steps' => getScheduleSteps($base_days),
+                    'actuals_col' => 'schedule_actuals'
+                ];
+            }
+
+            foreach ($schedulesToRender as $scheduleItem):
+                $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
+            ?>
             <div class="box" style="margin-top:15px; background:#f0f8ff; border-color:#cce5ff;">
-                <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 全体スケジュール</h3>
+                <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 <?= htmlspecialchars($scheduleItem['title']) ?> スケジュール</h3>
                 <div style="font-size:13px; line-height:1.6;">
                     <?php
-                    // 共通関数で営業日数とステップを取得 (functions.php)
-                    $base_days      = getScheduleBaseDays($project_info);
-                    $schedule_steps = getScheduleSteps($base_days);
-                    $primary_due_date = $project_info['primary_due_date'] ?? null;
-
                     if (empty($primary_due_date)) {
                         echo '<div style="color:#e53e3e; font-size:12px; margin-bottom:10px; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">⏳ 具体的な日付は、設計依頼のご提出後に担当者が確認・設定します。</div>';
                     } else {
@@ -70,9 +111,8 @@
                     echo '<tbody>';
                     
                     $calc_date = $primary_due_date;
-                    $schedule_actuals = json_decode($project_info['schedule_actuals'] ?? '{}', true) ?: [];
                     
-                    foreach ($schedule_steps as $idx => $step) {
+                    foreach ($scheduleItem['steps'] as $idx => $step) {
                         $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
                         $badge = '';
                         if ($step['actor'] == 'designer') {
@@ -119,6 +159,7 @@
                     ?>
                 </div>
             </div>
+            <?php endforeach; ?>
 
             <div class="box" style="margin-top:15px; background:#fff3cd; border-color:#ffeeba;">
                 <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 ご請求・お支払い状況</h3>
@@ -202,6 +243,46 @@
                     <?php endif; ?>
                 <?php else: ?>
                     <div style="font-size:12px; color:#666; padding:10px; text-align:center; background:#fff; border-radius:4px;">見積書はまだ発行されていません。</div>
+                <?php endif; ?>
+                
+                <hr style="border:0; border-top:1px dashed #c8e6c9; margin:15px 0;">
+                
+                <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">📄 請求書</h3>
+                <?php 
+                $has_invoice = false;
+                if (!empty($files_by_cat['inv_primary'])): 
+                    $inv = $files_by_cat['inv_primary'][0];
+                    $inv_url = (strpos($inv['drive_file_id'], 'uploads/') !== 0 && !empty($inv['drive_file_id'])) 
+                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($inv['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                        : htmlspecialchars($inv['drive_file_id'], ENT_QUOTES);
+                    $has_invoice = true;
+                ?>
+                    <div style="margin-bottom:10px; padding:10px; background:#fff; border:1px solid #cbd5e1; border-radius:6px; text-align:center;">
+                        <div style="font-weight:bold; color:#1e40af; margin-bottom:5px;">一次請求書 (着手金50%分)</div>
+                        <a href="<?= $inv_url ?>" target="_blank" style="display:inline-block; padding:6px 12px; background:#2563eb; color:white; font-size:12px; font-weight:bold; border-radius:4px; text-decoration:none;">
+                            📄 一次請求書を表示
+                        </a>
+                    </div>
+                <?php endif; ?>
+
+                <?php 
+                if (!empty($files_by_cat['inv_final'])): 
+                    $inv_f = $files_by_cat['inv_final'][0];
+                    $inv_f_url = (strpos($inv_f['drive_file_id'], 'uploads/') !== 0 && !empty($inv_f['drive_file_id'])) 
+                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($inv_f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                        : htmlspecialchars($inv_f['drive_file_id'], ENT_QUOTES);
+                    $has_invoice = true;
+                ?>
+                    <div style="margin-bottom:10px; padding:10px; background:#fff; border:1px solid #cbd5e1; border-radius:6px; text-align:center;">
+                        <div style="font-weight:bold; color:#b91c1c; margin-bottom:5px;">最終ご請求書 (残金精算分)</div>
+                        <a href="<?= $inv_f_url ?>" target="_blank" style="display:inline-block; padding:6px 12px; background:#dc3545; color:white; font-size:12px; font-weight:bold; border-radius:4px; text-decoration:none;">
+                            📄 最終請求書を表示
+                        </a>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!$has_invoice): ?>
+                    <div style="font-size:12px; color:#666; padding:10px; text-align:center; background:#fff; border-radius:4px;">請求書はまだ発行されていません。</div>
                 <?php endif; ?>
                 
                 <hr style="border:0; border-top:1px dashed #c8e6c9; margin:15px 0;">

@@ -62,11 +62,34 @@ if ($action === 'upload_artifact' && $is_admin) {
                 $targetIndex = 4;
                 $msgTitle = "壁量計算・申請図書一式";
             }
-            // 外皮計算 (Index 4)
-            if (($file_category === 'skin_calc_doc' || $file_category === 'skin_doc') && $project['req_skin'] == 1) {
-                $colsToUpdate[] = 'schedule_actuals_skin';
-                $targetIndex = 4;
-                $msgTitle = "外皮計算・申請図書一式";
+            // 外皮計算 (Index 4) - 外皮計算書、WEBプログラム、外皮計算資料が全て揃っている場合のみ
+            if (($file_category === 'skin_calc_doc' || $file_category === 'skin_doc' || $file_category === 'skin_web_prog') && $project['req_skin'] == 1) {
+                // データベースから、このプロジェクトで最新として登録されている外皮関係のファイルのカテゴリーを取得
+                $stmtCheckSkinFiles = $pdo->prepare("
+                    SELECT file_category 
+                    FROM project_files 
+                    WHERE project_id = :pid 
+                      AND is_latest = 1 
+                      AND file_category IN ('skin_calc_doc', 'skin_web_prog', 'skin_doc')
+                ");
+                $stmtCheckSkinFiles->execute(['pid' => $project_id]);
+                $existing_cats = $stmtCheckSkinFiles->fetchAll(PDO::FETCH_COLUMN);
+
+                // アップロードされたばかりのファイルカテゴリーも含める（トランザクションコミット前だがDB上は既に追加されているため、最新フラグも考慮する）
+                // ただし、すでに上のINSERTでコミット前のテーブルにはis_latest=1として存在しているため、$existing_cats には含まれているはず。
+                $required_cats = ['skin_calc_doc', 'skin_web_prog', 'skin_doc'];
+                $has_all = true;
+                foreach ($required_cats as $req_cat) {
+                    if (!in_array($req_cat, $existing_cats)) {
+                        $has_all = false;
+                    }
+                }
+
+                if ($has_all) {
+                    $colsToUpdate[] = 'schedule_actuals_skin';
+                    $targetIndex = 4;
+                    $msgTitle = "外皮計算・申請図書一式";
+                }
             }
             // 外皮計算・初回提示 (Index 2) は WEBプログラム計算書をUPした時
             if ($file_category === 'skin_web_prog' && $project['req_skin'] == 1) {

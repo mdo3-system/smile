@@ -1,10 +1,12 @@
 <?php
 require_once 'auth.php';
 require_once 'functions.php';
-check_auth(['admin', 'subcontractor']);
+check_auth(['admin', 'subcontractor', 'accountant']);
 
 $user_id = $_SESSION['user_id'];
 $is_admin = ($_SESSION['role'] === 'admin');
+$is_accountant = ($_SESSION['role'] === 'accountant');
+$has_finance_access = ($is_admin || $is_accountant);
 
 // 表示対象の協力業者IDを決定
 $target_sub_id = 0;
@@ -58,25 +60,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    // 支払い記録の保存 (管理者のみ)
-    if ($action === 'log_sub_payment' && $is_admin) {
+    // 支払い記録の保存 (管理者・経理)
+    if ($action === 'log_sub_payment' && $has_finance_access) {
         $target_month = $_POST['target_month'] ?? '';
         $paid_amount = intval($_POST['paid_amount'] ?? 0);
         $note = $_POST['note'] ?? '';
         
         if ($target_month !== '') {
-            // UPSERT処理
-            $stmt = $pdo->prepare("
-                INSERT INTO subcontractor_payments (subcontractor_id, target_month, paid_amount, paid_at, note) 
-                VALUES (:sub_id, :t_month, :amt, NOW(), :note)
-                ON DUPLICATE KEY UPDATE paid_amount = :amt, paid_at = NOW(), note = :note
-            ");
-            $stmt->execute([
-                'sub_id' => $target_sub_id,
-                't_month' => $target_month,
-                'amt' => $paid_amount,
-                'note' => $note
-            ]);
+            $pdo->beginTransaction();
+            try {
+                // UPSERT処理
+                $stmt = $pdo->prepare("
+                    INSERT INTO subcontractor_payments (subcontractor_id, target_month, paid_amount, paid_at, note) 
+                    VALUES (:sub_id, :t_month, :amt, NOW(), :note)
+                    ON DUPLICATE KEY UPDATE paid_amount = :amt, paid_at = NOW(), note = :note
+                ");
+                $stmt->execute([
+                    'sub_id' => $target_sub_id,
+                    't_month' => $target_month,
+                    'amt' => $paid_amount,
+                    'note' => $note
+                ]);
+
+                // 協力業者チャット（global_messages）へ自動通知メッセージを投稿
+                $payment_msg = "【お支払い完了のお知らせ】\n";
+                $payment_msg .= "{$target_month} 納品完了分につきまして、お支払いが完了いたしました。\n\n";
+                $payment_msg .= "支払金額: " . number_format($paid_amount) . " 円\n";
+                $payment_msg .= "支払日時: " . date('Y年m月d日 H:i') . "\n";
+                if (!empty($note)) {
+                    $payment_msg .= "備考: {$note}\n";
+                }
+                $payment_msg .= "\nご確認のほど、よろしくお願い申し上げます。";
+
+                $stmtMsg = $pdo->prepare("
+                    INSERT INTO global_messages (subcontractor_id, sender_id, message_text) 
+                    VALUES (:sub_id, :sender_id, :msg)
+                ");
+                $stmtMsg->execute([
+                    'sub_id' => $target_sub_id,
+                    'sender_id' => $user_id,
+                    'msg' => $payment_msg
+                ]);
+
+                $pdo->commit();
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                die("支払記録の保存に失敗しました: " . $e->getMessage());
+            }
         }
         header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
         exit;
@@ -97,9 +127,9 @@ $tasks = $stmtTasks->fetchAll();
 // 月次集計データの作成 (25日締め)
 $monthly_totals = [];
 foreach ($tasks as $t) {
-    if ($t['status'] === 'delivered') {
-        // updated_at を納品日として月を判定
-        $date_str = $t['updated_at'] ?? $t['created_at'];
+    if ($t['status'] === 'completed') {
+        // completed_at を最優先、無ければ updated_at, created_at を完了日として月を判定
+        $date_str = $t['completed_at'] ?? $t['updated_at'] ?? $t['created_at'];
         $ts = strtotime($date_str);
         
         $y = (int)date('Y', $ts);
@@ -306,7 +336,7 @@ $global_messages = $stmtChat->fetchAll();
                                     <strong><?= number_format($balance) ?> 円</strong>
                                 </div>
                                 
-                                <?php if ($is_admin): ?>
+                                <?php if ($has_finance_access): ?>
                                     <form method="POST" style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:10px;">
                                         <input type="hidden" name="action" value="log_sub_payment">
                                         <input type="hidden" name="target_month" value="<?= $month ?>">

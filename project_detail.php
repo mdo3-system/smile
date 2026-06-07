@@ -3,10 +3,12 @@
 require_once 'auth.php';
 require_once 'functions.php';
 
-check_auth(['admin', 'client']);
+check_auth(['admin', 'client', 'accountant']);
 
 $current_user_id = $_SESSION['user_id'];
 $is_admin = ($_SESSION['role'] === 'admin');
+$is_accountant = ($_SESSION['role'] === 'accountant');
+$has_finance_access = ($is_admin || $is_accountant);
 
 $project_id = $_GET['id'] ?? null;
 if (!$project_id) { die("案件が指定されていません。"); }
@@ -56,7 +58,7 @@ $stmtAllEst->execute(['pid' => $project_id]);
 $all_estimates = $stmtAllEst->fetchAll();
 
 // 案件に関連する全ファイル（最新のみ）を取得 (依頼主提出物用)
-$stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND is_latest = 1");
+$stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY version DESC, id DESC");
 $stmtFiles->execute(['pid' => $project_id]);
 $all_files = $stmtFiles->fetchAll();
 
@@ -173,7 +175,7 @@ $chat_messages = $stmtMsgs->fetchAll();
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:15px;">
             <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
-            <?php if ($is_admin): ?>
+            <?php if ($has_finance_access): ?>
                 <a href="project_subcontractor.php?id=<?= $project_id ?>" target="_blank" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
             <?php endif; ?>
         </div>
@@ -183,7 +185,7 @@ $chat_messages = $stmtMsgs->fetchAll();
         </div>
     </div>
 
-        <?php if ($is_admin): ?>
+        <?php if ($has_finance_access): ?>
             <?php require __DIR__ . '/components/dashboard_admin.php'; ?>
         <?php else: ?>
             <?php require __DIR__ . '/components/dashboard_client.php'; ?>
@@ -237,6 +239,97 @@ SMS送付する場合がございますので、ご依頼いただける際は�
             </div>
         </div>
     </div>
+
+    <!-- ===== 一次回答後の本見積・請求書発行モーダル ===== -->
+    <?php if ($has_finance_access): ?>
+    <div class="modal-overlay" id="billingModal">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-title">💰 【連続発行】本見積と一次請求書の発行</div>
+            <div style="font-size:12px; color:#555; margin-bottom:15px;">
+                一次回答が完了しました。引き続き本見積額を設定し、一次請求書（50%分）を発行してください。
+            </div>
+            <form id="billingModalForm">
+                <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">本見積額 (円・税込)</label>
+                    <input type="number" name="formal_est_amount" id="bm_amount" value="<?= htmlspecialchars($project_info['formal_est_amount'] ?? '') ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required placeholder="例: 110000">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">本見積日</label>
+                    <input type="date" name="formal_est_date" id="bm_date" value="<?= htmlspecialchars($project_info['formal_est_date'] ?: date('Y-m-d')) ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">見積書・請求書の宛先名称</label>
+                    <input type="text" name="billing_company_name" id="bm_billing" value="<?= htmlspecialchars($project_info['billing_company_name'] ?: ($project_info['company_name'] . ' ' . $project_info['client_name'])) ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="※空白の場合は会社名＋担当者名">
+                </div>
+                <div class="modal-btns">
+                    <button type="button" onclick="document.getElementById('billingModal').classList.remove('active')" style="padding:8px 15px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px;">後で設定</button>
+                    <button type="button" onclick="submitBillingFlow()" id="btn_billing_submit" style="padding:8px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px;">保存して一次請求書(50%)を発行</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('show_billing_modal')) {
+            document.getElementById('billingModal').classList.add('active');
+        }
+    });
+
+    function submitBillingFlow() {
+        const amount = document.getElementById('bm_amount').value;
+        const date = document.getElementById('bm_date').value;
+        const billing = document.getElementById('bm_billing').value;
+
+        if (!amount || !date) {
+            alert('本見積額と本見積日を入力してください。');
+            return;
+        }
+
+        const btn = document.getElementById('btn_billing_submit');
+        btn.disabled = true;
+        btn.innerText = '処理中...';
+
+        // 1. 金銭データを保存
+        const saveForm = new FormData();
+        saveForm.append('project_id', <?= $project_id ?>);
+        saveForm.append('formal_est_amount', amount);
+        saveForm.append('formal_est_date', date);
+        saveForm.append('billing_company_name', billing);
+        saveForm.append('initial_est_amount', '<?= htmlspecialchars($project_info['initial_est_amount'] ?? '') ?>');
+        saveForm.append('initial_est_date', '<?= htmlspecialchars($project_info['initial_est_date'] ?? '') ?>');
+        saveForm.append('add_est_amount', '<?= htmlspecialchars($project_info['add_est_amount'] ?? '') ?>');
+        saveForm.append('add_est_date', '<?= htmlspecialchars($project_info['add_est_date'] ?? '') ?>');
+        saveForm.append('deposit_amount', '<?= htmlspecialchars($project_info['deposit_amount'] ?? '') ?>');
+        saveForm.append('deposit_date', '<?= htmlspecialchars($project_info['deposit_date'] ?? '') ?>');
+
+        fetch('actions/admin_finance_post.php', { method: 'POST', body: saveForm })
+            .then(res => {
+                // 2. 一次請求書(50%)を発行
+                const issueForm = new FormData();
+                issueForm.append('project_id', <?= $project_id ?>);
+                return fetch('api_issue_primary_invoice.php', { method: 'POST', body: issueForm });
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('本見積を保存し、一次請求書(50%)を発行しました。');
+                    window.location.href = 'project_detail.php?id=' + <?= $project_id ?>;
+                } else {
+                    alert('請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                    btn.disabled = false;
+                    btn.innerText = '保存して一次請求書(50%)を発行';
+                }
+            })
+            .catch(e => {
+                alert('通信エラーが発生しました: ' + e);
+                btn.disabled = false;
+                btn.innerText = '保存して一次請求書(50%)を発行';
+            });
+    }
+    </script>
+    <?php endif; ?>
 
     <script>
     // ===== チャット変数 (External JS 用) =====

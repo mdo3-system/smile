@@ -3,7 +3,7 @@ session_start();
 require_once '../db_connect.php';
 require_once '../functions.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'accountant'])) {
     die("権限がありません。");
 }
 

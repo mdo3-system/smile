@@ -25,7 +25,8 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $is_admin = ($_SESSION['role'] === 'admin');
-if (!$is_admin) {
+$is_accountant = ($_SESSION['role'] === 'accountant');
+if (!$is_admin && !$is_accountant) {
     http_response_code(403);
     echo json_encode(['error' => 'Permission denied']);
     exit;

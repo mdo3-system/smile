@@ -6,11 +6,11 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use App\Services\SubcontractorOrderService;
 
-check_auth(['admin', 'subcontractor']);
+check_auth(['admin', 'subcontractor', 'accountant']);
 
 // セッションからログイン中のユーザー情報を取得
 $user_id = $_SESSION['user_id']; 
-$is_admin = ($_SESSION['role'] === 'admin');
+$is_admin = in_array($_SESSION['role'], ['admin', 'accountant']);
 
 $subcontractorOrderService = new SubcontractorOrderService($pdo);
 
@@ -91,6 +91,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // 発注ステータスを delivered (納品済) に更新
             $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered', updated_at = NOW() WHERE id = :id AND subcontractor_id = :sub_id");
             $stmtOrder->execute(['id' => $order_id, 'sub_id' => $user_id]);
+
+            // 協力業者から管理者への納品報告チャットを自動登録
+            $stmtGetSubName = $pdo->prepare("SELECT contact_name FROM users WHERE id = :uid");
+            $stmtGetSubName->execute(['uid' => $user_id]);
+            $sub_name = $stmtGetSubName->fetchColumn() ?: '協力業者';
+
+            $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品（ファイルアップロード）が行われました。\n";
+            $notify_msg .= "管理者画面にて内容をご確認の上、承認（クライアントへの公開）処理を行ってください。";
+
+            $stmtChat = $pdo->prepare("
+                INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                VALUES (:pid, :sid, 'sub_admin', :msg)
+            ");
+            $stmtChat->execute([
+                'pid' => $project_id,
+                'sid' => $user_id,
+                'msg' => $notify_msg
+            ]);
+
             $pdo->commit();
         } else {
             $pdo->rollBack();
@@ -137,11 +156,17 @@ if ($is_admin) {
         $stmtSub->execute();
         $subcontractors = $stmtSub->fetchAll();
 
-        // この案件の発注履歴を取得
+        // この案件の発注履歴を取得（納品ファイルも結合）
         $stmtOrd = $pdo->prepare("
-            SELECT o.*, u.contact_name 
+            SELECT o.*, u.contact_name,
+                   f1.drive_file_id AS pdf_id, f1.file_name AS pdf_name, f1.version AS pdf_ver,
+                   f2.drive_file_id AS arc_d_id, f2.file_name AS arc_d_name, f2.version AS arc_d_ver,
+                   f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
             FROM subcontractor_orders o 
             JOIN users u ON o.subcontractor_id = u.id 
+            LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
+            LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend_design' AND f2.is_latest = 1
+            LEFT JOIN project_files f3 ON o.project_id = f3.project_id AND f3.file_category = 'sub_architrend_struct' AND f3.is_latest = 1
             WHERE o.project_id = :pid 
             ORDER BY o.created_at DESC
         ");
@@ -311,12 +336,53 @@ if ($is_admin) {
                                 <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?> 様宛
                                 <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 6px; border-radius:3px; font-size:12px; margin-left:10px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span>
                             </div>
-                            <div style="font-size:13px; color:#444;">
+                            <div style="font-size:13px; color:#444; line-height:1.6;">
                                 依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
                                 依頼額: <?= number_format($o['order_amount']) ?>円<br>
                                 依頼日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
                                 希望納品日: <?= !empty($o['due_date']) ? date('Y年m月d日', strtotime($o['due_date'])) : '未設定' ?><br>
                                 完了予定日 (業者回答): <?= !empty($o['expected_delivery_date']) ? '<strong style="color:#e67e22;">'.date('Y年m月d日', strtotime($o['expected_delivery_date'])).'</strong>' : '<span style="color:#999;">未定</span>' ?>
+                                
+                                <?php if (!empty($o['pdf_id']) || !empty($o['arc_d_id']) || !empty($o['arc_s_id'])): ?>
+                                    <div style="margin-top:8px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px;">
+                                        <strong style="color:#334155; font-size:12px;">📤 納品ファイル一覧:</strong>
+                                        <ul style="margin:4px 0 0 0; padding-left:20px; font-size:12px;">
+                                            <?php if (!empty($o['arc_d_id'])): 
+                                                $d_url = (strpos($o['arc_d_id'], 'uploads/') === 0) ? $o['arc_d_id'] : 'https://drive.google.com/file/d/' . $o['arc_d_id'] . '/view?usp=drivesdk';
+                                            ?>
+                                                <li>意匠用アーキ: <a href="<?= htmlspecialchars($d_url, ENT_QUOTES) ?>" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;"><?= htmlspecialchars($o['arc_d_name'], ENT_QUOTES) ?> (V<?= $o['arc_d_ver'] ?>)</a></li>
+                                            <?php endif; ?>
+                                            <?php if (!empty($o['arc_s_id'])): 
+                                                $s_url = (strpos($o['arc_s_id'], 'uploads/') === 0) ? $o['arc_s_id'] : 'https://drive.google.com/file/d/' . $o['arc_s_id'] . '/view?usp=drivesdk';
+                                            ?>
+                                                <li>構造用アーキ: <a href="<?= htmlspecialchars($s_url, ENT_QUOTES) ?>" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;"><?= htmlspecialchars($o['arc_s_name'], ENT_QUOTES) ?> (V<?= $o['arc_s_ver'] ?>)</a></li>
+                                            <?php endif; ?>
+                                            <?php if (!empty($o['pdf_id'])): 
+                                                $pdf_url = (strpos($o['pdf_id'], 'uploads/') === 0) ? $o['pdf_id'] : 'https://drive.google.com/file/d/' . $o['pdf_id'] . '/view?usp=drivesdk';
+                                                $is_published = ($o['status'] === 'completed');
+                                            ?>
+                                                <li>
+                                                    構造図PDF: <a href="<?= htmlspecialchars($pdf_url, ENT_QUOTES) ?>" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;"><?= htmlspecialchars($o['pdf_name'], ENT_QUOTES) ?> (V<?= $o['pdf_ver'] ?>)</a>
+                                                    <?php if ($is_published): ?>
+                                                        <span class="badge" style="background:#28a745; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">公開中</span>
+                                                    <?php else: ?>
+                                                        <span class="badge" style="background:#dc3545; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">未公開</span>
+                                                    <?php endif; ?>
+                                                </li>
+                                            <?php endif; ?>
+                                        </ul>
+
+                                        <?php if ($o['status'] === 'delivered'): ?>
+                                            <div style="margin-top:8px;">
+                                                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                                    <input type="hidden" name="action" value="approve_delivery">
+                                                    <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer;" onclick="return confirm('納品ファイルを承認し、構造図PDFを依頼主に公開しますか？')">承認して依頼主に公開</button>
+                                                </form>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
