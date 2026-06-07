@@ -24,7 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 add_est_amount = :add_amt,
                 add_est_date = :add_date,
                 deposit_amount = :dep_amt,
-                deposit_date = :dep_date
+                deposit_date = :dep_date,
+                billing_company_name = :billing_name
             WHERE id = :id
         ");
         
@@ -37,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'add_date' => $_POST['add_est_date'] === '' ? null : $_POST['add_est_date'],
             'dep_amt' => $_POST['deposit_amount'] === '' ? null : (int)$_POST['deposit_amount'],
             'dep_date' => $_POST['deposit_date'] === '' ? null : $_POST['deposit_date'],
+            'billing_name' => $_POST['billing_company_name'] ?? null,
             'id' => $project_id
         ]);
 
