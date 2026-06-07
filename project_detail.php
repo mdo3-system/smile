@@ -256,7 +256,7 @@ SMS送付する場合がございますので、ご依頼いただける際は�
                 </div>
                 <div style="margin-bottom:12px;">
                     <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">本見積日</label>
-                    <input type="date" name="formal_est_date" id="bm_date" value="<?= htmlspecialchars($project_info['formal_est_date'] ?: date('Y-m-d')) ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
+                    <input type="date" name="formal_est_date" id="bm_date" value="<?= htmlspecialchars(!empty($project_info['formal_est_date']) ? $project_info['formal_est_date'] : date('Y-m-d')) ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
                 </div>
                 <div style="margin-bottom:15px;">
                     <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">見積書・請求書の宛先名称</label>
@@ -297,12 +297,12 @@ SMS送付する場合がございますので、ご依頼いただける際は�
         saveForm.append('formal_est_amount', amount);
         saveForm.append('formal_est_date', date);
         saveForm.append('billing_company_name', billing);
-        saveForm.append('initial_est_amount', '<?= htmlspecialchars($project_info['initial_est_amount'] ?? '') ?>');
-        saveForm.append('initial_est_date', '<?= htmlspecialchars($project_info['initial_est_date'] ?? '') ?>');
-        saveForm.append('add_est_amount', '<?= htmlspecialchars($project_info['add_est_amount'] ?? '') ?>');
-        saveForm.append('add_est_date', '<?= htmlspecialchars($project_info['add_est_date'] ?? '') ?>');
-        saveForm.append('deposit_amount', '<?= htmlspecialchars($project_info['deposit_amount'] ?? '') ?>');
-        saveForm.append('deposit_date', '<?= htmlspecialchars($project_info['deposit_date'] ?? '') ?>');
+        saveForm.append('initial_est_amount', '<?= htmlspecialchars(!empty($project_info['initial_est_amount']) ? $project_info['initial_est_amount'] : '') ?>');
+        saveForm.append('initial_est_date', '<?= htmlspecialchars(!empty($project_info['initial_est_date']) ? $project_info['initial_est_date'] : '') ?>');
+        saveForm.append('add_est_amount', '<?= htmlspecialchars(!empty($project_info['add_est_amount']) ? $project_info['add_est_amount'] : '') ?>');
+        saveForm.append('add_est_date', '<?= htmlspecialchars(!empty($project_info['add_est_date']) ? $project_info['add_est_date'] : '') ?>');
+        saveForm.append('deposit_amount', '<?= htmlspecialchars(!empty($project_info['deposit_amount']) ? $project_info['deposit_amount'] : '') ?>');
+        saveForm.append('deposit_date', '<?= htmlspecialchars(!empty($project_info['deposit_date']) ? $project_info['deposit_date'] : '') ?>');
 
         fetch('actions/admin_finance_post.php', { method: 'POST', body: saveForm })
             .then(res => {
