@@ -8,12 +8,46 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
 
 
         // Save JSON specs
+        $buildSpecString = function($prefix) {
+            $type = trim($_POST[$prefix . '_type'] ?? '');
+            $size = trim($_POST[$prefix . '_size'] ?? '');
+            if ($type === 'その他') {
+                return $size;
+            }
+            if ($type !== '' && $size !== '') {
+                return $type . ' ' . $size;
+            }
+            return $type !== '' ? $type : $size;
+        };
+
+        // 垂木の処理 (W×H@間隔)
+        $taruki_str = '';
+        $taruki_type = trim($_POST['spec_taruki_type'] ?? '');
+        $taruki_w = trim($_POST['spec_taruki_w'] ?? '');
+        $taruki_h = trim($_POST['spec_taruki_h'] ?? '');
+        $taruki_pitch = trim($_POST['spec_taruki_pitch'] ?? '');
+        if ($taruki_type === 'その他') {
+            $taruki_str = trim($_POST['spec_taruki_size'] ?? '');
+        } else {
+            $dims = ($taruki_w !== '' && $taruki_h !== '') ? "{$taruki_w}×{$taruki_h}" : '';
+            $pitch = ($taruki_pitch !== '') ? "@{$taruki_pitch}" : '';
+            if ($taruki_type !== '' && ($dims !== '' || $pitch !== '')) {
+                $taruki_str = $taruki_type . ' ' . $dims . $pitch;
+            } else {
+                $taruki_str = $taruki_type !== '' ? $taruki_type : ($dims . $pitch);
+            }
+            $taruki_str = trim($taruki_str);
+        }
+
         $wood_details = [
-            'dodai'    => $_POST['spec_dodai'] ?? '',
-            'obiki'    => $_POST['spec_obiki'] ?? '',
-            'hashira'  => $_POST['spec_hashira'] ?? '',
-            'hari'     => $_POST['spec_hari'] ?? '',
-            'koya'     => $_POST['spec_koya'] ?? ''
+            'dodai'    => $buildSpecString('spec_dodai'),
+            'obiki'    => $buildSpecString('spec_obiki'),
+            'hashira'  => $buildSpecString('spec_hashira'),
+            'hari'     => $buildSpecString('spec_hari'),
+            'koya'     => $buildSpecString('spec_koyatsuka'),
+            'moya'     => $buildSpecString('spec_moya'),
+            'munagi'   => $buildSpecString('spec_munagi'),
+            'taruki'   => $taruki_str
         ];
         $wall_details = [
             'type' => $_POST['spec_wall'] ?? ''

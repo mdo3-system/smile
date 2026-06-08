@@ -8,6 +8,18 @@ check_auth(['client']);
 $current_user_id = $_SESSION['user_id'];
 $message = '';
 
+// ログインユーザー情報から電話番号とメールアドレスを取得
+$stmtUser = $pdo->prepare("SELECT email, phone_number FROM users WHERE id = :uid");
+$stmtUser->execute(['uid' => $current_user_id]);
+$current_user_info = $stmtUser->fetch();
+$default_email = $current_user_info['email'] ?? '';
+$default_phone = $current_user_info['phone_number'] ?? '';
+
+// 過去案件から最新の宛先名称を取得
+$stmtLatestProj = $pdo->prepare("SELECT billing_company_name FROM projects WHERE client_id = :uid AND billing_company_name IS NOT NULL AND billing_company_name != '' ORDER BY id DESC LIMIT 1");
+$stmtLatestProj->execute(['uid' => $current_user_id]);
+$default_billing = $stmtLatestProj->fetchColumn() ?: '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $project_name = trim($_POST['project_name'] ?? '');
     
@@ -51,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 3. メモ・通知先があればメッセージとして登録
             $memo = trim($_POST['memo'] ?? '');
-            $contact_notify = trim($_POST['contact_notify'] ?? '');
+            $sms_opt_in = isset($_POST['sms_opt_in']) ? 1 : 0;
+            $phone = trim($_POST['phone_number'] ?? '');
+            $contact_notify = ($sms_opt_in && !empty($phone)) ? $phone : '';
             
             $msg_body = "";
             if (!empty($contact_notify)) {
@@ -370,18 +384,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <div class="form-group">
                     <label for="billing_company_name">見積書・請求書の宛先名称（※変更がある場合のみ）</label>
-                    <input type="text" id="billing_company_name" name="billing_company_name" placeholder="例: 株式会社○○ 支店等">
+                    <input type="text" id="billing_company_name" name="billing_company_name" placeholder="例: 株式会社○○ 支店等" value="<?= htmlspecialchars($default_billing, ENT_QUOTES) ?>">
                     <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">※未入力の場合はご登録の会社名が宛先となります。</div>
                 </div>
 
                 <div class="form-group">
                     <label for="phone_number">お電話番号</label>
-                    <input type="text" id="phone_number" name="phone_number" placeholder="例: 090-1234-5678">
+                    <input type="text" id="phone_number" name="phone_number" placeholder="例: 090-1234-5678" value="<?= htmlspecialchars($default_phone, ENT_QUOTES) ?>">
                 </div>
                 
                 <div class="form-group">
                     <label for="contact_email">📧 メールアドレス（必須・通知やダッシュボードURLの受け取りに使用）</label>
-                    <input type="email" id="contact_email" name="contact_email" placeholder="例: sample@example.com" style="width:100%; padding:12px 16px; background:#fff; border:1px solid var(--border-color); border-radius:8px; font-size:15px; box-sizing:border-box;">
+                    <input type="email" id="contact_email" name="contact_email" placeholder="例: sample@example.com" value="<?= htmlspecialchars($default_email, ENT_QUOTES) ?>" style="width:100%; padding:12px 16px; background:#fff; border:1px solid var(--border-color); border-radius:8px; font-size:15px; box-sizing:border-box;">
                     <div style="font-size:12px; color:#d97706; margin-top:5px; background:#fff8e1; padding:8px; border-radius:6px; border:1px solid #f59e0b;">
                         ⚠️ <strong>重要</strong>: 見積完了時・担当者からのメッセージ送信時などに通知メールをお送りします。<br>
                         送信後、このアドレスへ確認メールをお送りします。<strong>迷惑メールフォルダをご確認ください</strong>（送信元: system@antigravity-jp.net）。
@@ -389,9 +403,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <div class="form-group">
-                    <label for="contact_notify">📱 SMS通知先電話番号（任意・SMSでも通知を受け取る場合）</label>
-                    <input type="text" id="contact_notify" name="contact_notify" placeholder="例: 090-1234-5678（SMSを希望する場合のみ）">
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">※メール通知のみでよい場合は未入力で構いません。</div>
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                        <input type="checkbox" name="sms_opt_in" id="sms_opt_in" value="1"> 📱 お見積り完了などの通知をSMS（ショートメッセージ）でも受け取る
+                    </label>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:5px; margin-left: 24px;">※上記「お電話番号」宛てにSMS通知をお送りします。不要な場合はチェックを外したままにしてください。</div>
                 </div>
                 
                 <div class="form-group">
