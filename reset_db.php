@@ -11,8 +11,6 @@ if (php_sapi_name() !== 'cli') {
 echo "ユーザー情報以外のデータベースのリセットを開始します...\n";
 
 try {
-    $pdo->beginTransaction();
-
     // 外部キー制約を一時的に無効化
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
 
@@ -34,11 +32,7 @@ try {
     // 外部キー制約を再有効化
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
 
-    $pdo->commit();
     echo "データベースのリセットが正常に完了しました。\n";
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
     echo "エラーが発生しました: " . $e->getMessage() . "\n";
 }
