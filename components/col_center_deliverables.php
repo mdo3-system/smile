@@ -18,8 +18,6 @@
             
             if ($req_permit == 1) {
                 $artifact_sections['許容応力度計算'] = [
-                    'inv_primary' => '一次回答',
-                    'inv_primary_rev' => '修正一次回答',
                     'safety_cert' => '安全証明書',
                     'standard_dwg' => '構造標準図',
                     'structural_dwg' => '構造図',
@@ -28,8 +26,6 @@
             }
             if ($req_wall == 1) {
                 $artifact_sections['壁量計算'] = [
-                    'inv_primary' => '一次回答',
-                    'inv_primary_rev' => '修正一次回答',
                     'wall_spreadsheet' => '表計算ツール',
                     'wall_calc_doc' => '壁量計算書'
                 ];
@@ -43,8 +39,6 @@
             }
             if ($req_skin == 1) {
                 $artifact_sections['外皮計算'] = [
-                    'inv_primary' => '一次回答',
-                    'inv_primary_rev' => '修正一次回答',
                     'skin_calc_doc' => '外皮計算書',
                     'skin_web_prog' => 'WEBプログラム計算書',
                     'skin_doc' => '外皮計算資料'
@@ -52,8 +46,6 @@
             }
             if ($req_sky == 1) {
                 $artifact_sections['天空率'] = [
-                    'inv_primary' => '一次回答',
-                    'inv_primary_rev' => '修正一次回答',
                     'sky_dwg' => '天空率図書'
                 ];
             }

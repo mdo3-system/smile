@@ -81,6 +81,7 @@
             </div>
             <?php endif; ?>
 
+            <?php if (!($_SESSION['role'] === 'accountant')): ?>
             <?php require __DIR__ . '/col_estimate_files.php'; ?>
 
             <?php if ($is_admin && $project_info['status'] !== 'completed'): ?>
@@ -147,6 +148,7 @@
                 </div>
             </div>
             <!-- ▲▲▲ 管理者用：必要図書ステータス確認パネル ▲▲▲ -->
+            <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($is_admin && $project_info['status'] === 'primary_prep'): ?>
