@@ -57,7 +57,7 @@ if ($action === 'set_primary_due_date') {
             ]);
         }
     }
-    header("Location: project_detail.php?id=" . $project_id . "&show_billing_modal=1&t=" . time()); exit;
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
 // スケジュール実施日（実績）の更新
@@ -89,6 +89,125 @@ if ($action === 'update_schedule_actual') {
             }
             $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
             $stmt->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+}
+
+// 設計開始 (start_design)
+if ($action === 'start_design') {
+    if ($is_admin) {
+        $projectRepo->updateStatus($project_id, 'structural_dwg');
+        
+        // 自動メッセージ
+        $proj_name = $project_info['project_name'] ?? '案件';
+        $due_date = $project_info['primary_due_date'] ?? '-';
+        $msg = "【通知】案件「{$proj_name}」の構造計算・設計に着手いたしました。一次回答期日（{$due_date}）に向けて作業を進めてまいります。何卒よろしくお願いいたします。";
+        
+        $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+        $stmtMsg->execute([
+            'pid' => $project_id,
+            'sid' => $_SESSION['user_id'],
+            'msg' => $msg
+        ]);
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+}
+
+// 一次回答 ＆ 50%請求書の発行 (submit_primary_response)
+if ($action === 'submit_primary_response') {
+    if ($is_admin) {
+        $formal_amt = $_POST['formal_est_amount'] ?? '';
+        $formal_date = $_POST['formal_est_date'] ?? '';
+        
+        if (empty($formal_amt) || intval($formal_amt) <= 0) {
+            die("処理に失敗しました: 本見積額を正しく入力してください。");
+        }
+        if (empty($_FILES['primary_file']['name']) || $_FILES['primary_file']['error'] !== UPLOAD_ERR_OK) {
+            die("処理に失敗しました: 一次回答ファイルのアップロードに失敗しました。");
+        }
+
+        $pdo->beginTransaction();
+        try {
+            // A. 本見積額の保存 (projects テーブル)
+            $stmtUpdateProj = $pdo->prepare("
+                UPDATE projects 
+                SET formal_est_amount = :amt, formal_est_date = :dt 
+                WHERE id = :pid
+            ");
+            $stmtUpdateProj->execute([
+                'amt' => $formal_amt,
+                'dt' => $formal_date,
+                'pid' => $project_id
+            ]);
+
+            // B. 一次回答ファイルのアップロード (Google Drive ＋ project_files 登録)
+            require_once 'google_drive_client.php';
+            
+            $file_name = $_FILES['primary_file']['name'];
+            $tmp_name  = $_FILES['primary_file']['tmp_name'];
+            $mime_type = $_FILES['primary_file']['type'];
+            
+            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+            
+            $file_category = 'calc_doc'; // 構造計算書
+            
+            // 既存の同カテゴリファイルを is_latest=0 にする
+            $stmtOld = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+            $stmtOld->execute(['pid' => $project_id, 'cat' => $file_category]);
+            
+            // バージョン番号
+            $stmtVer = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+            $stmtVer->execute(['pid' => $project_id, 'cat' => $file_category]);
+            $next_ver = intval($stmtVer->fetchColumn()) + 1;
+            
+            $stmtNewFile = $pdo->prepare("
+                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                VALUES (:pid, :cat, :name, :fid, :ver, 1)
+            ");
+            $stmtNewFile->execute([
+                'pid'  => $project_id,
+                'cat'  => $file_category,
+                'name' => $file_name,
+                'fid'  => $drive_file_id,
+                'ver'  => $next_ver
+            ]);
+
+            // C. ステータスを submission（提出済・確認中）に更新
+            $projectRepo->updateStatus($project_id, 'submission');
+
+            // D. スケジュール実績 JSON の更新（インデックス 2: 構造計算・図面 初回提示 に今日の日付を設定）
+            $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+            $stmtAct->execute(['id' => $project_id]);
+            $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+            $today = date('Y-m-d');
+            if ($act_row) {
+                $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+                foreach ($colsToUpdate as $col) {
+                    $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+                    $actuals[2] = $today; // 初回提示
+                    $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                    $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                }
+            }
+
+            // E. 一次請求書(50%)の自動発行＆チャット通知 (共通ヘルパーの呼び出し)
+            require_once __DIR__ . '/action_issue_invoice_helper.php';
+            issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id']);
+
+            // F. 一次回答の提示完了チャット通知を追加
+            $msg = "【一次回答の提示】\n一次回答の計算図書「{$file_name}」をアップロードいたしました。ファイル一覧（成果物）よりご確認ください。\n何卒よろしくお願いいたします。";
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $msg
+            ]);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("一次回答の登録に失敗しました: " . $e->getMessage());
         }
     }
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;

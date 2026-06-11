@@ -431,6 +431,54 @@
             </div>
             <?php endif; ?>
 
+            <?php if ($is_admin && $project_info['status'] === 'contracted'): ?>
+            <div class="box" style="background:#ecfdf5; border-color:#a7f3d0; margin-top:15px; padding:15px;">
+                <h3 style="margin-top:0; font-size:14px; color:#047857; border-bottom:1px solid #a7f3d0; padding-bottom:5px;">
+                    🚀 設計開始のトリガー
+                </h3>
+                <div style="font-size:12px; color:#065f46; margin-bottom:12px; line-height:1.4;">
+                    一次回答期日（<?= $project_info['primary_due_date'] ?>）に向けて、構造計算・設計を開始します。<br>
+                    <strong>「設計（着手）を開始する」</strong> を押すと、ステータスが「構造図作成中」に進み、依頼主に着手が通知されます。
+                </div>
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
+                    <input type="hidden" name="action" value="start_design">
+                    <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="return confirm('設計開始を確定し、着手をクライアントに通知します。よろしいですか？')">設計（着手）を開始する</button>
+                </form>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($is_admin && $project_info['status'] === 'structural_dwg'): ?>
+            <div class="box" style="background:#e0f2fe; border-color:#bae6fd; margin-top:15px; padding:15px;">
+                <h3 style="margin-top:0; font-size:14px; color:#0369a1; border-bottom:1px solid #bae6fd; padding-bottom:5px;">
+                    📢 一次回答 ＆ 50%請求書の発行
+                </h3>
+                <div style="font-size:12px; color:#0284c7; margin-bottom:12px; line-height:1.4;">
+                    設計が完了した一次回答図書（計算書等）をアップロードし、本見積額を入力してください。<br>
+                    <strong>「一次回答と50%請求書を発行する」</strong> を実行すると、一次回答ファイルが登録され、自動的に50%分の一次請求書が生成・通知されます。
+                </div>
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="submit_primary_response">
+                    
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block; font-weight:bold; font-size:11px; margin-bottom:4px;">① 一次回答ファイル (計算書等・必須)</label>
+                        <input type="file" name="primary_file" required style="font-size:11px; width:100%;">
+                    </div>
+                    
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block; font-weight:bold; font-size:11px; margin-bottom:4px;">② 本見積額 (円・税込・必須)</label>
+                        <input type="number" name="formal_est_amount" value="<?= htmlspecialchars($project_info['formal_est_amount'] ?: '') ?>" required placeholder="例: 110000" style="width:100%; padding:6px; font-size:12px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
+                    
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block; font-weight:bold; font-size:11px; margin-bottom:4px;">③ 本見積日</label>
+                        <input type="date" name="formal_est_date" value="<?= htmlspecialchars($project_info['formal_est_date'] ?: date('Y-m-d')) ?>" required style="width:100%; padding:6px; font-size:12px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
+
+                    <button type="submit" style="width:100%; background:#0284c7; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="return confirm('一次回答ファイルをアップロードし、50%分の一次請求書を発行してクライアントへ通知します。よろしいですか？')">一次回答 ＆ 50%請求書を発行</button>
+                </form>
+            </div>
+            <?php endif; ?>
+
             
 
             <?php if ($is_admin): ?>

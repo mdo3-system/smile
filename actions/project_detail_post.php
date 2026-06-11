@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // スケジュール関連
-    elseif (in_array($action, ['set_primary_due_date', 'update_schedule_actual'])) {
+    elseif (in_array($action, ['set_primary_due_date', 'update_schedule_actual', 'start_design', 'submit_primary_response'])) {
         require __DIR__ . '/action_schedule.php';
     }
 }
