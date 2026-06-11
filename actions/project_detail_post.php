@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // クライアント仕様・情報関連
-    elseif (in_array($action, ['update_client_info', 'save_client_specs_draft', 'request_design_start', 'replace_documents'])) {
+    elseif (in_array($action, ['update_client_info', 'save_client_specs_draft', 'request_design_start', 'replace_documents', 'update_specs_detail'])) {
         require __DIR__ . '/action_save_specs.php';
     }
 

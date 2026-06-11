@@ -2,7 +2,7 @@
 // actions/action_save_specs.php
 
 // 仕様保存・一括ファイルアップロード処理
-if ($action === 'save_client_specs_draft' || $action === 'request_design_start' || $action === 'replace_documents') {
+if ($action === 'save_client_specs_draft' || $action === 'request_design_start' || $action === 'replace_documents' || $action === 'update_specs_detail') {
     $pdo->beginTransaction();
     try {
 
@@ -69,6 +69,11 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             'soil' => $_POST['soil_status'] ?? null,
             'pid' => $project_id
         ]);
+
+        if ($action === 'update_specs_detail') {
+            $pdo->commit();
+            header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+        }
 
         // Process multi file uploads
         require_once 'google_drive_client.php';
