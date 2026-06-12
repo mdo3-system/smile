@@ -11,8 +11,20 @@
             <h2 class="section-title" style="background:#28a745; margin:0; width:auto; display:inline-block; padding:5px 10px;">💰 自動見積シミュレーター</h2>
             <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
                 <strong>📂 Drive連携:</strong>
-                <?php if (file_exists(__DIR__ . '/../token.json')): ?>
-                    <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
+                <?php 
+                $is_service_account = false;
+                $cred_path = __DIR__ . '/../credentials.json';
+                if (file_exists($cred_path)) {
+                    $cred_data = json_decode(file_get_contents($cred_path), true);
+                    if (is_array($cred_data) && isset($cred_data['type']) && $cred_data['type'] === 'service_account') {
+                        $is_service_account = true;
+                    }
+                }
+                ?>
+                <?php if ($is_service_account): ?>
+                    <span style="color:#28a745; font-weight:bold;">🟢 サービスアカウント</span>
+                <?php elseif (file_exists(__DIR__ . '/../token.json')): ?>
+                    <span style="color:#28a745; font-weight:bold;">🟢 完了 (OAuth)</span>
                 <?php else: ?>
                     <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
                 <?php endif; ?>

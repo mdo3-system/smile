@@ -57,33 +57,43 @@ function get_google_drive_service() {
     $client = new Google\Client();
     $client->setAuthConfig($credentials_path);
     $client->addScope(Google\Service\Drive::DRIVE);
-    $client->setAccessType('offline');
 
-    // トークン保存先
-    $token_path = __DIR__ . '/token.json';
-    if (file_exists($token_path)) {
-        $accessToken = json_decode(file_get_contents($token_path), true);
-        if (is_array($accessToken) && isset($accessToken['access_token'])) {
-            $client->setAccessToken($accessToken);
-        }
+    // credentials.jsonの中身をチェックしてサービスアカウントかどうか判定
+    $is_service_account = false;
+    $credentials_data = json_decode(file_get_contents($credentials_path), true);
+    if (is_array($credentials_data) && isset($credentials_data['type']) && $credentials_data['type'] === 'service_account') {
+        $is_service_account = true;
     }
 
-    // トークンが期限切れの場合の自動リフレッシュ
-    if ($client->isAccessTokenExpired()) {
-        $refreshToken = $client->getRefreshToken();
-        if ($refreshToken) {
-            try {
-                $new_token = $client->fetchAccessTokenWithRefreshToken($refreshToken);
-                if (!isset($new_token['refresh_token'])) {
-                    $new_token['refresh_token'] = $refreshToken;
-                }
-                file_put_contents($token_path, json_encode($new_token));
-                $client->setAccessToken($new_token);
-            } catch (Exception $e) {
-                throw new Exception("Google認証トークンの更新に失敗しました。再連携してください: " . $e->getMessage());
+    if (!$is_service_account) {
+        $client->setAccessType('offline');
+
+        // トークン保存先
+        $token_path = __DIR__ . '/token.json';
+        if (file_exists($token_path)) {
+            $accessToken = json_decode(file_get_contents($token_path), true);
+            if (is_array($accessToken) && isset($accessToken['access_token'])) {
+                $client->setAccessToken($accessToken);
             }
-        } else {
-            throw new Exception("Googleドライブが連携されていません。管理者画面からログイン連携を行ってください。");
+        }
+
+        // トークンが期限切れの場合の自動リフレッシュ
+        if ($client->isAccessTokenExpired()) {
+            $refreshToken = $client->getRefreshToken();
+            if ($refreshToken) {
+                try {
+                    $new_token = $client->fetchAccessTokenWithRefreshToken($refreshToken);
+                    if (!isset($new_token['refresh_token'])) {
+                        $new_token['refresh_token'] = $refreshToken;
+                    }
+                    file_put_contents($token_path, json_encode($new_token));
+                    $client->setAccessToken($new_token);
+                } catch (Exception $e) {
+                    throw new Exception("Google認証トークンの更新に失敗しました。再連携してください: " . $e->getMessage());
+                }
+            } else {
+                throw new Exception("Googleドライブが連携されていません。管理者画面からログイン連携を行ってください。");
+            }
         }
     }
     

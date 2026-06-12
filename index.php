@@ -67,14 +67,25 @@ $status_labels = [
                 <a href="admin_sales.php" style="font-weight:bold; color:white; background:#e67e22; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📊 経理・売上管理</a>
                 <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
                     <strong>📂 Drive連携:</strong>
-                    <?php if (file_exists(__DIR__ . '/token.json')): ?>
-                        <span style="color:#28a745; font-weight:bold;">🟢 完了</span>
+                    <?php 
+                    $is_service_account = false;
+                    $cred_path = __DIR__ . '/credentials.json';
+                    if (file_exists($cred_path)) {
+                        $cred_data = json_decode(file_get_contents($cred_path), true);
+                        if (is_array($cred_data) && isset($cred_data['type']) && $cred_data['type'] === 'service_account') {
+                            $is_service_account = true;
+                        }
+                    }
+                    ?>
+                    <?php if ($is_service_account): ?>
+                        <span style="color:#28a745; font-weight:bold;">🟢 サービスアカウント</span>
+                    <?php elseif (file_exists(__DIR__ . '/token.json')): ?>
+                        <span style="color:#28a745; font-weight:bold;">🟢 完了 (OAuth)</span>
+                        <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">認証更新</a>
                     <?php else: ?>
                         <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
+                        <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">連携ログイン</a>
                     <?php endif; ?>
-                    <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">
-                        <?= file_exists(__DIR__ . '/token.json') ? '認証更新' : '連携ログイン' ?>
-                    </a>
                 </div>
             <?php endif; ?>
             <div>ログイン中: <?= htmlspecialchars($current_user['contact_name'], ENT_QUOTES) ?> 様 <span style="font-size:11px; background:#4b5563; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;"><?= htmlspecialchars($_SESSION['role'], ENT_QUOTES) ?></span></div>

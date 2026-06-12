@@ -396,7 +396,7 @@ function saveAndPrintEstimate(isFormal = false) {
                         location.reload();
                     });
             } else {
-                alert('見積保存に失敗しました');
+                alert('見積保存に失敗しました\nエラー詳細: ' + (data.error || '不明なエラー'));
             }
         })
         .catch(e => alert('通信エラー: ' + e))
