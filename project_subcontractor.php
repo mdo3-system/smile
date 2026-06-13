@@ -35,6 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset(
     exit;
 }
 
+// キャンセル処理 (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['action']) && $_POST['action'] === 'cancel_order' && $is_admin) {
+    $order_id = intval($_POST['order_id']);
+    $pid = intval($_POST['project_id'] ?? 0);
+    
+    $subcontractorOrderService->cancelOrder($order_id, $user_id);
+
+    header("Location: project_subcontractor.php?id=" . $pid . "&t=" . time());
+    exit;
+}
+
 // 公開・非表示の切り替え処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_publish_sub' && $is_admin) {
     $file_id = intval($_POST['file_id'] ?? 0);
@@ -157,6 +168,7 @@ $project_id = 0;
 $project_info = null;
 $subcontractors = [];
 $admin_orders = [];
+$default_floor_area = ''; // 意匠図作図依頼からの引き継ぎ面積
 if ($is_admin) {
     $project_id = intval($_GET['id'] ?? 0);
     if ($project_id > 0) {
@@ -168,6 +180,16 @@ if ($is_admin) {
         $stmtSub = $pdo->prepare("SELECT id, contact_name FROM users WHERE role = 'subcontractor'");
         $stmtSub->execute();
         $subcontractors = $stmtSub->fetchAll();
+
+        // 意匠図作図依頼（order_type = 'design'）から最も新しい床面積を取得
+        $stmtArea = $pdo->prepare("
+            SELECT floor_area 
+            FROM subcontractor_orders 
+            WHERE project_id = :pid AND order_type = 'design' AND status != 'cancelled'
+            ORDER BY id DESC LIMIT 1
+        ");
+        $stmtArea->execute(['pid' => $project_id]);
+        $default_floor_area = $stmtArea->fetchColumn();
 
         // この案件の発注履歴を取得（納品ファイルも結合）
         $stmtOrd = $pdo->prepare("
@@ -229,7 +251,7 @@ if ($is_admin) {
                     </div>
 
                     <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
-                        <input type="number" id="sub_area" name="floor_area" placeholder="床面積(㎡)" style="width:100px; font-size:14px; padding:5px;" oninput="calcSubcontractorEstimate()" step="0.01">
+                        <input type="number" id="sub_area" name="floor_area" placeholder="床面積(㎡)" value="<?= htmlspecialchars($default_floor_area, ENT_QUOTES) ?>" style="width:100px; font-size:14px; padding:5px;" oninput="calcSubcontractorEstimate()" step="0.01">
                         <span style="font-size:14px;">㎡</span>
                     </div>
 
@@ -342,12 +364,24 @@ if ($is_admin) {
                             $badge_bg = '#fd7e14'; $status_label = '納品済 (確認待ち)';
                         } elseif ($o['status'] === 'completed') {
                             $badge_bg = '#28a745'; $status_label = '完了 (確認済)';
+                        } elseif ($o['status'] === 'cancelled') {
+                            $badge_bg = '#dc3545'; $status_label = 'キャンセル済';
                         }
                     ?>
                         <div style="padding:10px 0; border-bottom:1px solid #eee;">
-                            <div style="font-weight:bold; margin-bottom:5px;">
-                                <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?> 様宛
-                                <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 6px; border-radius:3px; font-size:12px; margin-left:10px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span>
+                            <div style="font-weight:bold; margin-bottom:5px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?> 様宛
+                                    <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 6px; border-radius:3px; font-size:12px; margin-left:10px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span>
+                                </div>
+                                <?php if ($is_admin && in_array($o['status'], ['requested', 'accepted'])): ?>
+                                    <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" onsubmit="return confirm('この発注をキャンセルしますか？\n（業者チャットへ自動通知されます）')" style="margin:0;">
+                                        <input type="hidden" name="action" value="cancel_order">
+                                        <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                        <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:11px; font-weight:bold; cursor:pointer;">発注キャンセル</button>
+                                    </form>
+                                <?php endif; ?>
                             </div>
                             <div style="font-size:13px; color:#444; line-height:1.6;">
                                 依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
@@ -557,6 +591,7 @@ if ($is_admin) {
                 <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
             </div>
         </div>
+
         <?php foreach ($my_tasks as $task): 
             // 該当案件の最新共通図書・CADファイル（公開フラグ=1のもののみ）を取得
             $stmtFiles = $pdo->prepare("
@@ -568,188 +603,208 @@ if ($is_admin) {
             ");
             $stmtFiles->execute(['project_id' => $task['project_id']]);
             $shared_files = $stmtFiles->fetchAll();
+
+            // このプロジェクトのチャット履歴を取得
+            $stmtChat = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'sub_admin' ORDER BY id ASC");
+            $stmtChat->execute(['pid' => $task['project_id']]);
+            $sub_msgs = $stmtChat->fetchAll();
         ?>
-            <div class="task-card">
-                <h3>案件名: <?= htmlspecialchars($task['project_name'], ENT_QUOTES) ?></h3>
-                <p>依頼内容: <?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?></p>
-                <p>報酬額: <strong><?= number_format($task['order_amount']) ?>円</strong></p>
-
-                <!-- 共有された図書・CADデータ表示セクション -->
-                <div class="shared-files-section" style="margin:15px 0; border:1px solid #cce5ff; background:#e6f2ff; padding:12px; border-radius:6px; font-size:13px; border-left: 5px solid #2563eb;">
-                    <strong style="color:#004085; display:block; margin-bottom:8px; font-size:14px;">📂 共有された共通図書・CADデータ:</strong>
-                    <?php if (count($shared_files) > 0): ?>
-                        <ul style="margin:5px 0 0 0; padding-left:20px; line-height:1.8;">
-                            <?php 
-                            $sub_cat_names = [
-                                'cad_layout'    => '配置図 (CAD)',
-                                'cad_plan_1f'   => '1F平面図 (CAD)',
-                                'cad_plan_2f'   => '2F平面図 (CAD)',
-                                'cad_plan_3f'   => '3F平面図 (CAD)',
-                                'cad_plan_ph'   => 'PH平面図 (CAD)',
-                                'cad_plan_rf'   => 'RF平面図 (CAD)',
-                                'cad_elevation' => '立面図 (CAD)',
-                                'cad_section'   => '矩計図 (CAD)',
-                                'app_doc'       => '確認申請書',
-                                'soil_report'   => '地盤調査報告書',
-                                'soil_impr'     => '地盤改良設計書',
-                                'pdf_precut'    => 'プレカット図等',
-                            ];
-                            foreach ($shared_files as $file): 
-                                $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
-                                if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
-                                    $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
-                                }
-                                $lbl = $sub_cat_names[$file['file_category']] ?? $file['file_category'];
-                            ?>
-                                <li style="margin-bottom:5px;">
-                                    <span style="font-weight:bold; color:#1e40af; margin-right:5px;">[<?= htmlspecialchars($lbl, ENT_QUOTES) ?>]</span>
-                                    <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none; border-bottom:1px dashed #0056b3;">
-                                        <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> 
-                                    </a>
-                                    <span class="badge" style="background:#64748b; color:white; font-size:9px; padding:1px 4px; border-radius:3px; margin-left:5px;">V<?= $file['version'] ?></span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php else: ?>
-                        <div style="color:#856404; font-size:12px; margin-top:5px;">現在共有されている図書・CADデータはありません。（管理者が公開するとここに表示されます）</div>
-                    <?php endif; ?>
-                </div>
-                
-                <?php if ($task['status'] === 'requested'): ?>
-                    <form method="POST" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
-                        <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
-                        <div style="margin-bottom:10px;">
-                            <label style="font-weight:bold; font-size:13px; color:#e67e22;">完了納期予定日を設定:</label>
-                            <input type="date" name="expected_delivery_date" required style="padding:4px; border:1px solid #ccc; border-radius:3px;">
-                        </div>
-                        <button type="submit" class="btn-accept">納期を入力して承諾する</button>
-                    </form>
-                <?php else: ?>
-                    <?php 
-                        $badge_bg = '#6c757d'; 
-                        $status_label = $task['status'];
-                        if ($task['status'] === 'accepted') {
-                            $badge_bg = '#007bff';
-                            $status_label = '作業中 (承諾済)';
-                        } elseif ($task['status'] === 'delivered') {
-                            $badge_bg = '#fd7e14'; 
-                            $status_label = '納品済 (確認待ち)';
-                        } elseif ($task['status'] === 'completed') {
-                            $badge_bg = '#28a745'; 
-                            $status_label = '完了 (確認済)';
-                        }
-                    ?>
-                    <p>状態: <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 8px; border-radius:4px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span></p>
-                    <p style="font-size:13px; color:#555;">完了納期予定日: <strong><?= !empty($task['expected_delivery_date']) ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></p>
-
-                    <div class="delivery-section" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; font-size:13px;">
-                        <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
-                        <p style="font-size:11px; color:#666; margin:4px 0;">※個別にアップロード可能です。差し替えた場合も履歴が残ります。</p>
-                        <form method="POST" enctype="multipart/form-data" style="margin-top:10px; display:flex; flex-direction:column; gap:10px; background:#fff; padding:10px; border:1px solid #eee; border-radius:5px;">
-                            <input type="hidden" name="action" value="deliver_task">
-                            <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
-                            <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
-                            
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <label style="width:160px; font-weight:bold; color:#0056b3;">意匠図用アーキデータ:</label>
-                                <input type="file" name="architrend_design" style="font-size:12px;">
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <label style="width:160px; font-weight:bold; color:#0056b3;">構造図用アーキデータ:</label>
-                                <input type="file" name="architrend_struct" style="font-size:12px;">
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <label style="width:160px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
-                                <input type="file" name="structural_pdf" style="font-size:12px;">
-                            </div>
-                            <div style="margin-top:5px;">
-                                <button type="submit" style="background:#28a745; color:white; border:none; padding:6px 15px; border-radius:3px; font-size:13px; font-weight:bold; cursor:pointer;">選択したファイルを納品・差し替えする</button>
-                            </div>
-                        </form>
+            <!-- 案件ごとのカードコンテナ。PC用2カラム構成 -->
+            <div class="task-card" style="border-left: 5px solid #e67e22; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px;">
+                <div style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                    <h3 style="margin:0; font-size:18px;">案件名: <?= htmlspecialchars($task['project_name'], ENT_QUOTES) ?></h3>
+                    <div style="font-size: 13px;">
+                        <span>依頼内容: <strong><?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?></strong></span>
+                        <span style="margin-left:15px;">報酬額: <strong style="color:#d97706; font-size:15px;"><?= number_format($task['order_amount']) ?>円</strong></span>
                     </div>
+                </div>
+
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                     
-                    <div class="history-section" style="margin-top:15px; font-size:12px;">
-                        <strong>📜 納品履歴:</strong>
-                        <?php
-                            $stmtHist = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category IN ('sub_architrend_design', 'sub_architrend_struct', 'sub_structural_pdf') ORDER BY created_at DESC");
-                            $stmtHist->execute(['pid' => $task['project_id']]);
-                            $hist_files = $stmtHist->fetchAll();
-                            
-                            if (count($hist_files) > 0):
-                        ?>
-                            <ul style="margin:5px 0 0 0; padding-left:20px; color:#555;">
-                                <?php foreach ($hist_files as $hf): 
-                                    $hurl = htmlspecialchars($hf['drive_file_id'], ENT_QUOTES);
-                                    if (strpos($hf['drive_file_id'], 'uploads/') !== 0 && !empty($hf['drive_file_id'])) {
-                                        $hurl = 'https://drive.google.com/file/d/' . htmlspecialchars($hf['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
-                                    }
-                                    $lbl = 'ファイル';
-                                    if ($hf['file_category'] === 'sub_architrend_design') $lbl = '意匠用アーキ';
-                                    if ($hf['file_category'] === 'sub_architrend_struct') $lbl = '構造用アーキ';
-                                    if ($hf['file_category'] === 'sub_structural_pdf') $lbl = '構造図PDF';
-                                ?>
-                                    <li style="margin-bottom:3px;">
-                                        [<?= $lbl ?>] <a href="<?= $hurl ?>" target="_blank" style="color:#0056b3; text-decoration:none;"><?= htmlspecialchars($hf['file_name'], ENT_QUOTES) ?></a> 
-                                        <span style="font-size:10px; color:#999;">(V<?= $hf['version'] ?>) - <?= date('m/d H:i', strtotime($hf['created_at'])) ?></span>
-                                        <?php if ($hf['is_latest']): ?>
-                                            <span style="background:#17a2b8; color:white; padding:1px 4px; border-radius:3px; font-size:9px;">最新</span>
-                                        <?php endif; ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
+                    <!-- 左カラム：案件スケジュール・納品フォーム（width: 55%） -->
+                    <div style="flex: 1.2; min-width: 320px; display:flex; flex-direction:column; gap:15px;">
+                        
+                        <!-- 共有された図書・CADデータ表示セクション -->
+                        <div class="shared-files-section" style="border:1px solid #cce5ff; background:#e6f2ff; padding:12px; border-radius:6px; font-size:13px; border-left: 5px solid #2563eb;">
+                            <strong style="color:#004085; display:block; margin-bottom:8px; font-size:14px;">📂 共有された共通図書・CADデータ:</strong>
+                            <?php if (count($shared_files) > 0): ?>
+                                <ul style="margin:5px 0 0 0; padding-left:20px; line-height:1.8; list-style-type:square;">
+                                    <?php 
+                                    $sub_cat_names = [
+                                        'cad_layout'    => '配置図 (CAD)',
+                                        'cad_plan_1f'   => '1F平面図 (CAD)',
+                                        'cad_plan_2f'   => '2F平面図 (CAD)',
+                                        'cad_plan_3f'   => '3F平面図 (CAD)',
+                                        'cad_plan_ph'   => 'PH平面図 (CAD)',
+                                        'cad_plan_rf'   => 'RF平面図 (CAD)',
+                                        'cad_elevation' => '立面図 (CAD)',
+                                        'cad_section'   => '矩計図 (CAD)',
+                                        'app_doc'       => '確認申請書',
+                                        'soil_report'   => '地盤調査報告書',
+                                        'soil_impr'     => '地盤改良設計書',
+                                        'pdf_precut'    => 'プレカット図等',
+                                    ];
+                                    foreach ($shared_files as $file): 
+                                        $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
+                                        if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
+                                            $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                        }
+                                        $lbl = $sub_cat_names[$file['file_category']] ?? $file['file_category'];
+                                    ?>
+                                        <li style="margin-bottom:5px;">
+                                            <span style="font-weight:bold; color:#1e40af; margin-right:5px;">[<?= htmlspecialchars($lbl, ENT_QUOTES) ?>]</span>
+                                            <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none; border-bottom:1px dashed #0056b3;">
+                                                <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> 
+                                            </a>
+                                            <span class="badge" style="background:#64748b; color:white; font-size:9px; padding:1px 4px; border-radius:3px; margin-left:5px;">V<?= $file['version'] ?></span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <div style="color:#856404; font-size:12px; margin-top:5px;">現在共有されている図書・CADデータはありません。（管理者が公開するとここに表示されます）</div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <?php if ($task['status'] === 'requested'): ?>
+                            <div style="background:#fff3cd; border:1px solid #ffeeba; padding:15px; border-radius:6px;">
+                                <form method="POST" style="margin:0;">
+                                    <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
+                                    <div style="margin-bottom:10px;">
+                                        <label style="font-weight:bold; font-size:13px; color:#e67e22; display:block; margin-bottom:5px;">完了納期予定日を設定:</label>
+                                        <input type="date" name="expected_delivery_date" required style="padding:6px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+                                    </div>
+                                    <button type="submit" class="btn-accept" style="font-weight:bold; padding:8px 20px;">納期を入力して承諾する</button>
+                                </form>
+                            </div>
                         <?php else: ?>
-                            <div style="color:#aaa;">まだ納品されていません。</div>
+                            <?php 
+                                $badge_bg = '#6c757d'; 
+                                $status_label = $task['status'];
+                                if ($task['status'] === 'accepted') {
+                                    $badge_bg = '#007bff';
+                                    $status_label = '作業中 (承諾済)';
+                                } elseif ($task['status'] === 'delivered') {
+                                    $badge_bg = '#fd7e14'; 
+                                    $status_label = '納品済 (確認待ち)';
+                                } elseif ($task['status'] === 'completed') {
+                                    $badge_bg = '#28a745'; 
+                                    $status_label = '完了 (確認済)';
+                                } elseif ($task['status'] === 'cancelled') {
+                                    $badge_bg = '#dc3545';
+                                    $status_label = 'キャンセル済';
+                                }
+                            ?>
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:6px; display:flex; flex-direction:column; gap:10px;">
+                                <div>状態: <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:4px 10px; border-radius:4px; font-size:12px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span></div>
+                                <div style="font-size:13px; color:#555;">完了納期予定日: <strong><?= !empty($task['expected_delivery_date']) ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></div>
+                            </div>
+
+                            <?php if ($task['status'] !== 'cancelled'): ?>
+                                <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px;">
+                                    <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
+                                    <p style="font-size:11px; color:#666; margin:4px 0 10px 0;">※個別にアップロード可能です。差し替えた場合も履歴が残ります。</p>
+                                    <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:10px;">
+                                        <input type="hidden" name="action" value="deliver_task">
+                                        <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
+                                        <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
+                                        
+                                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                            <label style="width:150px; font-weight:bold; color:#0056b3;">意匠図用アーキデータ:</label>
+                                            <input type="file" name="architrend_design" style="font-size:12px;">
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                            <label style="width:150px; font-weight:bold; color:#0056b3;">構造図用アーキデータ:</label>
+                                            <input type="file" name="architrend_struct" style="font-size:12px;">
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                            <label style="width:150px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
+                                            <input type="file" name="structural_pdf" style="font-size:12px;">
+                                        </div>
+                                        <div style="margin-top:8px;">
+                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">選択したファイルを納品・差し替えする</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="history-section" style="font-size:12px;">
+                                <strong>📜 納品履歴:</strong>
+                                <?php
+                                    $stmtHist = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category IN ('sub_architrend_design', 'sub_architrend_struct', 'sub_structural_pdf') ORDER BY created_at DESC");
+                                    $stmtHist->execute(['pid' => $task['project_id']]);
+                                    $hist_files = $stmtHist->fetchAll();
+                                    
+                                    if (count($hist_files) > 0):
+                                ?>
+                                    <ul style="margin:5px 0 0 0; padding-left:20px; color:#555; list-style-type:circle;">
+                                        <?php foreach ($hist_files as $hf): 
+                                            $hurl = htmlspecialchars($hf['drive_file_id'], ENT_QUOTES);
+                                            if (strpos($hf['drive_file_id'], 'uploads/') !== 0 && !empty($hf['drive_file_id'])) {
+                                                $hurl = 'https://drive.google.com/file/d/' . htmlspecialchars($hf['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                            }
+                                            $lbl = 'ファイル';
+                                            if ($hf['file_category'] === 'sub_architrend_design') $lbl = '意匠用アーキ';
+                                            if ($hf['file_category'] === 'sub_architrend_struct') $lbl = '構造用アーキ';
+                                            if ($hf['file_category'] === 'sub_structural_pdf') $lbl = '構造図PDF';
+                                        ?>
+                                            <li style="margin-bottom:4px;">
+                                                [<?= $lbl ?>] <a href="<?= $hurl ?>" target="_blank" style="color:#0056b3; text-decoration:none;"><?= htmlspecialchars($hf['file_name'], ENT_QUOTES) ?></a> 
+                                                <span style="font-size:10px; color:#999;">(V<?= $hf['version'] ?>) - <?= date('m/d H:i', strtotime($hf['created_at'])) ?></span>
+                                                <?php if ($hf['is_latest']): ?>
+                                                    <span style="background:#17a2b8; color:white; padding:1px 4px; border-radius:3px; font-size:9px;">最新</span>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php else: ?>
+                                    <div style="color:#aaa; margin-top:5px;">まだ納品されていません。</div>
+                                <?php endif; ?>
+                            </div>
                         <?php endif; ?>
                     </div>
-                <?php endif; ?>
 
-                <!-- サブコントラクター用 案件別チャットUI -->
-                <?php
-                    // このプロジェクトのチャット履歴を取得
-                    $stmtChat = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'sub_admin' ORDER BY id ASC");
-                    $stmtChat->execute(['pid' => $task['project_id']]);
-                    $sub_msgs = $stmtChat->fetchAll();
-                ?>
-                <div style="margin-top:20px; border-top:2px solid #ccc; padding-top:15px;">
-                    <h4 style="margin:0 0 10px 0; color:#d97706;">💬 この案件の連絡・質疑チャット</h4>
-                    <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:300px;">
-                        <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $task['project_id'] ?>">
-                            <?php foreach ($sub_msgs as $msg): 
-                                $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
-                                $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
-                                $align = $isMe ? 'flex-end' : 'flex-start';
-                                $sender = $isMe ? 'あなた' : '管理者';
-                            ?>
-                                <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
-                                    <span style="font-size:10px; color:#666; margin-bottom:2px;"><?= $sender ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
-                                    <?php if (!empty($msg['message_text'])): ?>
-                                        <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:80%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($msg['file_path'])): 
-                                        $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
-                                            ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
-                                            : htmlspecialchars($msg['file_path'], ENT_QUOTES);
-                                    ?>
-                                        <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
-                                            <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
-                                                <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo "🖼 画像を見る"; else echo "📄 添付ファイルを見る"; ?>
-                                            </a>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                        <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px; display:flex; gap:10px; align-items:center;">
-                            <input type="file" id="chatFile_<?= $task['project_id'] ?>" accept="image/*,.pdf" style="display:none;" onchange="document.getElementById('fileLabel_<?= $task['project_id'] ?>').style.color='#28a745'">
-                            <label for="chatFile_<?= $task['project_id'] ?>" id="fileLabel_<?= $task['project_id'] ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
-                            
-                            <textarea id="chatText_<?= $task['project_id'] ?>" style="flex:1; border:1px solid #ccc; border-radius:20px; padding:8px 12px; font-size:13px; resize:none;" rows="1" placeholder="メッセージを入力..."></textarea>
-                            
-                            <button onclick="sendProjMessage(<?= $task['project_id'] ?>)" style="background:#3b82f6; color:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:16px;">➤</button>
+                    <!-- 右カラム：この案件の連絡・質疑チャット（width: 45%） -->
+                    <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; border-left:1px solid #eee; padding-left:20px;">
+                        <h4 style="margin:0 0 10px 0; color:#d97706; font-size:14px; display:flex; align-items:center; gap:5px;">💬 この案件の連絡・質疑チャット</h4>
+                        <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:380px;">
+                            <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $task['project_id'] ?>">
+                                <?php foreach ($sub_msgs as $msg): 
+                                    $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
+                                    $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
+                                    $align = $isMe ? 'flex-end' : 'flex-start';
+                                    $sender = $isMe ? 'あなた' : '管理者';
+                                ?>
+                                    <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
+                                        <span style="font-size:10px; color:#666; margin-bottom:2px;"><?= $sender ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
+                                        <?php if (!empty($msg['message_text'])): ?>
+                                            <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:85%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($msg['file_path'])): 
+                                            $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
+                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
+                                                : htmlspecialchars($msg['file_path'], ENT_QUOTES);
+                                        ?>
+                                            <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
+                                                <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
+                                                    <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo "🖼 画像を見る"; else echo "📄 添付ファイルを見る"; ?>
+                                                </a>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px; display:flex; gap:10px; align-items:center;">
+                                <input type="file" id="chatFile_<?= $task['project_id'] ?>" accept="image/*,.pdf" style="display:none;" onchange="document.getElementById('fileLabel_<?= $task['project_id'] ?>').style.color='#28a745'">
+                                <label for="chatFile_<?= $task['project_id'] ?>" id="fileLabel_<?= $task['project_id'] ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
+                                
+                                <textarea id="chatText_<?= $task['project_id'] ?>" style="flex:1; border:1px solid #ccc; border-radius:20px; padding:8px 12px; font-size:13px; resize:none;" rows="1" placeholder="メッセージを入力..."></textarea>
+                                
+                                <button onclick="sendProjMessage(<?= $task['project_id'] ?>)" style="background:#3b82f6; color:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:16px;">➤</button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
+                </div>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>

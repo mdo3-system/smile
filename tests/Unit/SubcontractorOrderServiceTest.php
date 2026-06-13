@@ -114,4 +114,32 @@ class SubcontractorOrderServiceTest extends TestCase
         $this->assertEquals('sub_admin', $msg['thread_type']);
         $this->assertStringContainsString('発注を辞退（拒否）しました。', $msg['message_text']);
     }
+
+    public function testCancelOrderSuccess(): void
+    {
+        $orderId = 1;
+        $userId = 1; // 管理者
+
+        $result = $this->service->cancelOrder($orderId, $userId);
+        $this->assertTrue($result);
+
+        // 状態検証 (subcontractor_orders)
+        $stmt = $this->pdo->prepare("SELECT * FROM subcontractor_orders WHERE id = :id");
+        $stmt->execute(['id' => $orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertEquals('cancelled', $order['status']);
+        $this->assertNotNull($order['updated_at']);
+
+        // チャットメッセージ検証 (messages)
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertNotFalse($msg);
+        $this->assertEquals(10, $msg['project_id']);
+        $this->assertEquals($userId, $msg['sender_id']);
+        $this->assertEquals('sub_admin', $msg['thread_type']);
+        $this->assertStringContainsString('発注依頼がキャンセルされました', $msg['message_text']);
+        $this->assertStringContainsString('現在までの費用をご請求してください', $msg['message_text']);
+    }
 }

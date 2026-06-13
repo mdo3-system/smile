@@ -114,4 +114,53 @@ class SubcontractorOrderService
             throw $e;
         }
     }
+
+    /**
+     * 発注をキャンセルする（設計管理者・経理用）
+     *
+     * @param int $orderId
+     * @param int $userId キャンセルを行ったユーザーID（通常は管理者/経理）
+     * @return bool
+     * @throws Exception
+     */
+    public function cancelOrder(int $orderId, int $userId): bool
+    {
+        $this->pdo->beginTransaction();
+        try {
+            // ステータスを cancelled に更新
+            $stmt = $this->pdo->prepare("
+                UPDATE subcontractor_orders 
+                SET status = 'cancelled', updated_at = NOW() 
+                WHERE id = :id
+            ");
+            $stmt->execute([
+                'id' => $orderId
+            ]);
+
+            // 案件IDと発注時の業者IDを取得
+            $stmtP = $this->pdo->prepare("SELECT project_id, subcontractor_id, task_title FROM subcontractor_orders WHERE id = :id");
+            $stmtP->execute(['id' => $orderId]);
+            $orderInfo = $stmtP->fetch(PDO::FETCH_ASSOC);
+
+            if ($orderInfo) {
+                // メッセージ（チャット通知）を挿入
+                $msg = "【自動通知】「" . $orderInfo['task_title'] . "」の発注依頼がキャンセルされました。\n現在までの費用をご請求してください。";
+                $stmtMsg = $this->pdo->prepare("
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                    VALUES (:pid, :sid, 'sub_admin', :msg)
+                ");
+                $stmtMsg->execute([
+                    'pid' => $orderInfo['project_id'],
+                    'sid' => $userId,
+                    'msg' => $msg
+                ]);
+            }
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
 }
