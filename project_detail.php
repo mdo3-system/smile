@@ -160,8 +160,15 @@ $chat_messages = $stmtMsgs->fetchAll();
         .chat-textarea { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 20px; font-size: 13px; resize: none; min-height: 38px; max-height: 120px; overflow-y: auto; font-family: inherit; outline: none; }
         .chat-send-btn { background: #17a2b8; color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
         .chat-send-btn:hover { background: #138496; }
-        .chat-attach-btn { background: #6c757d; color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
-        .chat-file-preview { font-size: 11px; color: #555; margin-top: 4px; padding: 3px 8px; background: white; border-radius: 10px; display: none; }
+        .chat-attach-btn { background: #6c757d; color: white; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; transition: all 0.2s ease; }
+        .chat-attach-btn.attached { background: #10b981; animation: pulse-green 2s infinite; }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .chat-file-preview { font-size: 11px; color: #555; margin-top: 4px; padding: 5px 10px; background: white; border-radius: 8px; display: none; border: 1px solid #cbd5e1; }
+        .chat-file-preview:not(:empty) { display: block; }
         /* グリーティングモーダル */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-overlay.active { display: flex; }

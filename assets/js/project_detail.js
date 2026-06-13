@@ -99,8 +99,10 @@ function sendMessage(text) {
         .then(data => {
             if(data.success) {
                 if (textarea) textarea.value = '';
-                if (fileInput) fileInput.value = '';
-                document.getElementById('filePreview').innerHTML = '';
+                if (fileInput) {
+                    fileInput.value = '';
+                    previewFile(fileInput);
+                }
                 pollMessages();
             } else {
                 alert(data.error || '送信失敗');
@@ -122,10 +124,21 @@ function handleKey(e) {
 
 function previewFile(input) {
     const preview = document.getElementById('filePreview');
+    const label = input.closest('.chat-attach-btn');
     if (input.files && input.files[0]) {
-        preview.innerHTML = `📎 ${input.files[0].name}`;
+        preview.innerHTML = `<span class="preview-badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:4px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:1px solid #bae6fd; font-weight:bold;">📎 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:3px; font-size:14px; line-height:1;" onclick="removeChatFile('${input.id}')">×</span></span>`;
+        if (label) label.classList.add('attached');
     } else {
         preview.innerHTML = '';
+        if (label) label.classList.remove('attached');
+    }
+}
+
+function removeChatFile(inputId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = '';
+        previewFile(input);
     }
 }
 
@@ -150,8 +163,10 @@ function sendSubMessage() {
         .then(data => {
             if(data.success) {
                 if (textarea) textarea.value = '';
-                if (fileInput) fileInput.value = '';
-                document.getElementById('subFilePreview').innerHTML = '';
+                if (fileInput) {
+                    fileInput.value = '';
+                    previewSubFile(fileInput);
+                }
                 // 簡易的にリロードして反映させる（非同期更新も可能だがシンプル化のため）
                 window.location.reload();
             } else {
@@ -168,10 +183,13 @@ function handleSubKey(e) {
 
 function previewSubFile(input) {
     const preview = document.getElementById('subFilePreview');
+    const label = input.closest('.chat-attach-btn');
     if (input.files && input.files[0]) {
-        preview.innerHTML = `📎 ${input.files[0].name}`;
+        preview.innerHTML = `<span class="preview-badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:4px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:1px solid #bae6fd; font-weight:bold;">📎 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:3px; font-size:14px; line-height:1;" onclick="removeChatFile('${input.id}')">×</span></span>`;
+        if (label) label.classList.add('attached');
     } else {
         preview.innerHTML = '';
+        if (label) label.classList.remove('attached');
     }
 }
 
