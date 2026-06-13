@@ -53,172 +53,6 @@
                 </div>
             </div>
 
-            <?php
-            $base_days = getScheduleBaseDays($project_info);
-            $primary_due_date = $project_info['primary_due_date'] ?? null;
-
-            $schedulesToRender = [];
-
-            if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
-                $schedulesToRender[] = [
-                    'title' => '許容応力度・基礎横架材計算',
-                    'steps' => getScheduleSteps($base_days),
-                    'actuals_col' => 'schedule_actuals'
-                ];
-            }
-            if (($project_info['req_wall'] ?? 0) == 1) {
-                $schedulesToRender[] = [
-                    'title' => '壁量計算',
-                    'steps' => getScheduleStepsWall($base_days),
-                    'actuals_col' => 'schedule_actuals_wall'
-                ];
-            }
-            if (($project_info['req_skin'] ?? 0) == 1) {
-                $schedulesToRender[] = [
-                    'title' => '外皮計算',
-                    'steps' => getScheduleStepsSkin($base_days),
-                    'actuals_col' => 'schedule_actuals_skin'
-                ];
-            }
-            if (($project_info['req_sky'] ?? 0) == 1) {
-                $schedulesToRender[] = [
-                    'title' => '天空率',
-                    'steps' => getScheduleStepsSky($base_days),
-                    'actuals_col' => 'schedule_actuals_sky'
-                ];
-            }
-
-            if (empty($schedulesToRender)) {
-                $schedulesToRender[] = [
-                    'title' => '構造計算・基本スケジュール',
-                    'steps' => getScheduleSteps($base_days),
-                    'actuals_col' => 'schedule_actuals'
-                ];
-            }
-
-            foreach ($schedulesToRender as $scheduleItem):
-                $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
-            ?>
-            <div class="box" style="margin-top:15px; background:#f0f8ff; border-color:#cce5ff;">
-                <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 <?= htmlspecialchars($scheduleItem['title']) ?> スケジュール</h3>
-                <div style="font-size:13px; line-height:1.6;">
-                    <?php
-                    if (empty($primary_due_date)) {
-                        echo '<div style="color:#e53e3e; font-size:12px; margin-bottom:10px; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">⏳ 具体的な日付は、設計依頼のご提出後に担当者が確認・設定します。</div>';
-                    } else {
-                        echo '<div style="color:#155724; font-size:12px; margin-bottom:10px; background:#d4edda; border:1px solid #c3e6cb; padding:8px; border-radius:4px;">✅ 一次回答期日：<strong>' . date('Y年m月d日', strtotime($primary_due_date)) . '</strong>（スケジュール確定済み）</div>';
-                    }
-
-                    echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';
-                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日</th></tr></thead>';
-                    echo '<tbody>';
-                    
-                    $calc_date = $primary_due_date;
-                    
-                    foreach ($scheduleItem['steps'] as $idx => $step) {
-                        $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
-                        $badge = '';
-                        if ($step['actor'] == 'designer') {
-                            $badge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟦 サポート</span>';
-                        } elseif ($step['actor'] == 'client') {
-                            $client_display_name = htmlspecialchars($project_info['client_name'], ENT_QUOTES) . '様';
-                            $badge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟩 ' . $client_display_name . '</span>';
-                        } else {
-                            $badge = '<span style="background:#64748b; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">⬛ 審査・待機</span>';
-                        }
-
-                        $date_str = '<span style="color:#64748b;">未確定</span>';
-                        
-                        if ($primary_due_date) {
-                            if ($idx == 0) {
-                                $date_str = '<span style="color:#64748b;">-</span>';
-                            } elseif ($idx == 1) {
-                                $calc_date = $primary_due_date;
-                                $date_str = '<strong>' . date('m/d', strtotime($primary_due_date)) . '</strong>';
-                            } else {
-                                if ($step['type'] == 'biz') {
-                                    $calc_date = addBusinessDays($calc_date, $step['days']);
-                                } elseif ($step['type'] == 'cal') {
-                                    $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
-                                }
-                                $date_str = date('m/d', strtotime($calc_date));
-                            }
-                        }
-
-                        // 実施日があればそれを起算日に上書きする
-                        $actual_date = $schedule_actuals[$idx] ?? '';
-                        if ($actual_date) {
-                            $calc_date = $actual_date;
-                            $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
-                        }
-
-                        echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
-                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
-                        echo "<td style='padding:6px;'>{$badge}</td>";
-                        echo "<td style='padding:6px;'>{$date_str}</td>";
-                        echo "</tr>";
-                    }
-                    echo '</tbody></table>';
-                    ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-
-            <div class="box" style="margin-top:15px; background:#fff3cd; border-color:#ffeeba;">
-                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 ご請求・お支払い状況</h3>
-                <div style="font-size:13px; line-height:1.8;">
-                    <?php
-                        $initial = $project_info['initial_est_amount'] ?? 0;
-                        $initial_date = $project_info['initial_est_date'] ?? '-';
-                        $formal = $project_info['formal_est_amount'] ?? 0;
-                        $formal_date = $project_info['formal_est_date'] ?? '-';
-                        $add = $project_info['add_est_amount'] ?? 0;
-                        $add_date = $project_info['add_est_date'] ?? '-';
-                        $deposit = $project_info['deposit_amount'] ?? 0;
-                        $deposit_date = $project_info['deposit_date'] ?? '-';
-
-                        $total_req = $formal + $add;
-                        $balance = $total_req - $deposit;
-
-                        // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
-                        $primary_invoice_amount = 0;
-                        if ($formal > 0) {
-                            $base_formal = round($formal / 1.1);
-                            $subtotal_primary = round($base_formal * 0.5);
-                            $tax_primary = round($subtotal_primary * 0.1);
-                            $primary_invoice_amount = $subtotal_primary + $tax_primary;
-                        }
-                    ?>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>初期お見積額 (<?= htmlspecialchars($initial_date) ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>本見積額 (<?= htmlspecialchars($formal_date) ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
-                    </div>
-                    <?php if ($add > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
-                        <span>追加費用 (<?= htmlspecialchars($add_date) ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
-                    </div>
-                    <?php endif; ?>
-                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-                        <span>合計ご請求額 (本見積＋追加):</span> <strong><?= number_format($total_req) ?> 円</strong>
-                    </div>
-                    <?php if ($formal > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 5px;">
-                        <span>一次請求額 (着手金50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
-                    </div>
-                    <?php endif; ?>
-                    <div style="display:flex; justify-content:space-between; color:#28a745;">
-                        <span>入金済額 (<?= htmlspecialchars($deposit_date) ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
-                        <span>最終ご請求額 (残金精算額):</span> <span><?= number_format($balance) ?> 円</span>
-                    </div>
-                </div>
-            </div>
-
-            <?php require __DIR__ . '/col_estimate_files.php'; ?>
-            
             <div class="box" style="margin-top:15px; background:#e8f5e9; border-color:#c8e6c9;">
                 <h3 style="margin-top:0; font-size:14px; color:#2e7d32; border-bottom:1px solid #c8e6c9; padding-bottom:5px;">📝 見積書・請求書</h3>
                 
@@ -304,6 +138,61 @@
                     </div>
                 <?php endif; ?>
             </div>
+
+            <div class="box" style="margin-top:15px; background:#fff3cd; border-color:#ffeeba;">
+                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 ご請求・お支払い状況</h3>
+                <div style="font-size:13px; line-height:1.8;">
+                    <?php
+                        $initial = $project_info['initial_est_amount'] ?? 0;
+                        $initial_date = $project_info['initial_est_date'] ?? '-';
+                        $formal = $project_info['formal_est_amount'] ?? 0;
+                        $formal_date = $project_info['formal_est_date'] ?? '-';
+                        $add = $project_info['add_est_amount'] ?? 0;
+                        $add_date = $project_info['add_est_date'] ?? '-';
+                        $deposit = $project_info['deposit_amount'] ?? 0;
+                        $deposit_date = $project_info['deposit_date'] ?? '-';
+
+                        $total_req = $formal + $add;
+                        $balance = $total_req - $deposit;
+
+                        // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
+                        $primary_invoice_amount = 0;
+                        if ($formal > 0) {
+                            $base_formal = round($formal / 1.1);
+                            $subtotal_primary = round($base_formal * 0.5);
+                            $tax_primary = round($subtotal_primary * 0.1);
+                            $primary_invoice_amount = $subtotal_primary + $tax_primary;
+                        }
+                    ?>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>初期お見積額 (<?= htmlspecialchars($initial_date) ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>本見積額 (<?= htmlspecialchars($formal_date) ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
+                    </div>
+                    <?php if ($add > 0): ?>
+                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
+                        <span>追加費用 (<?= htmlspecialchars($add_date) ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
+                    </div>
+                    <?php endif; ?>
+                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
+                        <span>合計ご請求額 (本見積＋追加):</span> <strong><?= number_format($total_req) ?> 円</strong>
+                    </div>
+                    <?php if ($formal > 0): ?>
+                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 5px;">
+                        <span>一次請求額 (着手金50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
+                    </div>
+                    <?php endif; ?>
+                    <div style="display:flex; justify-content:space-between; color:#28a745;">
+                        <span>入金済額 (<?= htmlspecialchars($deposit_date) ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
+                        <span>最終ご請求額 (残金精算額):</span> <span><?= number_format($balance) ?> 円</span>
+                    </div>
+                </div>
+            </div>
+
+            <?php require __DIR__ . '/col_estimate_files.php'; ?>
         </div>
         
         <!-- ===== 発注データアップロードモーダル ===== -->
@@ -347,10 +236,121 @@
             </div>
         </div>
 
-        <!-- カラム2：成果物一覧 ＋ 依頼主アップロード図書 -->
+        <!-- カラム2：成果物一覧 ＋ スケジュール -->
         <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
             <?php require __DIR__ . '/col_center_deliverables.php'; ?>
-            <?php require __DIR__ . '/col_center_uploads.php'; ?>
+
+            <!-- スケジュールボックス（旧左カラムから移動） -->
+            <?php
+            $base_days = getScheduleBaseDays($project_info);
+            $primary_due_date = $project_info['primary_due_date'] ?? null;
+
+            $schedulesToRender = [];
+
+            if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '許容応力度・基礎横架材計算',
+                    'steps' => getScheduleSteps($base_days),
+                    'actuals_col' => 'schedule_actuals'
+                ];
+            }
+            if (($project_info['req_wall'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '壁量計算',
+                    'steps' => getScheduleStepsWall($base_days),
+                    'actuals_col' => 'schedule_actuals_wall'
+                ];
+            }
+            if (($project_info['req_skin'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '外皮計算',
+                    'steps' => getScheduleStepsSkin($base_days),
+                    'actuals_col' => 'schedule_actuals_skin'
+                ];
+            }
+            if (($project_info['req_sky'] ?? 0) == 1) {
+                $schedulesToRender[] = [
+                    'title' => '天空率',
+                    'steps' => getScheduleStepsSky($base_days),
+                    'actuals_col' => 'schedule_actuals_sky'
+                ];
+            }
+
+            if (empty($schedulesToRender)) {
+                $schedulesToRender[] = [
+                    'title' => '構造計算・基本スケジュール',
+                    'steps' => getScheduleSteps($base_days),
+                    'actuals_col' => 'schedule_actuals'
+                ];
+            }
+
+            foreach ($schedulesToRender as $scheduleItem):
+                $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
+            ?>
+            <div class="box" style="background:#f0f8ff; border-color:#cce5ff;">
+                <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 <?= htmlspecialchars($scheduleItem['title']) ?> スケジュール</h3>
+                <div style="font-size:13px; line-height:1.6;">
+                    <?php
+                    if (empty($primary_due_date)) {
+                        echo '<div style="color:#e53e3e; font-size:12px; margin-bottom:10px; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">⏳ 具体的な日付は、設計依頼のご提出後に担当者が確認・設定します。</div>';
+                    } else {
+                        echo '<div style="color:#155724; font-size:12px; margin-bottom:10px; background:#d4edda; border:1px solid #c3e6cb; padding:8px; border-radius:4px;">✅ 一次回答期日：<strong>' . date('Y年m月d日', strtotime($primary_due_date)) . '</strong>（スケジュール確定済み）</div>';
+                    }
+
+                    echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';
+                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日</th></tr></thead>';
+                    echo '<tbody>';
+                    
+                    $calc_date = $primary_due_date;
+                    
+                    foreach ($scheduleItem['steps'] as $idx => $step) {
+                        $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
+                        $badge = '';
+                        if ($step['actor'] == 'designer') {
+                            $badge = '<span style="background:#3b82f6; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟦 サポート</span>';
+                        } elseif ($step['actor'] == 'client') {
+                            $client_display_name = htmlspecialchars($project_info['client_name'], ENT_QUOTES) . '様';
+                            $badge = '<span style="background:#10b981; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">🟩 ' . $client_display_name . '</span>';
+                        } else {
+                            $badge = '<span style="background:#64748b; color:white; padding:2px 6px; border-radius:10px; font-size:10px;">⬛ 審査・待機</span>';
+                        }
+
+                        $date_str = '<span style="color:#64748b;">未確定</span>';
+                        
+                        if ($primary_due_date) {
+                            if ($idx == 0) {
+                                $date_str = '<span style="color:#64748b;">-</span>';
+                            } elseif ($idx == 1) {
+                                $calc_date = $primary_due_date;
+                                $date_str = '<strong>' . date('m/d', strtotime($primary_due_date)) . '</strong>';
+                            } else {
+                                if ($step['type'] == 'biz') {
+                                    $calc_date = addBusinessDays($calc_date, $step['days']);
+                                } elseif ($step['type'] == 'cal') {
+                                    $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
+                                }
+                                $date_str = date('m/d', strtotime($calc_date));
+                            }
+                        }
+
+                        // 実施日があればそれを起算日に上書きする
+                        $actual_date = $schedule_actuals[$idx] ?? '';
+                        if ($actual_date) {
+                            $calc_date = $actual_date;
+                            $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
+                        }
+
+                        echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
+                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
+                        echo "<td style='padding:6px;'>{$badge}</td>";
+                        echo "<td style='padding:6px;'>{$date_str}</td>";
+                        echo "</tr>";
+                    }
+                    echo '</tbody></table>';
+                    ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
             
             <?php
             // 構造仕様表示用の処理
@@ -382,90 +382,94 @@
             <?php endif; ?>
         </div>
 
-        <!-- 右パネル：チャット -->
-        <div class="column col-right" style="flex: 1;">
-            <h2 class="section-title" style="background:#17a2b8;">💬 メッセージ</h2>
-            <!-- チャットエリア (LINEスタイル) -->
-            <div class="chat-wrapper">
-                <div class="chat-messages" id="chatMessages">
-                    <?php foreach ($chat_messages as $msg):
-                        $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
-                        $rowClass = $isMe ? 'from-me' : '';
-                        $bubbleClass = ($msg['sender_id'] == 1) ? 'bubble-admin' : 'bubble-client';
-                        $avatarClass = ($msg['sender_id'] == 1) ? 'admin-avatar' : 'client-avatar';
-                        $avatarIcon  = ($msg['sender_id'] == 1) ? '👷' : '👤';
-                        $senderName  = ($msg['sender_id'] == 1) ? 'サポート担当者' : 'あなた';
-                        $timeStr     = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
-                    ?>
-                        <div class="chat-bubble-row <?= $rowClass ?>" data-msg-id="<?= $msg['id'] ?>">
-                            <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
-                            <div class="chat-content">
-                                <?php if (!$isMe): ?>
-                                <div class="chat-name"><?= $senderName ?></div>
-                                <?php endif; ?>
-                                <?php if (!empty($msg['message_text'])): ?>
-                                <div class="chat-bubble <?= $bubbleClass ?>"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
-                                <?php endif; ?>
-                                <?php if (!empty($msg['file_path'])): ?>
-                                    <?php
-                                        $ftype = $msg['file_type'] ?? '';
-                                        $fpath = $msg['file_path'];
-                                        $isGdrive = (strlen($fpath) > 15 && strpos($fpath, '/') === false && strpos($fpath, 'uploads/') !== 0);
-                                        $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
-                                        $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w200' : '';
-                                    ?>
-                                    <?php if ($ftype === 'image' && $isGdrive): ?>
-                                        <a href="<?= $furl ?>" target="_blank">
-                                            <img src="<?= $thumbUrl ?>" class="chat-image-thumb" alt="添付画像">
-                                        </a>
-                                    <?php elseif ($ftype === 'pdf' || !empty($fpath)): ?>
-                                        <a href="<?= $furl ?>" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>
+        <!-- 右パネル：チャット ＋ 依頼主アップロード図書 -->
+        <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:350px;">
+            <div class="column col-right" style="flex:1; margin:0; width:100%; box-sizing:border-box;">
+                <h2 class="section-title" style="background:#17a2b8;">💬 メッセージ</h2>
+                <!-- チャットエリア (LINEスタイル) -->
+                <div class="chat-wrapper">
+                    <div class="chat-messages" id="chatMessages">
+                        <?php foreach ($chat_messages as $msg):
+                            $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
+                            $rowClass = $isMe ? 'from-me' : '';
+                            $bubbleClass = ($msg['sender_id'] == 1) ? 'bubble-admin' : 'bubble-client';
+                            $avatarClass = ($msg['sender_id'] == 1) ? 'admin-avatar' : 'client-avatar';
+                            $avatarIcon  = ($msg['sender_id'] == 1) ? '👷' : '👤';
+                            $senderName  = ($msg['sender_id'] == 1) ? 'サポート担当者' : 'あなた';
+                            $timeStr     = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
+                        ?>
+                            <div class="chat-bubble-row <?= $rowClass ?>" data-msg-id="<?= $msg['id'] ?>">
+                                <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
+                                <div class="chat-content">
+                                    <?php if (!$isMe): ?>
+                                    <div class="chat-name"><?= $senderName ?></div>
                                     <?php endif; ?>
-                                <?php endif; ?>
-                                <div class="chat-time"><?= $timeStr ?></div>
+                                    <?php if (!empty($msg['message_text'])): ?>
+                                    <div class="chat-bubble <?= $bubbleClass ?>"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($msg['file_path'])): ?>
+                                        <?php
+                                            $ftype = $msg['file_type'] ?? '';
+                                            $fpath = $msg['file_path'];
+                                            $isGdrive = (strlen($fpath) > 15 && strpos($fpath, '/') === false && strpos($fpath, 'uploads/') !== 0);
+                                            $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
+                                            $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w200' : '';
+                                        ?>
+                                        <?php if ($ftype === 'image' && $isGdrive): ?>
+                                            <a href="<?= $furl ?>" target="_blank">
+                                                <img src="<?= $thumbUrl ?>" class="chat-image-thumb" alt="添付画像">
+                                            </a>
+                                        <?php elseif ($ftype === 'pdf' || !empty($fpath)): ?>
+                                            <a href="<?= $furl ?>" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    <div class="chat-time"><?= $timeStr ?></div>
+                                </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
-                    <?php if (empty($chat_messages)): ?>
-                        <div style="text-align:center; color:#aaa; font-size:12px; margin-top:40px;">メッセージはまだありません</div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- 入力エリア -->
-                <div class="chat-input-area">
-                    <div id="filePreview" class="chat-file-preview"></div>
-                    <div style="margin-bottom:8px;">
-                        <select id="chatTargetFile" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
-                            <option value="">-- 対象ファイル（全体へのメッセージ） --</option>
-                            <?php
-                            $uploaded_file_names = [];
-                            foreach ($files_by_cat as $cat => $files) {
-                                foreach ($files as $f) {
-                                    $uploaded_file_names[] = $f['file_name'];
-                                }
-                            }
-                            try {
-                                $stmtAllCenter = $pdo->prepare("SELECT file_name FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY id DESC");
-                                $stmtAllCenter->execute(['pid' => $project_id]);
-                                while ($row = $stmtAllCenter->fetch(PDO::FETCH_ASSOC)) { $uploaded_file_names[] = $row['file_name']; }
-                                $uploaded_file_names = array_unique($uploaded_file_names);
-                                foreach ($uploaded_file_names as $fname) {
-                                    echo '<option value="' . htmlspecialchars($fname, ENT_QUOTES) . '">📎 ' . htmlspecialchars($fname, ENT_QUOTES) . '</option>';
-                                }
-                            } catch (Exception $e) {}
-                            ?>
-                        </select>
+                        <?php endforeach; ?>
+                        <?php if (empty($chat_messages)): ?>
+                            <div style="text-align:center; color:#aaa; font-size:12px; margin-top:40px;">メッセージはまだありません</div>
+                        <?php endif; ?>
                     </div>
-                    <div class="chat-input-row">
-                        <label class="chat-attach-btn" title="ファイルを添付">
-                            📎
-                            <input type="file" id="chatFileInput" accept="image/*,.pdf" style="display:none;" onchange="previewFile(this)">
-                        </label>
-                        <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" onkeydown="handleKey(event)"></textarea>
-                        <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>
+    
+                    <!-- 入力エリア -->
+                    <div class="chat-input-area">
+                        <div id="filePreview" class="chat-file-preview"></div>
+                        <div style="margin-bottom:8px;">
+                            <select id="chatTargetFile" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
+                                <option value="">-- 対象ファイル（全体へのメッセージ） --</option>
+                                <?php
+                                $uploaded_file_names = [];
+                                foreach ($files_by_cat as $cat => $files) {
+                                    foreach ($files as $f) {
+                                        $uploaded_file_names[] = $f['file_name'];
+                                    }
+                                }
+                                try {
+                                    $stmtAllCenter = $pdo->prepare("SELECT file_name FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY id DESC");
+                                    $stmtAllCenter->execute(['pid' => $project_id]);
+                                    while ($row = $stmtAllCenter->fetch(PDO::FETCH_ASSOC)) { $uploaded_file_names[] = $row['file_name']; }
+                                    $uploaded_file_names = array_unique($uploaded_file_names);
+                                    foreach ($uploaded_file_names as $fname) {
+                                        echo '<option value="' . htmlspecialchars($fname, ENT_QUOTES) . '">📎 ' . htmlspecialchars($fname, ENT_QUOTES) . '</option>';
+                                    }
+                                } catch (Exception $e) {}
+                                ?>
+                            </select>
+                        </div>
+                        <div class="chat-input-row">
+                            <label class="chat-attach-btn" title="ファイルを添付">
+                                📎
+                                <input type="file" id="chatFileInput" accept="image/*,.pdf" style="display:none;" onchange="previewFile(this)">
+                            </label>
+                            <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" onkeydown="handleKey(event)"></textarea>
+                            <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>
+                        </div>
                     </div>
                 </div>
             </div>
+            
+            <?php require __DIR__ . '/col_center_uploads.php'; ?>
         </div>
         
         <!-- ===== 基本情報編集モーダル ===== -->
