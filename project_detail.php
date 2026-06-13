@@ -113,8 +113,14 @@ $stmtDelivered = $pdo->prepare("
 $stmtDelivered->execute(['pid' => $project_id]);
 $delivered_orders = $stmtDelivered->fetchAll();
 
-// チャット履歴を取得
-$stmtMsgs = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'client_admin' ORDER BY id ASC");
+// チャット履歴を取得 (送信者のロールをJOINして取得)
+$stmtMsgs = $pdo->prepare("
+    SELECT m.*, u.role as sender_role, u.contact_name as sender_name 
+    FROM messages m 
+    LEFT JOIN users u ON m.sender_id = u.id 
+    WHERE m.project_id = :pid AND m.thread_type = 'client_admin' 
+    ORDER BY m.id ASC
+");
 $stmtMsgs->execute(['pid' => $project_id]);
 $chat_messages = $stmtMsgs->fetchAll();
 ?>

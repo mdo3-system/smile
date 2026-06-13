@@ -49,14 +49,31 @@
                     <?php foreach ($chat_messages as $msg):
                         $isMe = ($msg['sender_id'] == $_SESSION['user_id']);
                         $rowClass = $isMe ? 'from-me' : '';
-                        $bubbleClass = ($msg['sender_id'] == 1) ? 'bubble-admin' : 'bubble-client';
-                        $avatarClass = ($msg['sender_id'] == 1) ? 'admin-avatar' : 'client-avatar';
-                        $avatarIcon  = ($msg['sender_id'] == 1) ? '👷' : '👤';
-                        $senderName  = ($msg['sender_id'] == 1) ? '管理者' : htmlspecialchars($project_info['client_name'], ENT_QUOTES);
-                        $timeStr     = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
+                        
+                        $senderRole = $msg['sender_role'] ?? (($msg['sender_id'] == 1) ? 'admin' : 'client');
+                        $bubbleClass = 'bubble-client';
+                        $avatarClass = 'client-avatar';
+                        $avatarIcon  = '👤';
+                        $senderName  = htmlspecialchars($project_info['client_name'] ?? '依頼主', ENT_QUOTES);
+                        
+                        if ($senderRole === 'admin') {
+                            $bubbleClass = 'bubble-admin';
+                            $avatarClass = 'admin-avatar';
+                            $avatarIcon  = '👷';
+                            $senderName  = '設計担当';
+                        } elseif ($senderRole === 'accountant') {
+                            $bubbleClass = 'bubble-admin';
+                            $avatarClass = 'accountant-avatar';
+                            $avatarIcon  = '💼';
+                            $senderName  = '経理担当';
+                        }
+                        
+                        $timeStr = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
                     ?>
                         <div class="chat-bubble-row <?= $rowClass ?>" data-msg-id="<?= $msg['id'] ?>">
-                            <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
+                            <?php if (!$isMe): ?>
+                                <div class="chat-avatar <?= $avatarClass ?>" title="<?= $senderName ?>"><?= $avatarIcon ?></div>
+                            <?php endif; ?>
                             <div class="chat-content">
                                 <?php if (!$isMe): ?>
                                 <div class="chat-name"><?= $senderName ?></div>

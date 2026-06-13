@@ -11,6 +11,7 @@ class Message
     public ?string $filePath;
     public ?string $fileType;
     public ?string $createdAt;
+    public ?string $senderRole;
 
     public function __construct(
         ?int $id = null,
@@ -20,7 +21,8 @@ class Message
         string $messageText = '',
         ?string $filePath = null,
         ?string $fileType = null,
-        ?string $createdAt = null
+        ?string $createdAt = null,
+        ?string $senderRole = null
     ) {
         $this->id = $id;
         $this->projectId = $projectId;
@@ -30,6 +32,7 @@ class Message
         $this->filePath = $filePath;
         $this->fileType = $fileType;
         $this->createdAt = $createdAt;
+        $this->senderRole = $senderRole;
     }
 
     public static function fromArray(array $data): self
@@ -42,7 +45,8 @@ class Message
             $data['message_text'] ?? '',
             $data['file_path'] ?? null,
             $data['file_type'] ?? null,
-            $data['created_at'] ?? null
+            $data['created_at'] ?? null,
+            $data['sender_role'] ?? null
         );
     }
 }

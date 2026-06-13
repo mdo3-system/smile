@@ -34,7 +34,8 @@ class ChatController
                 'message_text' => $m->messageText,
                 'file_path' => $m->filePath,
                 'file_type' => $m->fileType,
-                'created_at' => $m->createdAt
+                'created_at' => $m->createdAt,
+                'sender_role' => $m->senderRole
             ];
         }
 

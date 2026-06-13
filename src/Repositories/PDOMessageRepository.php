@@ -16,7 +16,13 @@ class PDOMessageRepository implements MessageRepositoryInterface
 
     public function findByProjectIdAndThread(int $projectId, string $threadType, int $sinceId = 0): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = :thread AND id > :since ORDER BY id ASC");
+        $stmt = $this->pdo->prepare("
+            SELECT m.*, u.role as sender_role 
+            FROM messages m 
+            LEFT JOIN users u ON m.sender_id = u.id 
+            WHERE m.project_id = :pid AND m.thread_type = :thread AND m.id > :since 
+            ORDER BY m.id ASC
+        ");
         $stmt->execute([
             'pid' => $projectId,
             'thread' => $threadType,

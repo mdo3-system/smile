@@ -481,22 +481,36 @@
 
             
 
-            <?php if ($is_admin): ?>
+            <?php 
+            $is_accountant = ($_SESSION['role'] === 'accountant');
+            if ($is_admin || $is_accountant): 
+            ?>
             <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px; padding:15px;">
-                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 経理・請求管理（管理者専用）</h3>
+                <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">💰 経理・請求管理（管理者・経理用）</h3>
                 
                 <?php
                     $initial = $project_info['initial_est_amount'] ?? 0;
                     $initial_date = $project_info['initial_est_date'] ?? '';
                     $formal = $project_info['formal_est_amount'] ?? 0;
                     $formal_date = $project_info['formal_est_date'] ?? '';
-                    $add = $project_info['add_est_amount'] ?? 0;
-                    $add_date = $project_info['add_est_date'] ?? '';
-                    $deposit = $project_info['deposit_amount'] ?? 0;
-                    $deposit_date = $project_info['deposit_date'] ?? '';
+                    
+                    // 複数追加見積のパース
+                    $add_estimates = json_decode($project_info['additional_estimates'] ?? '[]', true) ?: [];
+                    
+                    $dep_50 = $project_info['deposit_amount_50'] ?? 0;
+                    $dep_date_50 = $project_info['deposit_date_50'] ?? '';
+                    $dep_rem = $project_info['deposit_amount_rem'] ?? 0;
+                    $dep_date_rem = $project_info['deposit_date_rem'] ?? '';
 
-                    $total_req = $formal + $add;
-                    $balance = $total_req - $deposit;
+                    // 合計追加費用
+                    $total_add = 0;
+                    foreach ($add_estimates as $ae) {
+                        $total_add += intval($ae['amount']);
+                    }
+
+                    $total_req = $formal + $total_add;
+                    $total_deposit = $dep_50 + $dep_rem;
+                    $balance = $total_req - $total_deposit;
 
                     // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
                     $primary_invoice_amount = 0;
@@ -512,33 +526,48 @@
                         <span>初期お見積額 (<?= $initial_date ? htmlspecialchars($initial_date) : '-' ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>本見積額 (<?= $formal_date ? htmlspecialchars($formal_date) : '-' ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
+                        <span>本見積額 (<?= $formal_date ? htmlspecialchars($formal_date) : '-' ?>):</span> <strong><span id="disp_formal"><?= number_format($formal) ?></span> 円</strong>
                     </div>
-                    <?php if ($add > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
-                        <span>追加費用 (<?= $add_date ? htmlspecialchars($add_date) : '-' ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
+                    
+                    <!-- 追加見積一覧の表示 -->
+                    <div id="disp_add_list" style="margin-left: 10px; font-size:12px; color:#555;">
+                        <?php foreach ($add_estimates as $idx => $ae): ?>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span>・追加見積 #<?= $idx+1 ?> (<?= htmlspecialchars($ae['date'] ?: '-') ?>):</span>
+                                <strong>+ <?= number_format($ae['amount']) ?> 円</strong>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <?php endif; ?>
+
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-                        <span>合計ご請求額 (本見積＋追加):</span> <strong><?= number_format($total_req) ?> 円</strong>
+                        <span>合計請求額 (本見積＋追加):</span> <strong><span id="disp_total_req" style="color:#d32f2f;"><?= number_format($total_req) ?></span> 円</strong>
                     </div>
-                    <?php if ($formal > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 5px;">
-                        <span>一次請求額 (着手金50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
+                    
+                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-top: 5px; margin-bottom: 2px;">
+                        <span>└ 一次請求予定額 (50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
                     </div>
-                    <?php endif; ?>
-                    <div style="display:flex; justify-content:space-between; color:#28a745;">
-                        <span>入金済額 (<?= $deposit_date ? htmlspecialchars($deposit_date) : '-' ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
+                    
+                    <div style="display:flex; justify-content:space-between; color:#28a745; margin-top: 5px;">
+                        <span>入金済合計 (50% + 残金):</span> <strong>- <span id="disp_total_deposit"><?= number_format($total_deposit) ?></span> 円</strong>
                     </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
-                        <span>最終ご請求額 (残金精算額):</span> <span><?= number_format($balance) ?> 円</span>
+                    <div style="font-size:11px; color:#666; margin-left: 10px; line-height:1.4;">
+                        <div>・50%着手金: <?= $dep_50 > 0 ? number_format($dep_50).'円 ('.$dep_date_50.')' : '未入金' ?></div>
+                        <div>・残金入金: <?= $dep_rem > 0 ? number_format($dep_rem).'円 ('.$dep_date_rem.')' : '未入金' ?></div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; margin-top:8px; border-top:1px solid #ccc; padding-top:8px; font-size:15px; font-weight:bold; color:#d32f2f;">
+                        <span>請求残金 (最終精算残高):</span> <span><span id="disp_balance"><?= number_format($balance) ?></span> 円</span>
                     </div>
                 </div>
 
+                <!-- 請求書発行エリア -->
                 <?php if ($formal > 0): ?>
-                    <div style="margin-top: 10px; margin-bottom: 10px;">
-                        <button type="button" id="issue_primary_invoice_btn" onclick="issuePrimaryInvoice()" style="width:100%; background:#dc3545; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">
-                            <?= isset($files_by_cat['inv_primary'][0]) ? '一次請求書(50%)を再発行' : '一次請求書(50%)を発行' ?>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                        <button type="button" id="issue_primary_invoice_btn" onclick="issuePrimaryInvoice()" style="background:#2563eb; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">
+                            <?= isset($files_by_cat['inv_primary'][0]) ? '一次請求書(50%)再発行' : '一次請求(50%)発行' ?>
+                        </button>
+                        <button type="button" id="issue_final_invoice_btn" onclick="issueFinalInvoice()" style="background:#dc3545; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">
+                            <?= isset($files_by_cat['inv_final'][0]) ? '最終請求書 再発行' : '最終請求書(残金)発行' ?>
                         </button>
                     </div>
                     
@@ -550,7 +579,7 @@
                         const btn = document.getElementById('issue_primary_invoice_btn');
                         if (btn) {
                             btn.disabled = true;
-                            btn.innerText = '一次請求書発行中...';
+                            btn.innerText = '発行中...';
                         }
                         const formData = new FormData();
                         formData.append('project_id', <?= (int)$project_id ?>);
@@ -570,54 +599,161 @@
                             .finally(() => {
                                 if (btn) {
                                     btn.disabled = false;
-                                    btn.innerText = '一次請求書(50%)を発行';
+                                    btn.innerText = '一次請求(50%)発行';
+                                }
+                            });
+                    }
+
+                    function issueFinalInvoice() {
+                        if (!confirm('最終請求書（本見積額＋追加見積額 − 50%着手金入金済額）を発行しますか？\n（発行するとGoogle Driveへアップロードされ、クライアントチャットに自動通知されます）')) {
+                            return;
+                        }
+                        const btn = document.getElementById('issue_final_invoice_btn');
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.innerText = '発行中...';
+                        }
+                        const formData = new FormData();
+                        formData.append('project_id', <?= (int)$project_id ?>);
+                        
+                        fetch('api_issue_final_invoice.php', { method: 'POST', body: formData })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success && data.drive_file_id) {
+                                    alert('最終請求書を発行しました。');
+                                    window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
+                                    location.reload();
+                                } else {
+                                    alert('最終請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                                }
+                            })
+                            .catch(e => alert('通信エラー: ' + e))
+                            .finally(() => {
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerText = '最終請求書(残金)発行';
                                 }
                             });
                     }
                     </script>
                 <?php endif; ?>
 
+                <!-- 金銭データの更新フォーム -->
                 <div style="border-top:1px dashed #ffeeba; padding-top:10px; margin-top:10px;">
-                    <strong style="display:block; font-size:12px; color:#856404; margin-bottom:10px;">✏️ 金銭データの更新（管理者・経理用）</strong>
+                    <strong style="display:block; font-size:12px; color:#856404; margin-bottom:10px;">✏️ 金銭データ・追加見積の更新</strong>
                     <form method="POST" action="actions/admin_finance_post.php" style="font-size:12px;">
                         <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                        
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
                             <div>
                                 <label style="display:block;margin-bottom:2px;">初期見積額 (円):</label>
-                                <input type="number" name="initial_est_amount" value="<?= htmlspecialchars($initial) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                                <input type="number" name="initial_est_amount" value="<?= htmlspecialchars($initial) ?>" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
                             </div>
                             <div>
                                 <label style="display:block;margin-bottom:2px;">初期見積日:</label>
-                                <input type="date" name="initial_est_date" value="<?= htmlspecialchars($initial_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                                <input type="date" name="initial_est_date" value="<?= htmlspecialchars($initial_date) ?>" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
                             </div>
                             <div>
                                 <label style="display:block;margin-bottom:2px;">本見積額 (円):</label>
-                                <input type="number" name="formal_est_amount" value="<?= htmlspecialchars($formal) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                                <input type="number" id="input_formal" name="formal_est_amount" value="<?= htmlspecialchars($formal) ?>" oninput="recalcFinance()" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
                             </div>
                             <div>
                                 <label style="display:block;margin-bottom:2px;">本見積日:</label>
-                                <input type="date" name="formal_est_date" value="<?= htmlspecialchars($formal_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label style="display:block;margin-bottom:2px;">追加費用 (円):</label>
-                                <input type="number" name="add_est_amount" value="<?= htmlspecialchars($add) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label style="display:block;margin-bottom:2px;">追加費用日:</label>
-                                <input type="date" name="add_est_date" value="<?= htmlspecialchars($add_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label style="display:block;margin-bottom:2px;">入金済額 (円):</label>
-                                <input type="number" name="deposit_amount" value="<?= htmlspecialchars($deposit) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
-                            </div>
-                            <div>
-                                <label style="display:block;margin-bottom:2px;">入金日:</label>
-                                <input type="date" name="deposit_date" value="<?= htmlspecialchars($deposit_date) ?>" style="width:100%; padding:3px; box-sizing:border-box;">
+                                <input type="date" name="formal_est_date" value="<?= htmlspecialchars($formal_date) ?>" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
                             </div>
                         </div>
-                        <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745;">金銭データを保存</button>
+
+                        <!-- 複数追加見積入力エリア -->
+                        <div style="background:#fffcf5; padding:8px; border:1px solid #fed7aa; border-radius:6px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:between; align-items:center; margin-bottom:5px;">
+                                <strong style="font-size:11px; color:#c2410c;">➕ 追加見積もり（複数登録可）</strong>
+                                <button type="button" onclick="addEstimateRow()" style="background:#ea580c; color:white; border:none; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; margin-left:auto;">追加</button>
+                            </div>
+                            <div id="additional_estimates_container">
+                                <?php foreach ($add_estimates as $idx => $ae): ?>
+                                    <div class="add-est-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                                        <input type="number" name="add_est_amounts[]" value="<?= htmlspecialchars($ae['amount']) ?>" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add">
+                                        <input type="date" name="add_est_dates[]" value="<?= htmlspecialchars($ae['date'] ?: '') ?>" style="flex:1; padding:3px;" class="form-control-fin-add-date">
+                                        <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- 入金情報入力エリア -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; background:#f0fdf4; padding:8px; border:1px solid #bbf7d0; border-radius:6px;">
+                            <div style="grid-column:1 / -1; font-weight:bold; color:#166534; font-size:11px;">💵 入金履歴管理</div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px; font-weight:bold;">50%着手金入金 (円):</label>
+                                <input type="number" id="input_dep_50" name="deposit_amount_50" value="<?= htmlspecialchars($dep_50) ?>" oninput="recalcFinance()" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">50%入金日:</label>
+                                <input type="date" name="deposit_date_50" value="<?= htmlspecialchars($dep_date_50) ?>" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px; font-weight:bold;">残金入金額 (円):</label>
+                                <input type="number" id="input_dep_rem" name="deposit_amount_rem" value="<?= htmlspecialchars($dep_rem) ?>" oninput="recalcFinance()" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:2px;">残金入金日:</label>
+                                <input type="date" name="deposit_date_rem" value="<?= htmlspecialchars($dep_date_rem) ?>" class="form-control-fin" style="width:100%; padding:3px; box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:10px;">
+                            <label style="display:block;margin-bottom:2px;">見積書・請求書 宛先名称:</label>
+                            <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '') ?>" placeholder="空欄時は会社名＋担当者名" style="width:100%; padding:4px; box-sizing:border-box;">
+                        </div>
+
+                        <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745; font-weight:bold;">上記金銭データを保存</button>
                     </form>
                 </div>
             </div>
+
+            <script>
+            function addEstimateRow() {
+                const container = document.getElementById('additional_estimates_container');
+                const row = document.createElement('div');
+                row.className = 'add-est-row';
+                row.style.display = 'flex';
+                row.style.gap = '5px';
+                row.style.marginBottom = '5px';
+                row.style.alignItems = 'center';
+                row.innerHTML = `
+                    <input type="number" name="add_est_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add">
+                    <input type="date" name="add_est_dates[]" value="" style="flex:1; padding:3px;" class="form-control-fin-add-date">
+                    <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
+                `;
+                container.appendChild(row);
+            }
+
+            function recalcFinance() {
+                // 本見積
+                const formal = parseInt(document.getElementById('input_formal').value) || 0;
+                
+                // 追加見積合計
+                let totalAdd = 0;
+                document.querySelectorAll('input[name="add_est_amounts[]"]').forEach(input => {
+                    totalAdd += parseInt(input.value) || 0;
+                });
+                
+                // 入金合計
+                const dep50 = parseInt(document.getElementById('input_dep_50').value) || 0;
+                const depRem = parseInt(document.getElementById('input_dep_rem').value) || 0;
+                const totalDeposit = dep50 + depRem;
+                
+                // 計算
+                const totalReq = formal + totalAdd;
+                const balance = totalReq - totalDeposit;
+                
+                // 反映
+                document.getElementById('disp_formal').innerText = formal.toLocaleString();
+                document.getElementById('disp_total_req').innerText = totalReq.toLocaleString();
+                document.getElementById('disp_total_deposit').innerText = totalDeposit.toLocaleString();
+                document.getElementById('disp_balance').innerText = balance.toLocaleString();
+            }
+            </script>
             <?php endif; ?>
+        </div>
         </div>
