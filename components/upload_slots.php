@@ -193,7 +193,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
     ============================================ -->
     <div style="margin-bottom:15px; border:1px solid #7c3aed; padding:12px; border-radius:6px; background:#f5f3ff;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <strong style="color:#5b21b6;">🟣 【許容応力度・基礎梁計算】構造材種・金物・耐力壁の指定</strong>
+            <strong style="color:#5b21b6;">🟣 【許容応力度・基礎梁計算】構造材種・金物・耐力壁の指定（ここで指定するか、依頼主アップロード図書内のプレカット図等にUPしてください）</strong>
             <?php if ($has_past_projects): ?>
             <label style="font-size:11px; background:#fff; border:1px solid #ccc; padding:2px 8px; border-radius:4px; cursor:pointer; color:#374151;">
                 <input type="checkbox" id="copy_past_specs" onchange="loadPastSpecs(this.checked)"> 過去の案件と同じ

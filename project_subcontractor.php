@@ -35,6 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset(
     exit;
 }
 
+// 公開・非表示の切り替え処理 (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_publish_sub' && $is_admin) {
+    $file_id = intval($_POST['file_id'] ?? 0);
+    $publish_val = intval($_POST['publish_val'] ?? 0);
+    $project_id = intval($_POST['project_id'] ?? 0);
+    if ($file_id > 0 && $project_id > 0) {
+        $stmt = $pdo->prepare("UPDATE project_files SET is_published_to_sub = :pub WHERE id = :id AND project_id = :pid");
+        $stmt->execute(['pub' => $publish_val, 'id' => $file_id, 'pid' => $project_id]);
+    }
+    header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time());
+    exit;
+}
+
 // 納品処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'deliver_task') {
     $order_id = intval($_POST['order_id']);
@@ -389,6 +402,97 @@ if ($is_admin) {
                 <?php endif; ?>
             </div>
 
+            <!-- 共通図書・CADデータの公開設定 -->
+            <div class="task-card" style="border-left-color: #3b82f6;">
+                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px; color:#1e3a8a;">📂 共通図書・CADデータの業者公開設定</h2>
+                <div style="font-size:12px; color:#555; margin-bottom:15px;">
+                    依頼主から提出されたCADデータや共通図書を、協力業者ポータルに公開・非表示にする設定を行えます。<br>
+                    <strong>初期状態はすべて非表示です。</strong>
+                </div>
+                <?php
+                // 最新の共通図書・CADデータを取得
+                $stmtClientFiles = $pdo->prepare("
+                    SELECT * FROM project_files 
+                    WHERE project_id = :pid 
+                      AND file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
+                      AND is_latest = 1
+                    ORDER BY id ASC
+                ");
+                $stmtClientFiles->execute(['pid' => $project_id]);
+                $client_files = $stmtClientFiles->fetchAll();
+
+                // カテゴリの日本語名マッピング
+                $cat_names = [
+                    'cad_layout'    => '配置図 (CAD)',
+                    'cad_plan_1f'   => '1F平面図 (CAD)',
+                    'cad_plan_2f'   => '2F平面図 (CAD)',
+                    'cad_plan_3f'   => '3F平面図 (CAD)',
+                    'cad_plan_ph'   => 'PH平面図 (CAD)',
+                    'cad_plan_rf'   => 'RF平面図 (CAD)',
+                    'cad_elevation' => '立面図 (CAD)',
+                    'cad_section'   => '矩計図 (CAD)',
+                    'app_doc'       => '確認申請書',
+                    'soil_report'   => '地盤調査報告書',
+                    'soil_impr'     => '地盤改良設計書',
+                    'pdf_precut'    => 'プレカット図等',
+                ];
+
+                if (empty($client_files)):
+                ?>
+                    <p style="color:#666; font-size:13px;">アップロードされた共通図書・CADデータはありません。</p>
+                <?php else: ?>
+                    <table style="width:100%; border-collapse:collapse; font-size:13px; line-height:1.5;">
+                        <thead>
+                            <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
+                                <th style="padding:6px; text-align:left;">図書類カテゴリ</th>
+                                <th style="padding:6px; text-align:left;">ファイル名</th>
+                                <th style="padding:6px; text-align:center; width:80px;">状態</th>
+                                <th style="padding:6px; text-align:center; width:120px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($client_files as $idx => $f): 
+                                $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
+                                $cat_label = $cat_names[$f['file_category']] ?? $f['file_category'];
+                                $is_pub = (int)($f['is_published_to_sub'] ?? 0);
+                            ?>
+                                <tr style="background:<?= $bg_color ?>; border-bottom:1px solid #e2e8f0;">
+                                    <td style="padding:8px 6px; font-weight:bold; color:#334155;"><?= htmlspecialchars($cat_label, ENT_QUOTES) ?></td>
+                                    <td style="padding:8px 6px; font-size:11px; word-break:break-all;"><?= htmlspecialchars($f['file_name'], ENT_QUOTES) ?></td>
+                                    <td style="padding:8px 6px; text-align:center;">
+                                        <?php if ($is_pub === 1): ?>
+                                            <span class="badge" style="background:#28a745; font-size:10px; padding:2px 6px; border-radius:3px;">公開中</span>
+                                        <?php else: ?>
+                                            <span class="badge" style="background:#6c757d; font-size:10px; padding:2px 6px; border-radius:3px;">非表示</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="padding:8px 6px; text-align:center;">
+                                        <div style="display:inline-flex; gap:5px;">
+                                            <!-- 公開ボタン -->
+                                            <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                                <input type="hidden" name="action" value="toggle_publish_sub">
+                                                <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                                <input type="hidden" name="file_id" value="<?= $f['id'] ?>">
+                                                <input type="hidden" name="publish_val" value="1">
+                                                <button type="submit" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold; <?= $is_pub === 1 ? 'opacity:0.4; cursor:not-allowed;' : '' ?>" <?= $is_pub === 1 ? 'disabled' : '' ?>>公開</button>
+                                            </form>
+                                            <!-- 非表示ボタン -->
+                                            <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                                <input type="hidden" name="action" value="toggle_publish_sub">
+                                                <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                                <input type="hidden" name="file_id" value="<?= $f['id'] ?>">
+                                                <input type="hidden" name="publish_val" value="0">
+                                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold; <?= $is_pub === 0 ? 'opacity:0.4; cursor:not-allowed;' : '' ?>" <?= $is_pub === 0 ? 'disabled' : '' ?>>非表示</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+
             <!-- 管理者用 案件別チャットUI -->
             <div class="task-card">
                 <?php
@@ -454,51 +558,60 @@ if ($is_admin) {
             </div>
         </div>
         <?php foreach ($my_tasks as $task): 
-            // 該当案件の最新CADファイルを取得 (承諾前[requested]または承諾済[accepted]の期間は一時的に強制表示)
-            if ($task['status'] === 'requested' || $task['status'] === 'accepted') {
-                $stmtFiles = $pdo->prepare("
-                    SELECT * FROM project_files 
-                    WHERE project_id = :project_id 
-                    AND file_category LIKE 'cad_%' 
-                    AND is_latest = 1
-                ");
-            } else {
-                $stmtFiles = $pdo->prepare("
-                    SELECT * FROM project_files 
-                    WHERE project_id = :project_id 
-                    AND file_category LIKE 'cad_%' 
-                    AND is_latest = 1 
-                    AND is_published_to_sub = 1
-                ");
-            }
+            // 該当案件の最新共通図書・CADファイル（公開フラグ=1のもののみ）を取得
+            $stmtFiles = $pdo->prepare("
+                SELECT * FROM project_files 
+                WHERE project_id = :project_id 
+                  AND file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
+                  AND is_latest = 1 
+                  AND is_published_to_sub = 1
+            ");
             $stmtFiles->execute(['project_id' => $task['project_id']]);
-            $cad_files = $stmtFiles->fetchAll();
+            $shared_files = $stmtFiles->fetchAll();
         ?>
             <div class="task-card">
                 <h3>案件名: <?= htmlspecialchars($task['project_name'], ENT_QUOTES) ?></h3>
                 <p>依頼内容: <?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?></p>
                 <p>報酬額: <strong><?= number_format($task['order_amount']) ?>円</strong></p>
 
-                <!-- CADデータ表示セクション (常に表示) -->
-                <div class="cad-files-section" style="margin:15px 0; border:1px solid #cce5ff; background:#e6f2ff; padding:10px; border-radius:5px; font-size:13px;">
-                    <strong style="color:#004085;">📂 共有されたCADデータ:</strong>
-                    <?php if (count($cad_files) > 0): ?>
-                        <ul style="margin:5px 0 0 0; padding-left:20px;">
-                            <?php foreach ($cad_files as $file): 
+                <!-- 共有された図書・CADデータ表示セクション -->
+                <div class="shared-files-section" style="margin:15px 0; border:1px solid #cce5ff; background:#e6f2ff; padding:12px; border-radius:6px; font-size:13px; border-left: 5px solid #2563eb;">
+                    <strong style="color:#004085; display:block; margin-bottom:8px; font-size:14px;">📂 共有された共通図書・CADデータ:</strong>
+                    <?php if (count($shared_files) > 0): ?>
+                        <ul style="margin:5px 0 0 0; padding-left:20px; line-height:1.8;">
+                            <?php 
+                            $sub_cat_names = [
+                                'cad_layout'    => '配置図 (CAD)',
+                                'cad_plan_1f'   => '1F平面図 (CAD)',
+                                'cad_plan_2f'   => '2F平面図 (CAD)',
+                                'cad_plan_3f'   => '3F平面図 (CAD)',
+                                'cad_plan_ph'   => 'PH平面図 (CAD)',
+                                'cad_plan_rf'   => 'RF平面図 (CAD)',
+                                'cad_elevation' => '立面図 (CAD)',
+                                'cad_section'   => '矩計図 (CAD)',
+                                'app_doc'       => '確認申請書',
+                                'soil_report'   => '地盤調査報告書',
+                                'soil_impr'     => '地盤改良設計書',
+                                'pdf_precut'    => 'プレカット図等',
+                            ];
+                            foreach ($shared_files as $file): 
                                 $download_url = htmlspecialchars($file['drive_file_id'], ENT_QUOTES);
                                 if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
                                     $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
                                 }
+                                $lbl = $sub_cat_names[$file['file_category']] ?? $file['file_category'];
                             ?>
-                                <li style="margin-bottom:3px;">
-                                    <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">
-                                        📄 <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> <span class="badge" style="background:#555; color:white; font-size:10px; padding:1px 4px; border-radius:3px;">V<?= $file['version'] ?></span>
+                                <li style="margin-bottom:5px;">
+                                    <span style="font-weight:bold; color:#1e40af; margin-right:5px;">[<?= htmlspecialchars($lbl, ENT_QUOTES) ?>]</span>
+                                    <a href="<?= $download_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none; border-bottom:1px dashed #0056b3;">
+                                        <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> 
                                     </a>
+                                    <span class="badge" style="background:#64748b; color:white; font-size:9px; padding:1px 4px; border-radius:3px; margin-left:5px;">V<?= $file['version'] ?></span>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
                     <?php else: ?>
-                        <div style="color:#856404; font-size:12px; margin-top:5px;">現在共有されているCADデータはありません。（管理者が公開するとここに表示されます）</div>
+                        <div style="color:#856404; font-size:12px; margin-top:5px;">現在共有されている図書・CADデータはありません。（管理者が公開するとここに表示されます）</div>
                     <?php endif; ?>
                 </div>
                 

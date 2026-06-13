@@ -25,7 +25,7 @@
         $common_docs['soil_report'] = '地盤調査報告書 🟡後出し可';
     }
     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-        $common_docs['pdf_precut'] = 'プレカット図';
+        $common_docs['pdf_precut'] = 'プレカット図等';
     }
     if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
         $common_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';

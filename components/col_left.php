@@ -94,7 +94,7 @@
             ?>
             <div class="box" style="margin-top:10px; border-color:#7c3aed; background:#f5f3ff;">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:8px;">
-                    <h3 style="margin:0; font-size:14px; color:#5b21b6;">🟣 構造仕様指定</h3>
+                    <h3 style="margin:0; font-size:14px; color:#5b21b6;">🟣 構造仕様指定（ここで指定するか、依頼主アップロード図書内のプレカット図等にUPしてください）</h3>
                     <button id="toggle_specs_edit_btn" onclick="toggleSpecsEdit()" style="background:#7c3aed; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; transition:background 0.2s;">
                         ✏️ 編集する
                     </button>

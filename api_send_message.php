@@ -2,6 +2,7 @@
 ini_set('display_errors', 0);
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/google_drive_client.php';
 
 session_start();
 if (!isset($_SESSION['user_id'])) {
@@ -21,13 +22,15 @@ if (!$projectId) {
     exit;
 }
 
-// Drive upload logic is typically kept here or in ChatService
 $uploadedDriveId = null;
 $fileType = null;
 if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-    // 既存の Google Drive アップロード処理を呼び出すと仮定
-    // $uploadedDriveId = uploadToDrive($_FILES['file']);
-    // $fileType = strpos($_FILES['file']['type'], 'image') === 0 ? 'image' : 'pdf';
+    $fileTmp = $_FILES['file']['tmp_name'];
+    $fileName = $_FILES['file']['name'];
+    $mimeType = $_FILES['file']['type'];
+    
+    $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType);
+    $fileType = (strpos($mimeType, 'image/') === 0) ? 'image' : 'pdf';
 }
 
 $container = AppContainer::getInstance();

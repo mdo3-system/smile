@@ -44,7 +44,7 @@
                 $hw_json = json_decode($project_info['hardware_details'] ?? '{}', true) ?: [];
             ?>
             <div class="box" style="margin-top:10px; border-color:#7c3aed; background:#f5f3ff;">
-                <h3 style="margin-top:0; font-size:14px; color:#5b21b6; border-bottom:1px solid #ddd; padding-bottom:5px;">🟣 構造仕様指定</h3>
+                <h3 style="margin-top:0; font-size:14px; color:#5b21b6; border-bottom:1px solid #ddd; padding-bottom:5px;">🟣 構造仕様指定（ここで指定するか、依頼主アップロード図書内のプレカット図等にUPしてください）</h3>
                 <table style="width:100%; border-collapse:collapse; font-size:12px; line-height:1.6;">
                     <tr><td style="width:70px; font-weight:bold; color:#4b5563; padding:2px 0;">土台:</td><td><?= htmlspecialchars($wood_json['dodai'] ?? '-', ENT_QUOTES) ?></td></tr>
                     <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">大引:</td><td><?= htmlspecialchars($wood_json['obiki'] ?? '-', ENT_QUOTES) ?></td></tr>
