@@ -246,6 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
         </div>
+        <div style="text-align:center; font-size:11px; color:#475569; margin-top:20px; font-weight:bold;">Ver: v1.3.6</div>
     </div>
 </body>
 </html>
