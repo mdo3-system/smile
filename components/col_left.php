@@ -439,6 +439,40 @@
                             </div>
                         </div>
 
+                        <!-- 協力業者支払状況入力エリア -->
+                        <div style="background:#fffcf5; padding:8px; border:1px solid #fed7aa; border-radius:6px; margin-bottom:10px;">
+                            <strong style="display:block; font-size:11px; color:#c2410c; margin-bottom:5px;">🤝 協力業者への支払状況管理</strong>
+                            <?php if (empty($orders)): ?>
+                                <div style="font-size:10px; color:#666; text-align:center; padding:5px;">発注履歴はありません。</div>
+                            <?php else: ?>
+                                <div style="display:flex; flex-direction:column; gap:5px;">
+                                    <?php foreach ($orders as $o): 
+                                        $pay_status = $o['payment_status'] ?: 'unpaid';
+                                    ?>
+                                        <div style="border-bottom:1px dashed #fed7aa; padding-bottom:5px; margin-bottom:5px; padding-top:2px;">
+                                            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:bold; margin-bottom:2px;">
+                                                <span>👷 <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?> (<?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?>)</span>
+                                                <span style="color:#c2410c;"><?= number_format($o['order_amount']) ?>円</span>
+                                            </div>
+                                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                                <div>
+                                                    <label style="font-size:9px; display:block; margin-bottom:1px;">支払日:</label>
+                                                    <input type="date" name="order_payment_dates[<?= $o['id'] ?>]" value="<?= htmlspecialchars($o['payment_date'] ?? '') ?>" style="width:100%; padding:2px; box-sizing:border-box; font-size:10px;">
+                                                </div>
+                                                <div>
+                                                    <label style="font-size:9px; display:block; margin-bottom:1px;">状況:</label>
+                                                    <select name="order_payment_statuses[<?= $o['id'] ?>]" style="width:100%; padding:2px; box-sizing:border-box; font-size:10px; font-weight:bold;">
+                                                        <option value="unpaid" <?= $pay_status === 'unpaid' ? 'selected' : '' ?>>未払</option>
+                                                        <option value="paid" <?= $pay_status === 'paid' ? 'selected' : '' ?>>支払済</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
                         <div style="margin-bottom:10px;">
                             <label style="display:block;margin-bottom:2px;">見積書・請求書 宛先名称:</label>
                             <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '') ?>" placeholder="空欄時は会社名＋担当者名" style="width:100%; padding:4px; box-sizing:border-box;">

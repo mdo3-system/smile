@@ -36,11 +36,12 @@ function buildBubble(msg) {
         }
     }
 
+    const avatarHtml = !isMe ? `<div class="chat-avatar ${avatarClass}" title="${senderName}">${avatarIcon}</div>` : '';
     const nameHtml = !isMe ? `<div class="chat-name">${senderName}</div>` : '';
     const textHtml = msg.message_text ? `<div class="chat-bubble ${bubbleClass}">${msg.message_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>` : '';
 
     return `<div class="chat-bubble-row ${rowClass}" data-msg-id="${msg.id}">
-        <div class="chat-avatar ${avatarClass}">${avatarIcon}</div>
+        ${avatarHtml}
         <div class="chat-content">
             ${nameHtml}
             ${textHtml}
@@ -125,12 +126,41 @@ function handleKey(e) {
 function previewFile(input) {
     const preview = document.getElementById('filePreview');
     const label = input.closest('.chat-attach-btn');
+    const textarea = document.getElementById('chatTextarea');
+    const sendBtn = document.querySelector('.chat-send-btn');
+
     if (input.files && input.files[0]) {
-        preview.innerHTML = `<span class="preview-badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:4px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:1px solid #bae6fd; font-weight:bold;">📎 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:3px; font-size:14px; line-height:1;" onclick="removeChatFile('${input.id}')">×</span></span>`;
-        if (label) label.classList.add('attached');
+        preview.innerHTML = `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); animation: pulse-green-border 2s infinite;">📎 【送信待ち】 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2fee; border-radius:50%;" onclick="removeChatFile('${input.id}')">×</span></span>`;
+        if (label) {
+            label.classList.add('attached');
+            label.style.background = '#10b981';
+            label.style.borderColor = '#059669';
+        }
+        if (textarea) {
+            textarea.style.background = '#f0fdf4';
+            textarea.style.borderColor = '#10b981';
+            textarea.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
+        }
+        if (sendBtn) {
+            sendBtn.style.background = '#10b981';
+            sendBtn.style.animation = 'pulse-green 1.5s infinite';
+        }
     } else {
         preview.innerHTML = '';
-        if (label) label.classList.remove('attached');
+        if (label) {
+            label.classList.remove('attached');
+            label.style.background = '';
+            label.style.borderColor = '';
+        }
+        if (textarea) {
+            textarea.style.background = '';
+            textarea.style.borderColor = '';
+            textarea.style.boxShadow = '';
+        }
+        if (sendBtn) {
+            sendBtn.style.background = '';
+            sendBtn.style.animation = '';
+        }
     }
 }
 

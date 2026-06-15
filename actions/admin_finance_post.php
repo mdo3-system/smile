@@ -86,6 +86,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => $project_id
         ]);
 
+        // 協力業者支払情報の更新
+        $order_payment_statuses = $_POST['order_payment_statuses'] ?? [];
+        $order_payment_dates = $_POST['order_payment_dates'] ?? [];
+        foreach ($order_payment_statuses as $order_id => $pay_status) {
+            $pay_date = !empty($order_payment_dates[$order_id]) ? $order_payment_dates[$order_id] : null;
+            $stmtSubOrder = $pdo->prepare("
+                UPDATE subcontractor_orders 
+                SET payment_status = :pay_status,
+                    payment_date = :pay_date
+                WHERE id = :id
+            ");
+            $stmtSubOrder->execute([
+                'pay_status' => $pay_status,
+                'pay_date' => $pay_date,
+                'id' => (int)$order_id
+            ]);
+        }
+
         header("Location: ../project_detail.php?id=" . $project_id . "&t=" . time());
         exit;
     } catch (Exception $e) {
