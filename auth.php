@@ -48,9 +48,25 @@ if (isset($_GET['token'])) {
 
 // 2. ログインチェックおよびロール判定関数
 function check_auth($allowed_roles = []) {
+    global $pdo;
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
         header("Location: login.php");
         exit;
+    }
+
+    // 常にDBから最新情報を取得してセッションを同期
+    if (isset($pdo)) {
+        $stmt = $pdo->prepare("SELECT role, contact_name FROM users WHERE id = :id");
+        $stmt->execute(['id' => $_SESSION['user_id']]);
+        $user = $stmt->fetch();
+        if ($user) {
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['contact_name'] = $user['contact_name'];
+        } else {
+            session_destroy();
+            header("Location: login.php");
+            exit;
+        }
     }
 
     if (!empty($allowed_roles) && !in_array($_SESSION['role'], $allowed_roles)) {

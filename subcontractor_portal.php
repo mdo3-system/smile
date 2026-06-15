@@ -307,10 +307,10 @@ $global_messages = $stmtChat->fetchAll();
                 </form>
             </div>
 
-            <!-- 💰 月次・請求支払い状況 -->
+            <!-- 💰 月次報酬・お受け取り状況 -->
             <div class="box">
-                <h3>💰 月次・請求支払い状況</h3>
-                <p style="font-size:12px; color:#666; margin-top:0;">納品完了した案件の報酬額（月別）などを管理します。</p>
+                <h3>💰 月次報酬・お受け取り状況</h3>
+                <p style="font-size:12px; color:#666; margin-top:0;">納品完了した案件の報酬額（月別）などのお受け取り状況を管理します。</p>
                 
                 <?php if (count($monthly_totals) > 0): ?>
                     <div style="display:flex; flex-direction:column; gap:10px;">
@@ -323,17 +323,17 @@ $global_messages = $stmtChat->fetchAll();
                                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:5px;">
                                     <strong style="font-size:15px; color:#1e293b;"><?= $month ?> 納品分</strong>
                                     <?php if ($balance <= 0): ?>
-                                        <span class="badge" style="background:#10b981;">支払完了</span>
+                                        <span class="badge" style="background:#10b981;">お受け取り完了</span>
                                     <?php else: ?>
-                                        <span class="badge" style="background:#ef4444;">未払残あり</span>
+                                        <span class="badge" style="background:#ef4444;">お受け取り待ち</span>
                                     <?php endif; ?>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
-                                    <span>合計報酬額:</span>
+                                    <span>ご請求額:</span>
                                     <strong><?= number_format($total) ?> 円</strong>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; color:#10b981;">
-                                    <span>支払済額:</span>
+                                    <span>お受け取り済額:</span>
                                     <strong><?= number_format($paid_amount) ?> 円</strong>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444;">

@@ -1,76 +1,19 @@
 <div class="column col-center" style="flex: none;">
-    <h2 class="section-title" style="background:#3b82f6;">📂 依頼主アップロード図書</h2>
+    <h2 class="section-title" style="background:#4f46e5;">📂 一次回答後のアップロード図書</h2>
     <div style="font-size:12px; color:#555; margin-bottom:15px;">
-        必要な図書を以下からアップロード・差し替えしてください。<br>
+        追加資料や補正通知などがある場合は、以下からアップロード・差し替えしてください。<br>
         常に最新版が表示され、過去の履歴もプルダウンから確認可能です。
     </div>
 
     <?php
-    // 依頼内容に基づく必要図書の判定 (グループ分け)
-    $upload_sections = [];
+    $post_upload_sections = [
+        '追加資料・補正通知など' => [
+            'correction_notice' => '補正通知書',
+            'other_extra' => 'その他追加資料'
+        ]
+    ];
 
-    // 1. 共通図書・CAD
-    $common_docs = [];
-    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-        $common_docs['cad_layout'] = '配置図 ※正式依頼時必須';
-        $common_docs['cad_plan_1f'] = '1F平面図 ※正式依頼時必須';
-        $common_docs['cad_plan_2f'] = '2F平面図 ※正式依頼時必須';
-        $common_docs['cad_elevation'] = '立面図 ※正式依頼時必須';
-        $common_docs['cad_section'] = '矩計図 ※正式依頼時必須';
-    }
-    // 確認申請書は全依頼で必須（後出し可）
-    $common_docs['app_doc'] = '確認申請書（2〜5面）🟡後出し可';
-    // 地盤調査報告書は許容応力度・基礎梁許容応力度のみ必須（後出し可）
-    if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-        $common_docs['soil_report'] = '地盤調査報告書 🟡後出し可';
-    }
-    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-        $common_docs['pdf_precut'] = 'プレカット図等';
-    }
-    if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-        $common_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';
-    }
-    $upload_sections['共通図書・CADデータ'] = $common_docs;
-
-    // 2. 外皮計算用
-    if ($project_info['req_skin'] == 1) {
-        $upload_sections['外皮計算用資料'] = [
-            'spec_doc' => '仕様書',
-            'insulation_data' => '断熱材資料',
-            'sash_data' => 'サッシ・玄関ドア仕様',
-            'ventilation_data' => '24時間換気計算図書',
-            'equip_data' => '設備機器カタログ'
-        ];
-    }
-
-    // 3. 天空率用
-    if ($project_info['req_sky'] == 1) {
-        $req_road = true;
-        $req_north = true;
-        if (isset($all_estimates) && !empty($all_estimates)) {
-            $latest_note = json_decode($all_estimates[0]['note'] ?? '[]', true) ?: [];
-            $has_road = false;
-            $has_north = false;
-            foreach ($latest_note as $item) {
-                if (isset($item['name'])) {
-                    if (strpos($item['name'], '天空率 道路斜線') !== false) $has_road = true;
-                    if (strpos($item['name'], '天空率 北側斜線') !== false) $has_north = true;
-                }
-            }
-            if ($has_road || $has_north) {
-                $req_road = $has_road;
-                $req_north = $has_north;
-            }
-        }
-        $sky_docs = [];
-        if ($req_road) $sky_docs['road_data'] = '道路の資料';
-        if ($req_north) $sky_docs['true_north'] = '真北の資料';
-        if (!empty($sky_docs)) {
-            $upload_sections['天空率用資料'] = $sky_docs;
-        }
-    }
-
-    foreach ($upload_sections as $section_title => $categories):
+    foreach ($post_upload_sections as $section_title => $categories):
     ?>
         <div class="box" style="margin-bottom:15px; background:#f8fafc; border:1px solid #cbd5e1;">
             <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #cbd5e1; padding-bottom:5px; color:#1e293b;"><?= $section_title ?></h3>
@@ -98,18 +41,6 @@
                                     </a>
                                 <?php endif; ?>
                                 
-                                <?php if ($is_admin && strpos($cat, 'cad_') === 0): ?>
-                                    <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
-                                        <input type="hidden" name="action" value="toggle_cad_publish">
-                                        <input type="hidden" name="file_id" value="<?= $latest['id'] ?>">
-                                        <?php if ($latest['is_published_to_sub']): ?>
-                                            <button type="submit" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;" onclick="return confirm('業者への公開を取り消しますか？')">業者公開を解除</button>
-                                        <?php else: ?>
-                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;">業者へ公開する</button>
-                                        <?php endif; ?>
-                                    </form>
-                                <?php endif; ?>
-
                                 <?php if (count($history) > 1): ?>
                                     <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
                                         <option value="">過去バージョン...</option>
@@ -162,4 +93,3 @@
         </div>
     <?php endforeach; ?>
 </div>
-

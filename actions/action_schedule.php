@@ -1,6 +1,18 @@
 <?php
 // actions/action_schedule.php
 
+if (isset($project_id) && (!isset($project_info) || !$project_info)) {
+    $stmtProj = $pdo->prepare("
+        SELECT p.*, s.*, u.company_name, u.contact_name as client_name, u.phone_number as client_phone
+        FROM projects p 
+        LEFT JOIN project_specs s ON p.id = s.project_id 
+        LEFT JOIN users u ON p.client_id = u.id
+        WHERE p.id = :id
+    ");
+    $stmtProj->execute(['id' => $project_id]);
+    $project_info = $stmtProj->fetch();
+}
+
 // 管理者による一次回答期日設定
 if ($action === 'set_primary_due_date') {
     if ($is_admin) {
