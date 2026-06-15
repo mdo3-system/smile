@@ -93,6 +93,33 @@ class EstimateController
                 }
             }
 
+            // is_additional = 1 の場合、追加見積額を projects.additional_estimates JSON に追記更新
+            $isAdditional = isset($_POST['is_additional']) && $_POST['is_additional'] === '1';
+            if ($isAdditional) {
+                $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice > 0) {
+                    $tax = round($totalPrice * 0.1);
+                    $grandTotal = $totalPrice + $tax;
+                    
+                    // 現在の projects.additional_estimates を取得
+                    $stmtGetAdd = $pdo->prepare("SELECT additional_estimates FROM projects WHERE id = :pid");
+                    $stmtGetAdd->execute(['pid' => $projectId]);
+                    $currentAddJson = $stmtGetAdd->fetchColumn();
+                    $addEstimates = json_decode($currentAddJson ?? '[]', true) ?: [];
+                    
+                    // 新しい追加見積データを追加
+                    $addEstimates[] = [
+                        'amount' => $grandTotal,
+                        'date' => date('Y-m-d'),
+                        'note' => 'シミュレーター発行追加見積'
+                    ];
+                    
+                    $newAddJson = json_encode($addEstimates, JSON_UNESCAPED_UNICODE);
+                    $stmtUpdateAdd = $pdo->prepare("UPDATE projects SET additional_estimates = :add_json WHERE id = :pid");
+                    $stmtUpdateAdd->execute(['add_json' => $newAddJson, 'pid' => $projectId]);
+                }
+            }
+
             $debug = ob_get_clean();
             header('Content-Type: application/json');
             echo json_encode([

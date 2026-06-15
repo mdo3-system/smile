@@ -398,7 +398,7 @@ if ($is_admin) {
                             </div>
                             <div style="font-size:13px; color:#444; line-height:1.6;">
                                 依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
-                                依頼額: <?= number_format($o['order_amount']) ?>円<br>
+                                依頼額: <?= number_format($o['order_amount']) ?>円<?php if ($o['status'] === 'completed' && !empty($o['completed_at'])): ?> <span style="color:#059669; font-weight:bold; font-size:12px;">(納品日: <?= date('Y/m/d', strtotime($o['completed_at'])) ?>)</span><?php endif; ?><br>
                                 依頼日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
                                 希望納品日: <?= !empty($o['due_date']) ? date('Y年m月d日', strtotime($o['due_date'])) : '未設定' ?><br>
                                 完了予定日 (業者回答): <?= !empty($o['expected_delivery_date']) ? '<strong style="color:#e67e22;">'.date('Y年m月d日', strtotime($o['expected_delivery_date'])).'</strong>' : '<span style="color:#999;">未定</span>' ?>
@@ -686,7 +686,12 @@ if ($is_admin) {
                             <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:6px; display:flex; flex-direction:column; gap:10px;">
                                 <div style="border-bottom: 1px solid #eee; padding-bottom: 8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                                     <span style="font-size:14px; font-weight:bold; color:#333;">📋 依頼内容: <?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?></span>
-                                    <span style="font-size:13px;">報酬額: <strong style="color:#d97706;"><?= number_format($task['order_amount']) ?>円</strong></span>
+                                    <span style="font-size:13px;">
+                                        報酬額: <strong style="color:#d97706;"><?= number_format($task['order_amount']) ?>円</strong>
+                                        <?php if ($task['status'] === 'completed' && !empty($task['completed_at'])): ?>
+                                            <span style="margin-left: 10px; color: #059669; font-size:11px; font-weight:bold;">(納品日: <?= date('Y/m/d', strtotime($task['completed_at'])) ?>)</span>
+                                        <?php endif; ?>
+                                    </span>
                                 </div>
                                 
                                 <?php if ($task['status'] === 'requested'): ?>

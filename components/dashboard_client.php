@@ -144,16 +144,34 @@
                 <div style="font-size:13px; line-height:1.8;">
                     <?php
                         $initial = $project_info['initial_est_amount'] ?? 0;
-                        $initial_date = $project_info['initial_est_date'] ?? '-';
+                        $initial_date = $project_info['initial_est_date'] ?? '';
                         $formal = $project_info['formal_est_amount'] ?? 0;
-                        $formal_date = $project_info['formal_est_date'] ?? '-';
-                        $add = $project_info['add_est_amount'] ?? 0;
-                        $add_date = $project_info['add_est_date'] ?? '-';
-                        $deposit = $project_info['deposit_amount'] ?? 0;
-                        $deposit_date = $project_info['deposit_date'] ?? '-';
+                        $formal_date = $project_info['formal_est_date'] ?? '';
+                        
+                        // 複数追加見積のパース
+                        $add_estimates = json_decode($project_info['additional_estimates'] ?? '[]', true) ?: [];
+                        
+                        $dep_50 = $project_info['deposit_amount_50'] ?? 0;
+                        $dep_date_50 = $project_info['deposit_date_50'] ?? '';
+                        $dep_rem = $project_info['deposit_amount_rem'] ?? 0;
+                        $dep_date_rem = $project_info['deposit_date_rem'] ?? '';
+                        $additional_deposits = json_decode($project_info['additional_deposits'] ?? '[]', true) ?: [];
 
-                        $total_req = $formal + $add;
-                        $balance = $total_req - $deposit;
+                        // 合計追加費用
+                        $total_add = 0;
+                        foreach ($add_estimates as $ae) {
+                            $total_add += intval($ae['amount']);
+                        }
+
+                        // 追加入金合計
+                        $total_add_dep = 0;
+                        foreach ($additional_deposits as $ad) {
+                            $total_add_dep += intval($ad['amount']);
+                        }
+
+                        $total_req = $formal + $total_add;
+                        $total_deposit = $dep_50 + $dep_rem + $total_add_dep;
+                        $balance = $total_req - $total_deposit;
 
                         // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
                         $primary_invoice_amount = 0;
@@ -165,27 +183,57 @@
                         }
                     ?>
                     <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>初期お見積額 (<?= htmlspecialchars($initial_date) ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
+                        <span>初期お見積額 (<?= $initial_date ? htmlspecialchars($initial_date) : '-' ?>):</span> <strong><?= number_format($initial) ?> 円</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span>本見積額 (<?= htmlspecialchars($formal_date) ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
+                        <span>本見積額 (<?= $formal_date ? htmlspecialchars($formal_date) : '-' ?>):</span> <strong><?= number_format($formal) ?> 円</strong>
                     </div>
-                    <?php if ($add > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#c0392b; margin-bottom: 5px;">
-                        <span>追加費用 (<?= htmlspecialchars($add_date) ?>):</span> <strong>+ <?= number_format($add) ?> 円</strong>
+                    
+                    <!-- 追加見積一覧の表示 -->
+                    <div style="margin-left: 10px; font-size:12px; color:#c0392b;">
+                        <?php foreach ($add_estimates as $idx => $ae): ?>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span>・追加見積 #<?= $idx+1 ?> (<?= htmlspecialchars($ae['date'] ?: '-') ?>):</span>
+                                <strong>+ <?= number_format($ae['amount']) ?> 円</strong>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <?php endif; ?>
+
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
                         <span>合計ご請求額 (本見積＋追加):</span> <strong><?= number_format($total_req) ?> 円</strong>
                     </div>
                     <?php if ($formal > 0): ?>
-                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 5px;">
-                        <span>一次請求額 (着手金50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
+                    <div style="display:flex; justify-content:space-between; color:#4a5568; margin-bottom: 2px;">
+                        <span>└ 一次請求予定額 (50%):</span> <strong><?= number_format($primary_invoice_amount) ?> 円</strong>
                     </div>
                     <?php endif; ?>
-                    <div style="display:flex; justify-content:space-between; color:#28a745;">
-                        <span>入金済額 (<?= htmlspecialchars($deposit_date) ?>):</span> <strong>- <?= number_format($deposit) ?> 円</strong>
+                    
+                    <div style="display:flex; justify-content:space-between; color:#28a745; margin-top: 5px;">
+                        <span>入金済合計 (50% + 残金 + 追加):</span> <strong>- <?= number_format($total_deposit) ?> 円</strong>
                     </div>
+                    
+                    <!-- 各入金の明細表示 -->
+                    <div style="margin-left: 10px; font-size:11px; color:#555; line-height: 1.4;">
+                        <?php if ($dep_50 > 0): ?>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span>・着手金 (50%) 入金 (<?= htmlspecialchars($dep_date_50 ?: '-') ?>):</span>
+                                <span><?= number_format($dep_50) ?> 円</span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($dep_rem > 0): ?>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span>・残金入金 (<?= htmlspecialchars($dep_date_rem ?: '-') ?>):</span>
+                                <span><?= number_format($dep_rem) ?> 円</span>
+                            </div>
+                        <?php endif; ?>
+                        <?php foreach ($additional_deposits as $idx => $ad): ?>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span>・追加入金 (<?= htmlspecialchars($ad['date'] ?: '-') ?><?php if(!empty($ad['note'])) echo ' - ' . htmlspecialchars($ad['note']); ?>):</span>
+                                <span><?= number_format($ad['amount']) ?> 円</span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
                     <div style="display:flex; justify-content:space-between; margin-top:5px; border-top:1px solid #ccc; padding-top:5px; font-size:15px; font-weight:bold; color:#d32f2f;">
                         <span>最終ご請求額 (残金精算額):</span> <span><?= number_format($balance) ?> 円</span>
                     </div>
@@ -239,6 +287,7 @@
         <!-- カラム2：成果物一覧 ＋ スケジュール -->
         <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
             <?php require __DIR__ . '/col_center_deliverables.php'; ?>
+            <?php require __DIR__ . '/col_center_uploads.php'; ?>
 
             <!-- スケジュールボックス（旧左カラムから移動） -->
             <?php
@@ -471,7 +520,6 @@
                 </div>
             </div>
             
-            <?php require __DIR__ . '/col_center_uploads.php'; ?>
         </div>
         
         <!-- ===== 基本情報編集モーダル ===== -->

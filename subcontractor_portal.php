@@ -222,7 +222,12 @@ $global_messages = $stmtChat->fetchAll();
                             ?>
                         </div>
                         <p style="margin: 8px 0; font-size: 13px; color: #555;">依頼内容: <?= htmlspecialchars($t['task_title']) ?></p>
-                        <p style="margin: 0; font-size: 13px; font-weight:bold;">発注額: <?= number_format($t['order_amount']) ?>円</p>
+                        <p style="margin: 0; font-size: 13px; font-weight:bold;">
+                            発注額: <?= number_format($t['order_amount']) ?>円
+                            <?php if ($t['status'] === 'completed' && !empty($t['completed_at'])): ?>
+                                <span style="margin-left: 10px; color: #059669; font-size:12px;">(納品日: <?= date('Y/m/d', strtotime($t['completed_at'])) ?>)</span>
+                            <?php endif; ?>
+                        </p>
                         
                         <!-- 案件ごとの詳細へ飛ぶリンク -->
                         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
