@@ -347,7 +347,7 @@
                     }
 
                     echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';
-                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日</th></tr></thead>';
+                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日/実績日</th></tr></thead>';
                     echo '<tbody>';
                     
                     $calc_date = $primary_due_date;
@@ -401,34 +401,6 @@
             </div>
             <?php endforeach; ?>
             
-            <?php
-            // 構造仕様表示用の処理
-            $needs_specs = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
-            if ($needs_specs):
-                $wood_json = json_decode($project_info['wood_details'] ?? '{}', true) ?: [];
-                $wall_json = json_decode($project_info['wall_details'] ?? '{}', true) ?: [];
-                $hw_json = json_decode($project_info['hardware_details'] ?? '{}', true) ?: [];
-            ?>
-            <div class="box" style="margin-top:10px; border-color:#7c3aed; background:#f5f3ff;">
-                <h3 style="margin-top:0; font-size:14px; color:#5b21b6; border-bottom:1px solid #ddd; padding-bottom:5px;">🟣 構造仕様指定（ここで指定するか、依頼主アップロード図書内のプレカット図等にUPしてください）</h3>
-                <table style="width:100%; border-collapse:collapse; font-size:12px; line-height:1.6;">
-                    <tr><td style="width:70px; font-weight:bold; color:#4b5563; padding:2px 0;">土台:</td><td><?= htmlspecialchars($wood_json['dodai'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">大引:</td><td><?= htmlspecialchars($wood_json['obiki'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">柱:</td><td><?= htmlspecialchars($wood_json['hashira'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">梁:</td><td><?= htmlspecialchars($wood_json['hari'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">小屋束:</td><td><?= htmlspecialchars($wood_json['koya'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">母屋:</td><td><?= htmlspecialchars($wood_json['moya'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">棟木:</td><td><?= htmlspecialchars($wood_json['munagi'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">垂木:</td><td><?= htmlspecialchars($wood_json['taruki'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0; border-top:1px dashed #ddd;">耐力壁:</td><td style="border-top:1px dashed #ddd;"><?= htmlspecialchars($wall_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">金物:</td><td><?= htmlspecialchars($hw_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <?php if (!empty($project_info['client_notes_extra'])): ?>
-                    <tr><td colspan="2" style="border-top:1px dashed #ddd; padding-top:5px; font-weight:bold; color:#4b5563;">特記事項:</td></tr>
-                    <tr><td colspan="2" style="font-size:11px; background:#fff; padding:6px; border:1px solid #ddd; border-radius:4px; margin-top:2px; white-space:pre-wrap;"><?= htmlspecialchars($project_info['client_notes_extra'], ENT_QUOTES) ?></td></tr>
-                    <?php endif; ?>
-                </table>
-            </div>
-            <?php endif; ?>
         </div>
 
         <!-- 右パネル：チャット ＋ 依頼主アップロード図書 -->
@@ -520,6 +492,35 @@
                 </div>
             </div>
             <?php require __DIR__ . '/col_center_uploads.php'; ?>
+            
+            <?php
+            // 構造仕様表示用の処理
+            $needs_specs = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
+            if ($needs_specs):
+                $wood_json = json_decode($project_info['wood_details'] ?? '{}', true) ?: [];
+                $wall_json = json_decode($project_info['wall_details'] ?? '{}', true) ?: [];
+                $hw_json = json_decode($project_info['hardware_details'] ?? '{}', true) ?: [];
+            ?>
+            <div class="box" style="margin-top:10px; border-color:#7c3aed; background:#f5f3ff;">
+                <h3 style="margin-top:0; font-size:14px; color:#5b21b6; border-bottom:1px solid #ddd; padding-bottom:5px;">🟣 構造仕様指定</h3>
+                <table style="width:100%; border-collapse:collapse; font-size:12px; line-height:1.6;">
+                    <tr><td style="width:70px; font-weight:bold; color:#4b5563; padding:2px 0;">土台:</td><td><?= htmlspecialchars($wood_json['dodai'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">大引:</td><td><?= htmlspecialchars($wood_json['obiki'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">柱:</td><td><?= htmlspecialchars($wood_json['hashira'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">梁:</td><td><?= htmlspecialchars($wood_json['hari'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">小屋束:</td><td><?= htmlspecialchars($wood_json['koya'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">母屋:</td><td><?= htmlspecialchars($wood_json['moya'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">棟木:</td><td><?= htmlspecialchars($wood_json['munagi'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">垂木:</td><td><?= htmlspecialchars($wood_json['taruki'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0; border-top:1px dashed #ddd;">耐力壁:</td><td style="border-top:1px dashed #ddd;"><?= htmlspecialchars($wall_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">金物:</td><td><?= htmlspecialchars($hw_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
+                    <?php if (!empty($project_info['client_notes_extra'])): ?>
+                    <tr><td colspan="2" style="border-top:1px dashed #ddd; padding-top:5px; font-weight:bold; color:#4b5563;">特記事項:</td></tr>
+                    <tr><td colspan="2" style="font-size:11px; background:#fff; padding:6px; border:1px solid #ddd; border-radius:4px; margin-top:2px; white-space:pre-wrap;"><?= htmlspecialchars($project_info['client_notes_extra'], ENT_QUOTES) ?></td></tr>
+                    <?php endif; ?>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
         
         <!-- ===== 基本情報編集モーダル ===== -->

@@ -325,7 +325,7 @@ $global_messages = $stmtChat->fetchAll();
                                     <?php if ($balance <= 0): ?>
                                         <span class="badge" style="background:#10b981;">お受け取り完了</span>
                                     <?php else: ?>
-                                        <span class="badge" style="background:#ef4444;">お受け取り待ち</span>
+                                        <span class="badge" style="background:#ef4444;">支払期日前</span>
                                     <?php endif; ?>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
@@ -333,7 +333,7 @@ $global_messages = $stmtChat->fetchAll();
                                     <strong><?= number_format($total) ?> 円</strong>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; color:#10b981;">
-                                    <span>お受け取り済額:</span>
+                                    <span>弊社支払額:</span>
                                     <strong><?= number_format($paid_amount) ?> 円</strong>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444;">

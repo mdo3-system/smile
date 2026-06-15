@@ -104,24 +104,30 @@
                         $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
                     }
 
-                    // 実施日入力フォーム (管理者のみ、一次回答日設定後)
-                    $actual_form = '';
-                    if ($is_admin && $primary_due_date) {
-                        $actual_form = '
-                        <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:5px; align-items:center;">
-                            <input type="hidden" name="action" value="update_schedule_actual">
-                            <input type="hidden" name="schedule_type" value="'.htmlspecialchars($scheduleItem['type'], ENT_QUOTES).'">
-                            <input type="hidden" name="step_idx" value="'.$idx.'">
-                            <input type="date" name="actual_date" value="'.htmlspecialchars($actual_date, ENT_QUOTES).'" style="font-size:10px; padding:2px;">
-                            <button type="submit" style="font-size:10px; padding:2px 5px; background:#e2e8f0; border:1px solid #cbd5e1; border-radius:3px; cursor:pointer;">保存</button>
-                        </form>';
+                    // 実施日表示または入力フォーム
+                    $actual_display = '';
+                    if ($is_admin) {
+                        if ($primary_due_date) {
+                            $actual_display = '
+                            <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:5px; align-items:center;">
+                                <input type="hidden" name="action" value="update_schedule_actual">
+                                <input type="hidden" name="schedule_type" value="'.htmlspecialchars($scheduleItem['type'], ENT_QUOTES).'">
+                                <input type="hidden" name="step_idx" value="'.$idx.'">
+                                <input type="date" name="actual_date" value="'.htmlspecialchars($actual_date, ENT_QUOTES).'" style="font-size:10px; padding:2px;">
+                                <button type="submit" style="font-size:10px; padding:2px 5px; background:#e2e8f0; border:1px solid #cbd5e1; border-radius:3px; cursor:pointer;">保存</button>
+                            </form>';
+                        } else {
+                            $actual_display = '<span style="color:#aaa;">-</span>';
+                        }
+                    } elseif ($is_accountant) {
+                        $actual_display = $actual_date ? '<strong>' . date('m/d', strtotime($actual_date)) . '</strong>' : '<span style="color:#aaa;">-</span>';
                     }
 
                     echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
                     echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                     echo "<td style='padding:6px;'>{$badge}</td>";
                     echo "<td style='padding:6px;'>{$date_str}</td>";
-                    echo "<td style='padding:6px;'>{$actual_form}</td>";
+                    echo "<td style='padding:6px;'>{$actual_display}</td>";
                     echo "</tr>";
                 }
                 ?>
