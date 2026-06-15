@@ -133,7 +133,7 @@
                         <?php endif; ?>
 
                         <!-- アップロードフォーム -->
-                        <?php if ($project_info['status'] !== 'quote_req' && !$is_admin): ?>
+                        <?php if (!$is_admin): ?>
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:2px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:3px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
                                 <input type="hidden" name="action_type" value="single_upload">

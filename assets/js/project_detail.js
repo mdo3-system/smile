@@ -325,9 +325,11 @@ function calcClientEstimate() {
 
         let dwg = parseInt(document.getElementById('est_dwg_wall').value) || 0;
         let jintsu = parseInt(document.getElementById('est_jintsu_wall').value) || 0;
+        let moya_qty = parseInt(document.getElementById('est_moya_wall').value) || 0;
         
         currentEstimate += pushEstimateItem("性能表示壁量計算 構造図(基礎伏図)作成", 1, "式", dwg, dwg > 0);
         currentEstimate += pushEstimateItem("性能表示壁量計算 人通孔箇所数割増", 1, "式", jintsu, jintsu > 0);
+        currentEstimate += pushEstimateItem("性能表示壁量計算 母屋下がり加算", moya_qty > 0 ? moya_qty : 1, "箇所", 15000, moya_qty > 0);
         
         let kisohari = document.getElementById('est_kisohari_wall').checked;
         let kisohari_price = 20000 + (area > 150 ? Math.ceil(area - 150) * 500 : 0);

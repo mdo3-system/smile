@@ -37,7 +37,7 @@ require_once __DIR__ . '/actions/project_detail_post.php';
 // ==========================================
 // 案件と仕様情報を取得
 $stmtProj = $pdo->prepare("
-    SELECT p.*, s.*, u.company_name, u.contact_name as client_name, u.phone_number as client_phone
+    SELECT p.*, s.*, u.company_name, u.company_kana, u.zip_code, u.address, u.contact_name as client_name, u.contact_kana, u.phone_number as client_phone, u.mobile_number
     FROM projects p 
     LEFT JOIN project_specs s ON p.id = s.project_id 
     LEFT JOIN users u ON p.client_id = u.id
@@ -187,15 +187,15 @@ $chat_messages = $stmtMsgs->fetchAll();
 </head>
 <body>
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center; gap:15px;">
-            <span style="font-size: 18px; font-weight: bold; color: #0056b3; margin-right: 15px;"><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></span>
-            <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
-            <?php if ($has_finance_access): ?>
-                <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
-                <a href="admin_sales.php" style="background:#10b981; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">📊 経理・売上・支払い管理（月別集計）</a>
-            <?php endif; ?>
+        <div style="display:flex; align-items:center;">
+            <span style="font-size: 18px; font-weight: bold; color: #0056b3;"><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></span>
         </div>
         <div style="display:flex; align-items:center; gap:15px;">
+            <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold; margin-right: 10px;">➔ 案件一覧に戻る</a>
+            <?php if ($has_finance_access): ?>
+                <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
+                <a href="admin_sales.php" style="background:#10b981; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">📊 経理・売上・支払い管理</a>
+            <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= SYSTEM_VERSION ?></div>
             <a href="logout.php" style="color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>

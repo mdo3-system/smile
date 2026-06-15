@@ -139,7 +139,7 @@ function generate_estimate_pdf($project_id, $pdo) {
                 
                 <td style="width: 40%; text-align: right;">
                     <div style="margin-bottom: 10px; text-align: right; font-size: 11pt;">発行日: ' . date('Y年m月d日') . '</div>
-                    <div style="line-height: 1.6; font-size: 10pt; text-align: left; display: inline-block;">
+                    <div style="line-height: 1.6; font-size: 10pt; text-align: right;">
                         <span style="font-size: 14pt; font-weight: bold;">株式会社住ま居る</span><br>
                         <span style="font-size: 12pt;">代表取締役 菅原 功樹</span><br>
                         〒350-2224<br>
@@ -187,10 +187,10 @@ function generate_estimate_pdf($project_id, $pdo) {
         <div style="margin-top: 30px; font-size: 9pt; color: #333333; line-height: 1.6;">
             <strong>【備考・スケジュールについて】</strong><br>
             ・本見積もりは意匠図を元に算出した概算です。詳細なモデル作成後に仕様変更等があった場合は変動する場合があります。<br>
-            ・<span style="text-decoration: underline;">一次回答は必要図書がすべて揃ってから7～15営業日</span>、以降の質疑・修正対応は〇日後となります。具体的な日程は図書受領後に決定いたします。<br>
+            ・<span style="text-decoration: underline;">一次回答は必要図書がすべて揃ってから7～15営業日</span>、以降の質疑・修正対応は4営業日後となります。具体的な日程は図書受領後に決定いたします。<br>
             ・意匠図の大幅な変更等に伴う追加計算は、別途費用が発生する場合がございます。<br>
             ・業務の流れとして、一次回答チェック後に見積額の50%のご入金をお願いしております。<br>
-            ・<span style="font-weight: bold; color: #d32f2f;">本見積もりの設計に関して、私は設計者（建築士法に基づく設計者）にはならないことを明記いたします。</span>
+            ・<span style="font-weight: bold; color: #d32f2f;">私は設計者にはなりません。</span>
         </div>
     </div>
     ';
@@ -305,7 +305,7 @@ function generate_primary_invoice_pdf($project_id, $pdo) {
                 
                 <td style="width: 40%; text-align: right;">
                     <div style="margin-bottom: 10px; text-align: right; font-size: 11pt;">発行日: ' . date('Y年m月d日') . '</div>
-                    <div style="line-height: 1.6; font-size: 10pt; text-align: left; display: inline-block;">
+                    <div style="line-height: 1.6; font-size: 10pt; text-align: right;">
                         <span style="font-size: 14pt; font-weight: bold;">株式会社住ま居る</span><br>
                         <span style="font-size: 12pt;">代表取締役 菅原 功樹</span><br>
                         〒350-2224<br>
@@ -495,7 +495,7 @@ function generate_final_invoice_pdf($project_id, $pdo) {
                 
                 <td style="width: 40%; text-align: right;">
                     <div style="margin-bottom: 10px; text-align: right; font-size: 11pt;">発行日: ' . date('Y年m月d日') . '</div>
-                    <div style="line-height: 1.6; font-size: 10pt; text-align: left; display: inline-block;">
+                    <div style="line-height: 1.6; font-size: 10pt; text-align: right;">
                         <span style="font-size: 14pt; font-weight: bold;">株式会社住ま居る</span><br>
                         <span style="font-size: 12pt;">代表取締役 菅原 功樹</span><br>
                         〒350-2224<br>

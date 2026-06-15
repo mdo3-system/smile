@@ -298,22 +298,52 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
-// 基本情報の更新処理 (update_client_info)
 if ($action === 'update_client_info') {
     $project_name = trim($_POST['project_name'] ?? '');
     $billing_company_name = trim($_POST['billing_company_name'] ?? '');
     $phone_number = trim($_POST['phone_number'] ?? '');
     
+    $company_name = trim($_POST['company_name'] ?? '');
+    $company_kana = trim($_POST['company_kana'] ?? '');
+    $zip_code = trim($_POST['zip_code'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $contact_name = trim($_POST['contact_name'] ?? '');
+    $contact_kana = trim($_POST['contact_kana'] ?? '');
+    $mobile_number = trim($_POST['mobile_number'] ?? '');
+    
     $pdo->beginTransaction();
     try {
         if ($project_name !== '') {
-            $stmt = $pdo->prepare("UPDATE projects SET project_name = :name, billing_company_name = :billing, billing_phone_number = :b_phone WHERE id = :pid");
-            $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'b_phone' => $phone_number, 'pid' => $project_id]);
+            $stmt = $pdo->prepare("UPDATE projects SET project_name = :name, billing_company_name = :billing WHERE id = :pid");
+            $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'pid' => $project_id]);
         }
-        if ($phone_number !== '') {
-            $stmtPhone = $pdo->prepare("UPDATE users SET phone_number = :phone WHERE id = :uid");
-            $stmtPhone->execute(['phone' => $phone_number, 'uid' => $_SESSION['user_id']]);
-        }
+        
+        $stmtUser = $pdo->prepare("
+            UPDATE users SET 
+                company_name = :company_name,
+                company_kana = :company_kana,
+                zip_code = :zip_code,
+                address = :address,
+                phone_number = :phone_number,
+                contact_name = :contact_name,
+                contact_kana = :contact_kana,
+                mobile_number = :mobile_number,
+                billing_company_name = :billing_company_name
+            WHERE id = :uid
+        ");
+        $stmtUser->execute([
+            'company_name' => $company_name,
+            'company_kana' => $company_kana,
+            'zip_code' => $zip_code,
+            'address' => $address,
+            'phone_number' => $phone_number,
+            'contact_name' => $contact_name,
+            'contact_kana' => $contact_kana,
+            'mobile_number' => $mobile_number,
+            'billing_company_name' => $billing_company_name,
+            'uid' => $_SESSION['user_id']
+        ]);
+        
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();

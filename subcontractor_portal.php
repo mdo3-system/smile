@@ -259,7 +259,7 @@ $global_messages = $stmtChat->fetchAll();
         <div class="col-side">
             <!-- 💬 グローバルチャット -->
             <div class="box" style="display:flex; flex-direction:column; height:450px;">
-                <h3>💬 業務連絡チャット</h3>
+                <h3>💬 業務連絡チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#c0392b;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h3>
                 <p style="font-size:12px; color:#666; margin-top:0;">案件に紐付かない、一般的な業務連絡や支払いに関するやり取りを行います。</p>
                 
                 <div style="flex:1; overflow-y:auto; background:#f8f9fa; border:1px solid #ddd; border-radius:4px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:10px;">

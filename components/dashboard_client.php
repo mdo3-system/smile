@@ -493,57 +493,69 @@
             </div>
             <?php require __DIR__ . '/col_center_uploads.php'; ?>
             
-            <?php
-            // 構造仕様表示用の処理
-            $needs_specs = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
-            if ($needs_specs):
-                $wood_json = json_decode($project_info['wood_details'] ?? '{}', true) ?: [];
-                $wall_json = json_decode($project_info['wall_details'] ?? '{}', true) ?: [];
-                $hw_json = json_decode($project_info['hardware_details'] ?? '{}', true) ?: [];
-            ?>
-            <div class="box" style="margin-top:10px; border-color:#7c3aed; background:#f5f3ff;">
-                <h3 style="margin-top:0; font-size:14px; color:#5b21b6; border-bottom:1px solid #ddd; padding-bottom:5px;">🟣 構造仕様指定</h3>
-                <table style="width:100%; border-collapse:collapse; font-size:12px; line-height:1.6;">
-                    <tr><td style="width:70px; font-weight:bold; color:#4b5563; padding:2px 0;">土台:</td><td><?= htmlspecialchars($wood_json['dodai'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">大引:</td><td><?= htmlspecialchars($wood_json['obiki'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">柱:</td><td><?= htmlspecialchars($wood_json['hashira'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">梁:</td><td><?= htmlspecialchars($wood_json['hari'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">小屋束:</td><td><?= htmlspecialchars($wood_json['koya'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">母屋:</td><td><?= htmlspecialchars($wood_json['moya'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">棟木:</td><td><?= htmlspecialchars($wood_json['munagi'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">垂木:</td><td><?= htmlspecialchars($wood_json['taruki'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0; border-top:1px dashed #ddd;">耐力壁:</td><td style="border-top:1px dashed #ddd;"><?= htmlspecialchars($wall_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">金物:</td><td><?= htmlspecialchars($hw_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
-                    <?php if (!empty($project_info['client_notes_extra'])): ?>
-                    <tr><td colspan="2" style="border-top:1px dashed #ddd; padding-top:5px; font-weight:bold; color:#4b5563;">特記事項:</td></tr>
-                    <tr><td colspan="2" style="font-size:11px; background:#fff; padding:6px; border:1px solid #ddd; border-radius:4px; margin-top:2px; white-space:pre-wrap;"><?= htmlspecialchars($project_info['client_notes_extra'], ENT_QUOTES) ?></td></tr>
-                    <?php endif; ?>
-                </table>
-            </div>
-            <?php endif; ?>
+            <?php require __DIR__ . '/col_specs.php'; ?>
         </div>
         
         <!-- ===== 基本情報編集モーダル ===== -->
         <div class="modal-overlay" id="editInfoModal">
-            <div class="modal-box">
-                <div class="modal-title">基本情報の編集</div>
+            <div class="modal-box" style="max-width:550px;">
+                <div class="modal-title">🏠 依頼主情報の登録・編集</div>
                 <form method="POST" action="project_detail.php?id=<?= $project_id ?>">
                     <input type="hidden" name="action" value="update_client_info">
                     <input type="hidden" name="project_id" value="<?= $project_id ?>">
                     
-                    <div style="margin-bottom:15px;">
-                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">案件名</label>
-                        <input type="text" name="project_name" value="<?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" required>
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">案件名</label>
+                        <input type="text" name="project_name" value="<?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
                     </div>
-                    
-                    <div style="margin-bottom:15px;">
-                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">お電話番号</label>
-                        <input type="text" name="phone_number" value="<?= htmlspecialchars($project_info['client_phone'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">会社・事務所名</label>
+                            <input type="text" name="company_name" value="<?= htmlspecialchars($project_info['company_name'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">会社・事務所名フリガナ</label>
+                            <input type="text" name="company_kana" value="<?= htmlspecialchars($project_info['company_kana'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="全角カタカナ">
+                        </div>
                     </div>
-                    
+
+                    <div style="display:grid; grid-template-columns:100px 1fr; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">郵便番号</label>
+                            <input type="text" name="zip_code" value="<?= htmlspecialchars($project_info['zip_code'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 123-4567">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">住所</label>
+                            <input type="text" name="address" value="<?= htmlspecialchars($project_info['address'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="市区町村・番地・マンション名等">
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">電話番号</label>
+                            <input type="text" name="phone_number" value="<?= htmlspecialchars($project_info['client_phone'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 03-1234-5678">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">担当者名</label>
+                            <input type="text" name="contact_name" value="<?= htmlspecialchars($project_info['client_name'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">担当者名フリガナ</label>
+                            <input type="text" name="contact_kana" value="<?= htmlspecialchars($project_info['contact_kana'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="全角カタカナ">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">担当者携帯電話番号</label>
+                            <input type="text" name="mobile_number" value="<?= htmlspecialchars($project_info['mobile_number'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 090-1234-5678">
+                        </div>
+                    </div>
+
                     <div style="margin-bottom:15px;">
-                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px;">見積書・請求書の宛先名称</label>
-                        <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '', ENT_QUOTES) ?>" placeholder="※変更がある場合のみ入力" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">お見積書・ご請求書宛先名称</label>
+                        <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '', ENT_QUOTES) ?>" placeholder="※変更がある場合のみ入力（空欄時は会社名＋担当者名）" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                     </div>
                     
                     <div class="modal-btns">

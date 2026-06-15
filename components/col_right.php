@@ -46,7 +46,7 @@
             <?php endif; ?>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h2 class="section-title" style="background:#17a2b8; margin:0;">💬 依頼主チャット</h2>
+                <h2 class="section-title" style="background:#17a2b8; margin:0;">💬 依頼主チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#fff3cd;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h2>
             </div>
 
             <!-- チャットエリア -->

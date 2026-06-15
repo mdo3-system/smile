@@ -238,9 +238,11 @@ if ($is_admin) {
 <body>
     <?php if ($is_admin && $project_info): ?>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
-            <h1 style="margin:0; font-size:24px;">🏢 協力業者への発注依頼・管理ダッシュボード</h1>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span style="font-size:18px; font-weight:bold; color:#0056b3;"><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></span>
+                <h1 style="margin:0; font-size:20px; color:#555;">🏢 協力業者への発注依頼・管理ダッシュボード</h1>
+            </div>
             <div style="font-size:14px; display:flex; align-items:center; gap:15px;">
-                <span>案件名: <strong><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></strong></span>
                 <span style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></span>
                 <a href="project_detail.php?id=<?= $project_id ?>" style="color:#3b82f6; text-decoration:none; font-weight:bold;">⬅ メイン画面へ戻る</a>
             </div>
@@ -797,7 +799,7 @@ if ($is_admin) {
 
                     <!-- 右カラム：この案件の連絡・質疑チャット（width: 45%） -->
                     <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; border-left:1px solid #eee; padding-left:20px;">
-                        <h4 style="margin:0 0 10px 0; color:#d97706; font-size:14px; display:flex; align-items:center; gap:5px;">💬 この案件の連絡・質疑チャット</h4>
+                        <h4 style="margin:0 0 10px 0; color:#d97706; font-size:14px; display:flex; align-items:center; gap:5px;">💬 この案件の連絡・質疑チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#c0392b;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h4>
                         <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:380px;">
                             <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $project_id ?>">
                                 <?php foreach ($sub_msgs as $msg): 

@@ -88,8 +88,7 @@
                 <div>
                     基本料金<br>
                     <select id="est_base_wall" onchange="calcClientEstimate()" style="width:100%; font-size:11px; padding:2px;">
-                        <option value="35000">性能表示 平屋建 (35,000円)</option>
-                        <option value="50000">性能表示 2階建 (50,000円)</option>
+                        <option value="50000">（性能表示）壁量計算 (50,000円)</option>
                     </select>
                 </div>
                 <div>
@@ -110,7 +109,7 @@
                     人通孔箇所数割増<br>
                     <select id="est_jintsu_wall" onchange="calcClientEstimate()" style="width:100%; font-size:11px; padding:2px;">
                         <option value="0">5箇所未満 (0円)</option>
-                        <option value="5000">5箇Shared所以上10箇所未満 (+5,000円)</option>
+                        <option value="5000">10箇所未満 (+5,000円)</option>
                         <option value="10000">10箇所以上 (+10,000円)</option>
                     </select>
                 </div>
@@ -123,6 +122,10 @@
                     <label><input type="checkbox" class="est_mult_wall" value="0.2" onchange="calcClientEstimate()"> PH階がある (+20%)</label><br>
                     <label><input type="checkbox" class="est_mult_wall" value="0.1" onchange="calcClientEstimate()"> 小屋裏収納がある (+10%)</label><br>
                     <label><input type="checkbox" class="est_mult_wall" value="0.1" onchange="calcClientEstimate()"> スキップレベル違いがある (+10%)</label>
+                </div>
+                <div>
+                    形状加算（箇所数×単価）<br>
+                    <label>母屋下がり箇所数: <input type="number" id="est_moya_wall" value="0" min="0" onchange="calcClientEstimate()" style="width:50px; font-size:11px; padding:2px;"> 箇所 (+15,000円/箇所)</label>
                 </div>
             </div>
         </div>
@@ -217,6 +220,7 @@
                         "性能表示壁量計算 スキップレベル違い",
                         "性能表示壁量計算 構造図",
                         "性能表示壁量計算 人通孔箇所数割増",
+                        "性能表示壁量計算 母屋下がり加算",
                         "性能表示壁量計算 基礎梁許容応力度",
                         "外皮計算 基本料金",
                         "外皮計算 外皮床面積割増",
