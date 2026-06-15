@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Invalid project ID.");
     }
 
+    try {
         // 複数追加見積の構築
         $add_estimates_data = [];
         $add_amounts = $_POST['add_est_amounts'] ?? [];
