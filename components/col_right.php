@@ -29,10 +29,17 @@
                                 - <a href="<?= $arc_s_url ?>" target="_blank" style="color:#0056b3; font-weight:bold; text-decoration:none;">📁 構造用アーキデータ (V<?= $del['arc_s_ver'] ?>)</a><br>
                             <?php endif; ?>
                             
-                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:8px;">
+                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
                                 <input type="hidden" name="action" value="approve_delivery">
                                 <input type="hidden" name="order_id" value="<?= $del['id'] ?>">
-                                <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer;">承認してクライアントへ公開</button>
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    <label style="font-size:10px; color:#666;">完了日を指定:</label>
+                                    <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:11px; border:1px solid #ccc; border-radius:4px;" required>
+                                </div>
+                                <div style="display:flex; gap:5px;">
+                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer; font-weight:bold; flex:1;">承認して依頼主に公開</button>
+                                    <button type="submit" name="reject_delivery" value="1" style="background:#dc3545; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer; font-weight:bold;" onclick="return confirm('修正依頼を出しますか？協力業者へ差し戻され、チャットで通知されます。')">修正依頼</button>
+                                </div>
                             </form>
                         </div>
                     <?php endforeach; ?>

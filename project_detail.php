@@ -188,6 +188,7 @@ $chat_messages = $stmtMsgs->fetchAll();
 <body>
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:15px;">
+            <span style="font-size: 18px; font-weight: bold; color: #0056b3; margin-right: 15px;"><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></span>
             <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold;">➔ 案件一覧に戻る</a>
             <?php if ($has_finance_access): ?>
                 <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>

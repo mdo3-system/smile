@@ -399,7 +399,9 @@
                             $timeStr     = date('m/d H:i', strtotime($msg['created_at'] ?? 'now'));
                         ?>
                             <div class="chat-bubble-row <?= $rowClass ?>" data-msg-id="<?= $msg['id'] ?>">
-                                <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
+                                <?php if (!$isMe): ?>
+                                    <div class="chat-avatar <?= $avatarClass ?>"><?= $avatarIcon ?></div>
+                                <?php endif; ?>
                                 <div class="chat-content">
                                     <?php if (!$isMe): ?>
                                     <div class="chat-name"><?= $senderName ?></div>

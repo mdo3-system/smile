@@ -421,10 +421,17 @@ if ($is_admin) {
 
                                         <?php if ($o['status'] === 'delivered'): ?>
                                             <div style="margin-top:8px;">
-                                                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:6px;">
                                                     <input type="hidden" name="action" value="approve_delivery">
                                                     <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer;" onclick="return confirm('納品ファイルを承認し、構造図PDFを依頼主に公開しますか？')">承認して依頼主に公開</button>
+                                                    <div style="display:flex; align-items:center; gap:5px;">
+                                                        <label style="font-size:11px; color:#555;">完了日を指定:</label>
+                                                        <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
+                                                    </div>
+                                                    <div style="display:flex; gap:5px;">
+                                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品ファイルを承認し、構造図PDFを依頼主に公開しますか？')">承認して公開</button>
+                                                        <button type="submit" name="reject_delivery" value="1" style="background:#dc3545; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer;" onclick="return confirm('修正依頼を出しますか？協力業者へ差し戻され、チャットで通知されます。')">修正依頼</button>
+                                                    </div>
                                                 </form>
                                             </div>
                                         <?php endif; ?>
@@ -775,7 +782,7 @@ if ($is_admin) {
                                     $sender = $isMe ? 'あなた' : '管理者';
                                 ?>
                                     <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
-                                        <span style="font-size:10px; color:#666; margin-bottom:2px;"><?= $sender ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
+                                        <span style="font-size:10px; color:#666; margin-bottom:2px;"><?php if (!$isMe): ?><?= $sender ?> <?php endif; ?>(<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
                                         <?php if (!empty($msg['message_text'])): ?>
                                             <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:85%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
                                         <?php endif; ?>

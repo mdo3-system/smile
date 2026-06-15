@@ -78,9 +78,36 @@ if ($action === 'order_subcontractor') {
     header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
-// 納品承認処理
+// 納品承認または修正依頼処理
 if ($action === 'approve_delivery') {
     $order_id = intval($_POST['order_id']);
+    
+    // 修正依頼の場合
+    if (isset($_POST['reject_delivery'])) {
+        $pdo->beginTransaction();
+        try {
+            // ステータスを作業中 (accepted) に戻す
+            $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'accepted' WHERE id = :id");
+            $stmtOrder->execute(['id' => $order_id]);
+            
+            // チャットへ修正依頼を自動投稿 (sub_admin)
+            $msg = "【修正依頼】\n提出いただいた成果品に修正事項があります。お手数ですが、修正の上、再アップロードをお願いいたします。";
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $msg
+            ]);
+            
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("修正依頼処理に失敗しました: " . $e->getMessage());
+        }
+        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    }
+    
+    // 承認処理
     $pdo->beginTransaction();
     try {
         // 1. サブコントラクターがアップロードした PDF を取得
@@ -114,8 +141,14 @@ if ($action === 'approve_delivery') {
         }
 
         // 2. 発注ステータスを completed に更新し、納品完了日を記録
-        $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = :id");
-        $stmtOrder->execute(['id' => $order_id]);
+        $completed_at = $_POST['completed_at'] ?? '';
+        if (empty($completed_at) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $completed_at)) {
+            $completed_at = date('Y-m-d H:i:s');
+        } else {
+            $completed_at = $completed_at . ' ' . date('H:i:s');
+        }
+        $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed', completed_at = :completed_at WHERE id = :id");
+        $stmtOrder->execute(['completed_at' => $completed_at, 'id' => $order_id]);
 
         // 3. 案件ステータスを「提出済・確認中 (submission)」に更新
         $projectRepo->updateStatus($project_id, 'submission');
