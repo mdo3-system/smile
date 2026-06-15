@@ -494,4 +494,3 @@
             </script>
             <?php endif; ?>
         </div>
-        </div>

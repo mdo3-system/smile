@@ -151,6 +151,7 @@ $chat_messages = $stmtMsgs->fetchAll();
         .chat-bubble-row.from-me .chat-meta { text-align: right; }
         .chat-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
         .chat-avatar.admin-avatar { background: #3b82f6; }
+        .chat-avatar.accountant-avatar { background: #eab308; }
         .chat-avatar.client-avatar { background: #28a745; }
         .chat-content { max-width: 70%; }
         .chat-name { font-size: 10px; color: #666; margin-bottom: 2px; }
