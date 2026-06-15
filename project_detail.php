@@ -108,7 +108,7 @@ $stmtDelivered = $pdo->prepare("
     LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
     LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend_design' AND f2.is_latest = 1
     LEFT JOIN project_files f3 ON o.project_id = f3.project_id AND f3.file_category = 'sub_architrend_struct' AND f3.is_latest = 1
-    WHERE o.project_id = :pid AND o.status = 'delivered'
+    WHERE o.project_id = :pid AND o.status = 'delivered' AND o.order_type = 'struct'
 ");
 $stmtDelivered->execute(['pid' => $project_id]);
 $delivered_orders = $stmtDelivered->fetchAll();

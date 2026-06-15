@@ -429,8 +429,7 @@ if ($is_admin) {
                                                         <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
                                                     </div>
                                                     <div style="display:flex; gap:5px;">
-                                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品ファイルを承認し、構造図PDFを依頼主に公開しますか？')">承認して公開</button>
-                                                        <button type="submit" name="reject_delivery" value="1" style="background:#dc3545; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer;" onclick="return confirm('修正依頼を出しますか？協力業者へ差し戻され、チャットで通知されます。')">修正依頼</button>
+                                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品タスクを完了（承認）しますか？')">納品完了</button>
                                                     </div>
                                                 </form>
                                             </div>

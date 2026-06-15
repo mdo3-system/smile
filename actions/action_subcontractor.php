@@ -110,34 +110,42 @@ if ($action === 'approve_delivery') {
     // 承認処理
     $pdo->beginTransaction();
     try {
-        // 1. サブコントラクターがアップロードした PDF を取得
-        $stmtGetPdf = $pdo->prepare("
-            SELECT * FROM project_files 
-            WHERE project_id = :pid AND file_category = 'sub_structural_pdf' AND is_latest = 1
-        ");
-        $stmtGetPdf->execute(['pid' => $project_id]);
-        $pdf_file = $stmtGetPdf->fetch();
+        // 0. 発注タスクの情報を取得
+        $stmtOrderInfo = $pdo->prepare("SELECT order_type FROM subcontractor_orders WHERE id = :id");
+        $stmtOrderInfo->execute(['id' => $order_id]);
+        $order_info = $stmtOrderInfo->fetch();
+        $order_type = $order_info ? $order_info['order_type'] : 'design';
 
-        if ($pdf_file) {
-            // 既存の依頼主向け structural_dwg を非最新にする
-            $stmtUpdate = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
-            $stmtUpdate->execute(['pid' => $project_id]);
-
-            // 新しい structural_dwg としてバージョンを上げて挿入
-            $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = 'structural_dwg'");
-            $stmtVer->execute(['pid' => $project_id]);
-            $new_v = ($stmtVer->fetch()['max_v'] ?? 0) + 1;
-
-            $stmtInsert = $pdo->prepare("
-                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest)
-                VALUES (:pid, 'structural_dwg', :fname, :fpath, :ver, 1)
+        if ($order_type === 'struct') {
+            // 1. サブコントラクターがアップロードした PDF を取得
+            $stmtGetPdf = $pdo->prepare("
+                SELECT * FROM project_files 
+                WHERE project_id = :pid AND file_category = 'sub_structural_pdf' AND is_latest = 1
             ");
-            $stmtInsert->execute([
-                'pid' => $project_id,
-                'fname' => $pdf_file['file_name'],
-                'fpath' => $pdf_file['drive_file_id'],
-                'ver' => $new_v
-            ]);
+            $stmtGetPdf->execute(['pid' => $project_id]);
+            $pdf_file = $stmtGetPdf->fetch();
+
+            if ($pdf_file) {
+                // 既存の依頼主向け structural_dwg を非最新にする
+                $stmtUpdate = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
+                $stmtUpdate->execute(['pid' => $project_id]);
+
+                // 新しい structural_dwg としてバージョンを上げて挿入
+                $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = 'structural_dwg'");
+                $stmtVer->execute(['pid' => $project_id]);
+                $new_v = ($stmtVer->fetch()['max_v'] ?? 0) + 1;
+
+                $stmtInsert = $pdo->prepare("
+                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest)
+                    VALUES (:pid, 'structural_dwg', :fname, :fpath, :ver, 1)
+                ");
+                $stmtInsert->execute([
+                    'pid' => $project_id,
+                    'fname' => $pdf_file['file_name'],
+                    'fpath' => $pdf_file['drive_file_id'],
+                    'ver' => $new_v
+                ]);
+            }
         }
 
         // 2. 発注ステータスを completed に更新し、納品完了日を記録

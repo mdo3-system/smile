@@ -37,8 +37,7 @@
                                     <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:11px; border:1px solid #ccc; border-radius:4px;" required>
                                 </div>
                                 <div style="display:flex; gap:5px;">
-                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer; font-weight:bold; flex:1;">承認して依頼主に公開</button>
-                                    <button type="submit" name="reject_delivery" value="1" style="background:#dc3545; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer; font-weight:bold;" onclick="return confirm('修正依頼を出しますか？協力業者へ差し戻され、チャットで通知されます。')">修正依頼</button>
+                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:4px 10px; font-size:11px; border-radius:3px; cursor:pointer; font-weight:bold; flex:1;">承諾して依頼主に公開</button>
                                 </div>
                             </form>
                         </div>

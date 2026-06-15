@@ -48,6 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $last_add_date = $ae['date'];
             }
         }
+        // 既存の入金値を取得
+        $stmtGetOld = $pdo->prepare("SELECT deposit_amount_50, deposit_amount_rem FROM projects WHERE id = :id");
+        $stmtGetOld->execute(['id' => $project_id]);
+        $old_finance = $stmtGetOld->fetch();
+        $old_dep_50 = $old_finance ? (int)$old_finance['deposit_amount_50'] : 0;
+        $old_dep_rem = $old_finance ? (int)$old_finance['deposit_amount_rem'] : 0;
 
         $stmt = $pdo->prepare("
             UPDATE projects 
@@ -86,6 +92,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'billing_name' => $_POST['billing_company_name'] ?? null,
             'id' => $project_id
         ]);
+
+        // 入金増加のチェックと自動チャット送信
+        $diff_dep_50 = $dep_50 - $old_dep_50;
+        $diff_dep_rem = $dep_rem - $old_dep_rem;
+
+        if ($diff_dep_50 > 0) {
+            $msg_text = "（経理担当）" . number_format($dep_50) . "円ご入金ありがとうございました。入金確認いたしました";
+            $stmtChat = $pdo->prepare("
+                INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
+                VALUES (:pid, :sid, 'client_admin', :msg, NOW())
+            ");
+            $stmtChat->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $msg_text
+            ]);
+        }
+        if ($diff_dep_rem > 0) {
+            $msg_text = "（経理担当）" . number_format($dep_rem) . "円ご入金ありがとうございました。入金確認いたしました";
+            $stmtChat = $pdo->prepare("
+                INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
+                VALUES (:pid, :sid, 'client_admin', :msg, NOW())
+            ");
+            $stmtChat->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $msg_text
+            ]);
+        }
 
         // 協力業者支払情報の更新
         $order_payment_statuses = $_POST['order_payment_statuses'] ?? [];

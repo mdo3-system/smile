@@ -1,4 +1,4 @@
-<div class="column col-center" style="flex: 1;">
+<div class="column col-center">
     <h2 class="section-title" style="background:#3b82f6;">📂 依頼主アップロード図書</h2>
     <div style="font-size:12px; color:#555; margin-bottom:15px;">
         必要な図書を以下からアップロード・差し替えしてください。<br>
