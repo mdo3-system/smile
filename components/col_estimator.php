@@ -108,7 +108,7 @@
                 <div>
                     人通孔箇所数割増<br>
                     <select id="est_jintsu_wall" onchange="calcClientEstimate()" style="width:100%; font-size:11px; padding:2px;">
-                        <option value="0">5箇所未満 (0円)</option>
+                        <option value="0">割増なし (0円)</option>
                         <option value="5000">10箇所未満 (+5,000円)</option>
                         <option value="10000">10箇所以上 (+10,000円)</option>
                     </select>

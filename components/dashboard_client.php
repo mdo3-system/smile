@@ -247,8 +247,28 @@
         <div class="modal-overlay" id="orderModal">
             <div class="modal-box" style="max-width:600px;">
                 <div class="modal-title">📤 設計依頼データの送付（正式発注）</div>
-                <div style="font-size:13px; margin-bottom:15px; color:#555;">以下の必須データをアップロードして、正式に発注してください。</div>
-                <form method="POST" enctype="multipart/form-data">
+
+                <!-- 免責事項 -->
+                <div style="background:#fff3cd; border:2px solid #ffc107; border-radius:8px; padding:12px; margin-bottom:15px;">
+                    <div style="font-size:14px; font-weight:bold; color:#856404; margin-bottom:6px;">⚠️ ご依頼前に必ずお読みください</div>
+                    <div style="font-size:13px; color:#664d03; line-height:1.7;">
+                        当サービスは「構造設計サポート業務」として、構造計算書・壁量計算書等の作成をお手伝いするものです。<br>
+                        <strong style="color:#b91c1c;">弊社（担当者）は建築設計者にはなりません。</strong><br>
+                        意匠設計・確認申請の代理人業務・設計者欄への記名・押印等は一切行いません。<br>
+                        設計者（建築士）の責任のもと、弊社の成果物をご活用ください。
+                    </div>
+                </div>
+
+                <!-- 承諾チェック -->
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px; margin-bottom:15px;">
+                    <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; font-size:13px; color:#7f1d1d; font-weight:bold;">
+                        <input type="checkbox" id="agreeDisclaimer" onchange="toggleOrderSubmit()" style="margin-top:3px; width:16px; height:16px; accent-color:#dc2626; flex-shrink:0;">
+                        <span>上記の内容を理解しました。弊社が設計者にならないことに同意した上で、設計依頼データを送付します。</span>
+                    </label>
+                </div>
+
+                <div style="font-size:13px; margin-bottom:15px; color:#555;">承諾後、以下の必須データをアップロードして、正式に発注してください。</div>
+                <form method="POST" enctype="multipart/form-data" id="orderForm">
                     <input type="hidden" name="action" value="request_design_start">
                     
                     <?php
@@ -278,11 +298,30 @@
                     
                     <div class="modal-btns">
                         <button type="button" onclick="document.getElementById('orderModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
-                        <button type="submit" style="padding:8px 20px; background:#0056b3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;" onclick="this.innerHTML='送信中...';">送信して正式発注</button>
+                        <button type="submit" id="orderSubmitBtn" disabled style="padding:8px 20px; background:#9ca3af; color:white; border:none; border-radius:6px; cursor:not-allowed; font-weight:bold;" onclick="if(this.disabled) return false; this.innerHTML='送信中...';">送信して正式発注（承諾が必要です）</button>
                     </div>
                 </form>
             </div>
         </div>
+        <script>
+        function toggleOrderSubmit() {
+            const cb = document.getElementById('agreeDisclaimer');
+            const btn = document.getElementById('orderSubmitBtn');
+            if (cb && btn) {
+                if (cb.checked) {
+                    btn.disabled = false;
+                    btn.style.background = '#0056b3';
+                    btn.style.cursor = 'pointer';
+                    btn.textContent = '送信して正式発注';
+                } else {
+                    btn.disabled = true;
+                    btn.style.background = '#9ca3af';
+                    btn.style.cursor = 'not-allowed';
+                    btn.textContent = '送信して正式発注（承諾が必要です）';
+                }
+            }
+        }
+        </script>
 
         <!-- カラム2：成果物一覧 ＋ スケジュール -->
         <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
@@ -406,7 +445,7 @@
         <!-- 右パネル：チャット ＋ 依頼主アップロード図書 -->
         <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:350px;">
             <div class="column col-right" style="flex:1; margin:0; width:100%; box-sizing:border-box;">
-                <h2 class="section-title" style="background:#17a2b8;">💬 メッセージ</h2>
+                <h2 class="section-title" style="background:#17a2b8;">💬 メッセージ <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#fff3cd;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h2>
                 <!-- チャットエリア (LINEスタイル) -->
                 <div class="chat-wrapper">
                     <div class="chat-messages" id="chatMessages">

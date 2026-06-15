@@ -318,3 +318,84 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
         header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
     }
 }
+
+// ==============================
+// 一括アップロード処理（依頼主向け）
+// ==============================
+if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
+    $bulk_files = $_FILES['bulk_files'] ?? [];
+    $bulk_included = $_POST['bulk_included_in_other'] ?? [];
+    $bulk_reason = trim($_POST['bulk_update_reason'] ?? '');
+
+    if (!empty($bulk_files['name'])) {
+        require_once 'google_drive_client.php';
+        $uploaded_cats = [];
+        $has_replace = false;
+
+        try {
+            $pdo->beginTransaction();
+
+            foreach ($bulk_files['name'] as $cat => $fname) {
+                $error  = $bulk_files['error'][$cat] ?? UPLOAD_ERR_NO_FILE;
+                $is_inc = isset($bulk_included[$cat]) && $bulk_included[$cat] == '1';
+
+                // ファイルが選択されていない かつ「別ファイル済」でもない場合はスキップ
+                if ($error !== UPLOAD_ERR_OK && !$is_inc) continue;
+
+                // 既存ファイルの有無確認（差し替え判定）
+                $stmtChk = $pdo->prepare("SELECT COUNT(*), MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+                $stmtChk->execute(['pid' => $project_id, 'cat' => $cat]);
+                [$existing_count, $max_ver] = $stmtChk->fetch(PDO::FETCH_NUM);
+                $is_replace = ($existing_count > 0);
+                if ($is_replace) $has_replace = true;
+
+                $file_name = '';
+                $drive_id  = '';
+
+                if ($is_inc) {
+                    $file_name = '【他ファイルに記載】';
+                } else {
+                    $file_name = $bulk_files['name'][$cat];
+                    $tmp_name  = $bulk_files['tmp_name'][$cat];
+                    $mime_type = $bulk_files['type'][$cat];
+                    $drive_id  = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                }
+
+                // 既存を履歴へ
+                $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat")
+                    ->execute(['pid' => $project_id, 'cat' => $cat]);
+
+                $new_ver = intval($max_ver) + 1;
+                $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)")
+                    ->execute([
+                        'pid' => $project_id, 'cat' => $cat, 'name' => $file_name,
+                        'drive_id' => $drive_id, 'ver' => $new_ver,
+                        'reason' => $is_replace ? $bulk_reason : null
+                    ]);
+
+                $uploaded_cats[] = $cat;
+            }
+
+            // 差し替え理由をチャットへ1回投稿
+            if ($has_replace && !empty($bulk_reason) && !empty($uploaded_cats)) {
+                $cat_list = implode(', ', $uploaded_cats);
+                $chat_msg = "【一括図書差し替え通知】\n対象: {$cat_list}\n理由: {$bulk_reason}";
+                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)")
+                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'msg' => $chat_msg]);
+            } elseif (!$has_replace && !empty($uploaded_cats)) {
+                $cat_list = implode(', ', $uploaded_cats);
+                $chat_msg = "【一括図書提出通知】\n提出カテゴリ: {$cat_list}";
+                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)")
+                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'msg' => $chat_msg]);
+            }
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            die("一括アップロードに失敗しました: " . $e->getMessage());
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+}
+
+

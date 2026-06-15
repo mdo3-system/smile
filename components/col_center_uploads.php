@@ -70,10 +70,21 @@
         }
     }
 
+    $section_idx = 0;
     foreach ($upload_sections as $section_title => $categories):
+        $section_id = 'bulk_modal_' . $section_idx;
     ?>
         <div class="box" style="margin-bottom:15px; background:#f8fafc; border:1px solid #cbd5e1;">
-            <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #cbd5e1; padding-bottom:5px; color:#1e293b;"><?= $section_title ?></h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:5px; margin-bottom:8px;">
+                <h3 style="margin:0; font-size:14px; color:#1e293b;"><?= $section_title ?></h3>
+                <?php if (!$is_admin): ?>
+                <button type="button"
+                    onclick="document.getElementById('<?= $section_id ?>').style.display='flex'"
+                    style="background:#f59e0b; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">
+                    📤 一括UP/更新
+                </button>
+                <?php endif; ?>
+            </div>
             
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <?php foreach ($categories as $cat => $label): ?>
@@ -132,7 +143,7 @@
                             <div style="font-size:11px; color:#ef4444;">未提出</div>
                         <?php endif; ?>
 
-                        <!-- アップロードフォーム -->
+                        <!-- 個別アップロードフォーム -->
                         <?php if (!$is_admin): ?>
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:2px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:3px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
@@ -160,6 +171,61 @@
                 <?php endforeach; ?>
             </div>
         </div>
-    <?php endforeach; ?>
+
+        <?php if (!$is_admin): ?>
+        <!-- 一括UPモーダル -->
+        <div id="<?= $section_id ?>" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9000; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;" onclick="if(event.target===this) this.style.display='none'">
+            <div style="background:#fff; border-radius:10px; padding:20px; max-width:600px; width:100%; max-height:85vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #3b82f6; padding-bottom:10px;">
+                    <h3 style="margin:0; color:#1e293b; font-size:16px;">📤 一括UP/更新：<?= htmlspecialchars($section_title) ?></h3>
+                    <button onclick="document.getElementById('<?= $section_id ?>').style.display='none'" style="background:#6c757d; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:13px;">✕ 閉じる</button>
+                </div>
+                <div style="font-size:12px; color:#555; margin-bottom:15px; background:#f0f9ff; border:1px solid #bae6fd; padding:8px; border-radius:4px;">
+                    ⚠️ 各ファイルを選択して「一括アップロード」ボタンを押すと、選択したファイルのみ登録されます。<br>
+                    差し替えの場合は差し替え理由を入力してください（差し替え理由は全ファイル共通で適用されます）。
+                </div>
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action_type" value="bulk_upload">
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
+                        <?php foreach ($categories as $cat => $label): 
+                            $hist = $files_by_cat[$cat] ?? [];
+                        ?>
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <label style="font-weight:bold; font-size:12px; color:#334155;"><?= htmlspecialchars($label) ?></label>
+                                <?php if (!empty($hist)): ?>
+                                    <span style="font-size:10px; color:#059669; font-weight:bold;">✓ 提出済 (V<?= $hist[0]['version'] ?>)</span>
+                                <?php else: ?>
+                                    <span style="font-size:10px; color:#ef4444; font-weight:bold;">未提出</span>
+                                <?php endif; ?>
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <input type="file" name="bulk_files[<?= htmlspecialchars($cat) ?>]" style="font-size:11px; flex:1;">
+                                <?php if (empty($hist)): ?>
+                                <label style="font-size:10px; display:flex; align-items:center; gap:3px; color:#d97706; white-space:nowrap; cursor:pointer;" title="他のCADファイルに記載がある場合">
+                                    <input type="checkbox" name="bulk_included_in_other[<?= htmlspecialchars($cat) ?>]" value="1"> 別ﾌｧｲﾙ済
+                                </label>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:5px; color:#334155;">差し替え理由（差し替えのファイルがある場合は入力必須）</label>
+                        <input type="text" name="bulk_update_reason" placeholder="例：設計変更（窓の位置変更）" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; box-sizing:border-box;">
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" onclick="document.getElementById('<?= $section_id ?>').style.display='none'" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
+                        <button type="submit" style="padding:8px 20px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">📤 一括アップロード</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php endif; ?>
+
+    <?php 
+        $section_idx++;
+        endforeach; 
+    ?>
 </div>
 
