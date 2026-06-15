@@ -212,7 +212,7 @@ $global_messages = $stmtChat->fetchAll();
                 <?php foreach ($tasks as $t): ?>
                     <div class="task-card">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="font-size:16px;"><?= htmlspecialchars($t['project_name']) ?></strong>
+                            <strong style="font-size:16px;"><?= htmlspecialchars($t['project_name']) ?> <span style="font-size:13px; color:#666; font-weight:normal;">[<?= htmlspecialchars($t['task_title']) ?>]</span></strong>
                             <?php 
                                 if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b;">承諾待ち</span>';
                                 elseif ($t['status'] === 'accepted' || $t['status'] === 'in_progress') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';

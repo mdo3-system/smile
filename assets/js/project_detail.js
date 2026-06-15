@@ -382,6 +382,19 @@ function calcClientEstimate() {
         currentEstimate += pushEstimateItem("天空率 詳細モデル検討", 1, "式", 15000, detail);
     }
     
+    // 5. 手動追加明細の処理
+    document.querySelectorAll('.manual-est-row').forEach(row => {
+        const nameInput = row.querySelector('.manual-est-name');
+        const priceInput = row.querySelector('.manual-est-price');
+        if (nameInput && priceInput) {
+            const name = nameInput.value.trim();
+            const price = parseInt(priceInput.value) || 0;
+            if (name !== '' && price !== 0) {
+                currentEstimate += pushEstimateItem(name, 1, "式", price, true);
+            }
+        }
+    });
+    
     currentTax = Math.round(currentEstimate * 0.1);
     currentTotal = currentEstimate + currentTax;
     
@@ -393,6 +406,23 @@ function calcClientEstimate() {
     
     const elGrand = document.getElementById('est_grand_total_disp');
     if (elGrand) elGrand.innerText = currentTotal.toLocaleString();
+}
+
+function addManualEstimateRow() {
+    const container = document.getElementById('manual_estimates_container');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'manual-est-row';
+    div.style.display = 'flex';
+    div.style.gap = '5px';
+    div.style.marginBottom = '5px';
+    div.style.alignItems = 'center';
+    div.innerHTML = `
+        <input type="text" placeholder="項目名" class="manual-est-name" oninput="calcClientEstimate()" style="flex:1; padding:3px; font-size:11px;" required>
+        <input type="number" placeholder="金額(税抜)" class="manual-est-price" oninput="calcClientEstimate()" style="width:80px; padding:3px; font-size:11px;" required>
+        <button type="button" onclick="this.parentElement.remove(); calcClientEstimate();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer; font-weight:bold;">✕</button>
+    `;
+    container.appendChild(div);
 }
 
 function saveAndPrintEstimate(isFormal = false, isAdditional = false) {

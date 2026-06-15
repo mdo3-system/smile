@@ -35,11 +35,11 @@
             <?php require __DIR__ . '/col_estimator.php'; ?>
         </div>
 
-        <!-- カラム3: 依頼主アップロード図書 ＋ 成果物一覧 -->
+        <!-- カラム3: 成果物一覧 ＋ 構造仕様 ＋ 依頼主アップロード図書 -->
         <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
-            <?php require __DIR__ . '/col_center_uploads.php'; ?>
-            <?php require __DIR__ . '/col_specs.php'; ?>
             <?php require __DIR__ . '/col_center_deliverables.php'; ?>
+            <?php require __DIR__ . '/col_specs.php'; ?>
+            <?php require __DIR__ . '/col_center_uploads.php'; ?>
         </div>
 
         <!-- カラム4: チャット・管理ツール -->

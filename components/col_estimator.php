@@ -185,6 +185,79 @@
             </div>
         </div>
 
+        <!-- 5. 手動見積明細追加エリア（動的追加） -->
+        <div class="box" style="background:#fff3cd; border:1px solid #ffeeba; padding:8px; margin:0; display:block;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <strong style="color:#b58900;">➕ 手動追加明細</strong>
+                <button type="button" onclick="addManualEstimateRow()" style="background:#b58900; color:white; border:none; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold;">追加</button>
+            </div>
+            <div id="manual_estimates_container">
+                <?php
+                if (!empty($all_estimates)) {
+                    $latest_est = $all_estimates[0];
+                    $est_note = json_decode($latest_est['note'] ?? '[]', true) ?: [];
+                    
+                    // 基本となる既定の項目名（これらの前方一致や完全一致以外を手動とみなす）
+                    $default_names = [
+                        "許容応力度計算 基本料金",
+                        "許容応力度計算 構造床面積割増",
+                        "目標等級加算",
+                        "準耐火/耐火構造",
+                        "PH階がある",
+                        "小屋裏収納がある",
+                        "スキップ等レベル違い",
+                        "平面不整形",
+                        "立面不整形",
+                        "金物工法割増",
+                        "特殊箇所割増",
+                        "性能表示壁量計算 基本料金",
+                        "性能表示壁量計算 構造床面積割増",
+                        "性能表示壁量計算 PH階がある",
+                        "性能表示壁量計算 小屋裏収納がある",
+                        "性能表示壁量計算 スキップレベル違い",
+                        "性能表示壁量計算 構造図",
+                        "性能表示壁量計算 人通孔箇所数割増",
+                        "性能表示壁量計算 基礎梁許容応力度",
+                        "外皮計算 基本料金",
+                        "外皮計算 外皮床面積割増",
+                        "外皮計算 PH階がある",
+                        "外皮計算 スキップレベル違い",
+                        "外皮計算 基礎立上り400超割増",
+                        "外皮計算 設計内容説明書",
+                        "一次消費エネルギー量計算",
+                        "天空率 道路斜線",
+                        "天空率 北側斜線",
+                        "天空率 追加斜線面検討",
+                        "天空率 敷地面積割増",
+                        "天空率 建物床面積割増",
+                        "天空率 詳細モデル検討"
+                    ];
+                    
+                    foreach ($est_note as $item) {
+                        $is_default = false;
+                        foreach ($default_names as $def) {
+                            if (mb_strpos($item['name'], $def) !== false) {
+                                $is_default = true;
+                                break;
+                            }
+                        }
+                        // デフォルト以外の有効な手動明細
+                        if (!$is_default && !empty($item['is_active']) && !empty($item['amount'])) {
+                            $m_name = htmlspecialchars($item['name'], ENT_QUOTES);
+                            $m_price = intval($item['price']);
+                            echo '
+                            <div class="manual-est-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                                <input type="text" placeholder="項目名" class="manual-est-name" value="' . $m_name . '" oninput="calcClientEstimate()" style="flex:1; padding:3px; font-size:11px;" required>
+                                <input type="number" placeholder="金額(税抜)" class="manual-est-price" value="' . $m_price . '" oninput="calcClientEstimate()" style="width:80px; padding:3px; font-size:11px;" required>
+                                <button type="button" onclick="this.parentElement.remove(); calcClientEstimate();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer; font-weight:bold;">✕</button>
+                            </div>';
+                        }
+                    }
+                }
+                ?>
+            </div>
+        </div>
+
         <!-- 計算結果表示 -->
         <div style="margin-top:10px; padding-top:10px; border-top:1px solid #ccc; font-weight:bold;">
             見積合計 (税抜): <span id="est_total_disp" style="color:#d32f2f; font-size:12px;">0</span> 円<br>
