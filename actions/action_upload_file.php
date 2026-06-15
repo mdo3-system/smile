@@ -11,7 +11,7 @@ if ($action === 'upload_artifact' && $is_admin) {
             $tmp_name  = $_FILES['artifact_file']['tmp_name'];
             $mime_type = $_FILES['artifact_file']['type'];
             
-            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
             
             $pdo->beginTransaction();
             // 既存の同カテゴリファイルを履歴に落とす
@@ -195,7 +195,7 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
                 $mime_type = $_FILES['upload_file']['type'];
                 // Google Drive へのアップロード
                 require_once 'google_drive_client.php';
-                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
             }
 
             // 1. 既存の同カテゴリのファイルを最新フラグから外す
@@ -370,7 +370,7 @@ if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
                     $file_name = $bulk_files['name'][$cat];
                     $tmp_name  = $bulk_files['tmp_name'][$cat];
                     $mime_type = $bulk_files['type'][$cat];
-                    $drive_id  = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                    $drive_id  = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
                 }
 
                 // 既存を履歴へ

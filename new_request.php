@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mime_type = $_FILES[$input_name]['type'];
 
                     try {
-                        $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                        $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $new_project_id, $pdo);
 
                         $stmtFile = $pdo->prepare("
                             INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 

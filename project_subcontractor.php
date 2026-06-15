@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $file_name = $_FILES[$input_name]['name'];
                 $mime_type = $_FILES[$input_name]['type'];
                 
-                $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type);
+                $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type, $project_id, $pdo);
                 
                 // 1. 最新バージョンの確認
                 $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = :cat");

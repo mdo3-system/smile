@@ -185,7 +185,7 @@ if ($action === 'submit_primary_response') {
             $tmp_name  = $_FILES['primary_file']['tmp_name'];
             $mime_type = $_FILES['primary_file']['type'];
             
-            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
             
             $file_category = 'calc_doc'; // 構造計算書
             

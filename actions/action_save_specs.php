@@ -106,7 +106,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                             $tmp_name = $_FILES['upload_files']['tmp_name'][$cat][$idx];
                             $mime_type = $_FILES['upload_files']['type'][$cat][$idx];
                             try {
-                                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
                                 
                                 // Get version
                                 $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
@@ -127,7 +127,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                         $tmp_name = $_FILES['upload_files']['tmp_name'][$cat];
                         $mime_type = $_FILES['upload_files']['type'][$cat];
                         try {
-                            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type);
+                            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
                             $disableOldFiles($cat);
                             
                             $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");

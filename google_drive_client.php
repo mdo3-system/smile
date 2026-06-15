@@ -303,7 +303,16 @@ function upload_to_google_drive_folder($local_file_path, $file_name, $mime_type,
  * @param string $mime_type MIMEタイプ
  * @return string Google DriveのファイルID
  */
-function upload_to_google_drive($local_file_path, $file_name, $mime_type) {
+function upload_to_google_drive($local_file_path, $file_name, $mime_type, $project_id = null, $pdo = null) {
+    if ($project_id && $pdo) {
+        try {
+            $folder_id = get_or_create_project_drive_folder($pdo, $project_id);
+            return upload_to_google_drive_folder($local_file_path, $file_name, $mime_type, $folder_id);
+        } catch (Exception $e) {
+            error_log("Failed to upload to project drive folder for project ID {$project_id}: " . $e->getMessage());
+            // Fallback to root folder
+        }
+    }
     $folder_id = getenv('GOOGLE_DRIVE_FOLDER_ID');
     return upload_to_google_drive_folder($local_file_path, $file_name, $mime_type, $folder_id);
 }

@@ -29,7 +29,7 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
     $fileName = $_FILES['file']['name'];
     $mimeType = $_FILES['file']['type'];
     
-    $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType);
+    $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType, $projectId, $pdo);
     $fileType = (strpos($mimeType, 'image/') === 0) ? 'image' : 'pdf';
 }
 

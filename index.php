@@ -2,7 +2,7 @@
 // index.php
 require_once 'auth.php';
 require_once 'functions.php';
-check_auth(['admin', 'client']);
+check_auth(['admin', 'client', 'accountant']);
 
 // 1. ログインユーザーの情報を取得
 $current_user_id = $_SESSION['user_id'];
@@ -20,7 +20,7 @@ if ($_SESSION['role'] === 'client') {
     // クライアントの場合は、自身が依頼主の案件のみ取得
     $projects = $projectRepo->findByClientIdWithClientInfo($current_user_id);
 } else {
-    // 管理者の場合は全案件を取得
+    // 管理者または経理の場合は全案件を取得
     $projects = $projectRepo->findAllWithClientInfo();
 }
 
@@ -64,7 +64,11 @@ $status_labels = [
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="subcontractors_list.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">👷 協力業者マスター</a>
+            <?php endif; ?>
+            <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant'): ?>
                 <a href="admin_sales.php" style="font-weight:bold; color:white; background:#e67e22; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📊 経理・売上管理</a>
+            <?php endif; ?>
+            <?php if ($_SESSION['role'] === 'admin'): ?>
                 <div style="display:flex; align-items:center; gap:10px; background:#e8f5e9; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
                     <strong>📂 Drive連携:</strong>
                     <?php 
