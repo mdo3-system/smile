@@ -9,42 +9,39 @@
     // 依頼内容に基づく必要図書の判定 (グループ分け)
     $upload_sections = [];
 
-    // 1. 共通図書・CAD
-    $common_docs = [];
-    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-        $common_docs['cad_layout'] = '配置図 ※正式依頼時必須';
-        $common_docs['cad_plan_1f'] = '1F平面図 ※正式依頼時必須';
-        $common_docs['cad_plan_2f'] = '2F平面図 ※正式依頼時必須';
-        $common_docs['cad_elevation'] = '立面図 ※正式依頼時必須';
-        $common_docs['cad_section'] = '矩計図 ※正式依頼時必須';
-    }
-    // 確認申請書は全依頼で必須（後出し可）
-    $common_docs['app_doc'] = '確認申請書（2〜5面）🟡後出し可';
-    // 地盤調査報告書は許容応力度・基礎梁許容応力度のみ必須（後出し可）
-    if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-        $common_docs['soil_report'] = '地盤調査報告書 🟡後出し可';
-    }
-    if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1) {
-        $common_docs['pdf_precut'] = 'プレカット図等';
-    }
-    if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-        $common_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';
-    }
-    $upload_sections['共通図書・CADデータ'] = $common_docs;
+    // 1. 共通図書
+    $common_docs = [
+        'cad_layout' => '配置図 ※正式依頼時必須',
+        'cad_plan_1f' => '1F平面図 ※正式依頼時必須',
+        'cad_plan_2f' => '2F平面図 ※正式依頼時必須',
+        'cad_elevation' => '立面図 ※正式依頼時必須',
+        'cad_section' => '矩計図 ※正式依頼時必須',
+        'app_doc' => '確認申請書（2〜5面）🟡後出し可'
+    ];
+    $upload_sections['共通図書'] = $common_docs;
 
-    // 2. 外皮計算用
-    if ($project_info['req_skin'] == 1) {
-        $upload_sections['外皮計算用資料'] = [
+    // 2. 専門図書
+    $specialized_docs = [];
+
+    if ($active_tab === 'permit') {
+        if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
+            $specialized_docs['soil_report'] = '地盤調査報告書 🟡後出し可';
+        }
+        $specialized_docs['pdf_precut'] = 'プレカット図等';
+        if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
+            $specialized_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';
+        }
+    } elseif ($active_tab === 'wall') {
+        $specialized_docs['pdf_precut'] = 'プレカット図等';
+    } elseif ($active_tab === 'skin') {
+        $specialized_docs = [
             'spec_doc' => '仕様書',
             'insulation_data' => '断熱材資料',
             'sash_data' => 'サッシ・玄関ドア仕様',
             'ventilation_data' => '24時間換気計算図書',
             'equip_data' => '設備機器カタログ'
         ];
-    }
-
-    // 3. 天空率用
-    if ($project_info['req_sky'] == 1) {
+    } elseif ($active_tab === 'sky') {
         $req_road = true;
         $req_north = true;
         if (isset($all_estimates) && !empty($all_estimates)) {
@@ -62,12 +59,12 @@
                 $req_north = $has_north;
             }
         }
-        $sky_docs = [];
-        if ($req_road) $sky_docs['road_data'] = '道路の資料';
-        if ($req_north) $sky_docs['true_north'] = '真北の資料';
-        if (!empty($sky_docs)) {
-            $upload_sections['天空率用資料'] = $sky_docs;
-        }
+        if ($req_road) $specialized_docs['road_data'] = '道路の資料';
+        if ($req_north) $specialized_docs['true_north'] = '真北の資料';
+    }
+
+    if (!empty($specialized_docs)) {
+        $upload_sections['専門図書'] = $specialized_docs;
     }
 
     $section_idx = 0;
@@ -113,6 +110,7 @@
                                     <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
                                         <input type="hidden" name="action" value="toggle_cad_publish">
                                         <input type="hidden" name="file_id" value="<?= $latest['id'] ?>">
+                                        <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                                         <?php if ($latest['is_published_to_sub']): ?>
                                             <button type="submit" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;" onclick="return confirm('業者への公開を取り消しますか？')">業者公開を解除</button>
                                         <?php else: ?>
@@ -148,6 +146,7 @@
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:2px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:3px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
                                 <input type="hidden" name="action_type" value="single_upload">
+                                <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                                 
                                 <div style="display:flex; gap:3px; align-items:center;">
                                     <input type="file" name="upload_file" id="file_<?= $cat ?>" <?= empty($history) ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:90px; padding:2px;">
@@ -186,6 +185,7 @@
                 </div>
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action_type" value="bulk_upload">
+                    <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                     <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
                         <?php foreach ($categories as $cat => $label): 
                             $hist = $files_by_cat[$cat] ?? [];

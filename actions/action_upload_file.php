@@ -122,10 +122,13 @@ if ($action === 'upload_artifact' && $is_admin) {
                 
                 if ($updated_any) {
                     // チャット通知
-                    $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                    $tab = $_POST['tab'] ?? '';
+                    $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+                    $stmtNotify = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
                     $stmtNotify->execute([
                         'pid' => $project_id,
                         'sid' => $_SESSION['user_id'],
+                        'thread' => $thread_type,
                         'msg' => "【自動通知】{$msgTitle}が提出されました。該当スケジュールの実施日が自動設定されました。"
                     ]);
                 }
@@ -157,7 +160,8 @@ if ($action === 'upload_artifact' && $is_admin) {
             die("アップロードに失敗しました: " . $e->getMessage());
         }
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    $tab = $_POST['tab'] ?? '';
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
 
 if ($action === 'toggle_cad_publish' && $is_admin) {
@@ -166,7 +170,8 @@ if ($action === 'toggle_cad_publish' && $is_admin) {
         $stmt = $pdo->prepare("UPDATE project_files SET is_published_to_sub = NOT is_published_to_sub WHERE id = :id");
         $stmt->execute(['id' => $file_id]);
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    $tab = $_POST['tab'] ?? '';
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
 
 // ファイルアップロード処理（管理者・依頼主）
@@ -237,10 +242,13 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
             if (!empty($update_reason)) {
                 $cat_label = $file_category; // 簡易的にカテゴリーキーを使用。必要ならマップ用意。
                 $msg = "【図書差し替え通知】\n対象: {$cat_label}\n理由: {$update_reason}";
-                $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                $tab = $_POST['tab'] ?? '';
+                $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+                $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
                 $stmtMsg->execute([
                     'pid' => $project_id,
                     'sid' => $_SESSION['user_id'] ?? 1,
+                    'thread' => $thread_type,
                     'msg' => $msg
                 ]);
             }
@@ -296,10 +304,13 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
                             }
 
                             // 管理者へ自動チャット通知
-                            $stmtN2 = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+                            $tab = $_POST['tab'] ?? '';
+                            $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+                            $stmtN2 = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
                             $stmtN2->execute([
                                 'pid' => $project_id,
                                 'sid' => $_SESSION['user_id'] ?? 1,
+                                'thread' => $thread_type,
                                 'msg' => "【自動通知】必要図書がすべて揃いました。本日（{$today2}）が一次回答の起算日となりました。図書の内容を確認の上、一次回答期日の設定をお願いします。"
                             ]);
                         }
@@ -315,7 +326,8 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
             }
             die("ファイルのアップロードまたはデータベース登録に失敗しました: " . $e->getMessage());
         }
-        header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+        $tab = $_POST['tab'] ?? '';
+        header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
     }
 }
 
@@ -377,16 +389,18 @@ if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
             }
 
             // 差し替え理由をチャットへ1回投稿
+            $tab = $_POST['tab'] ?? '';
+            $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
             if ($has_replace && !empty($bulk_reason) && !empty($uploaded_cats)) {
                 $cat_list = implode(', ', $uploaded_cats);
                 $chat_msg = "【一括図書差し替え通知】\n対象: {$cat_list}\n理由: {$bulk_reason}";
-                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)")
-                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'msg' => $chat_msg]);
+                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)")
+                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'thread' => $thread_type, 'msg' => $chat_msg]);
             } elseif (!$has_replace && !empty($uploaded_cats)) {
                 $cat_list = implode(', ', $uploaded_cats);
                 $chat_msg = "【一括図書提出通知】\n提出カテゴリ: {$cat_list}";
-                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)")
-                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'msg' => $chat_msg]);
+                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)")
+                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'thread' => $thread_type, 'msg' => $chat_msg]);
             }
 
             $pdo->commit();
@@ -395,7 +409,8 @@ if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
             die("一括アップロードに失敗しました: " . $e->getMessage());
         }
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    $tab = $_POST['tab'] ?? '';
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
 
 

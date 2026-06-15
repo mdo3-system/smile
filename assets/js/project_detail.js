@@ -53,7 +53,8 @@ function buildBubble(msg) {
 
 // ===== ポーリング（30秒ごと） =====
 function pollMessages() {
-    fetch(`api_get_messages.php?project_id=${window.APP_PROJECT_ID}&since_id=${window.APP_LAST_MSG_ID}`)
+    const tabParam = window.APP_ACTIVE_TAB ? `&tab=${encodeURIComponent(window.APP_ACTIVE_TAB)}` : '';
+    fetch(`api_get_messages.php?project_id=${window.APP_PROJECT_ID}&since_id=${window.APP_LAST_MSG_ID}${tabParam}`)
         .then(r => r.json())
         .then(msgs => {
             if (msgs && msgs.length > 0) {
@@ -82,6 +83,9 @@ function sendMessage(text) {
     formData.append('project_id', window.APP_PROJECT_ID);
     formData.append('action', 'send_message');
     formData.append('message_text', msg);
+    if (window.APP_ACTIVE_TAB) {
+        formData.append('tab', window.APP_ACTIVE_TAB);
+    }
     if (targetSelect && targetSelect.value) {
         formData.append('target_file', targetSelect.value);
     }

@@ -13,7 +13,13 @@ class ChatService
         $this->messageRepo = $messageRepo;
     }
 
-    public function getMessages(int $projectId, string $threadType, int $sinceId): array
+    /**
+     * @param int $projectId
+     * @param string|array $threadType
+     * @param int $sinceId
+     * @return array
+     */
+    public function getMessages(int $projectId, $threadType, int $sinceId): array
     {
         return $this->messageRepo->findByProjectIdAndThread($projectId, $threadType, $sinceId);
     }

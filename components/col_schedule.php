@@ -8,7 +8,7 @@
 
     $schedulesToRender = [];
 
-    if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
+    if ($active_tab === 'permit' && (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1)) {
         $schedulesToRender[] = [
             'title' => '許容応力度・基礎横架材計算',
             'type' => 'permit',
@@ -16,7 +16,7 @@
             'actuals_col' => 'schedule_actuals'
         ];
     }
-    if (($project_info['req_wall'] ?? 0) == 1) {
+    if ($active_tab === 'wall' && ($project_info['req_wall'] ?? 0) == 1) {
         $schedulesToRender[] = [
             'title' => '壁量計算',
             'type' => 'wall',
@@ -24,7 +24,7 @@
             'actuals_col' => 'schedule_actuals_wall'
         ];
     }
-    if (($project_info['req_skin'] ?? 0) == 1) {
+    if ($active_tab === 'skin' && ($project_info['req_skin'] ?? 0) == 1) {
         $schedulesToRender[] = [
             'title' => '外皮計算',
             'type' => 'skin',
@@ -32,7 +32,7 @@
             'actuals_col' => 'schedule_actuals_skin'
         ];
     }
-    if (($project_info['req_sky'] ?? 0) == 1) {
+    if ($active_tab === 'sky' && ($project_info['req_sky'] ?? 0) == 1) {
         $schedulesToRender[] = [
             'title' => '天空率',
             'type' => 'sky',

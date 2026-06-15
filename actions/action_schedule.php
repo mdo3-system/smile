@@ -118,15 +118,17 @@ if ($action === 'update_schedule_actual') {
             $action_desc = empty($actual_date) ? "削除" : "「{$actual_date}」に設定";
             $chat_msg = "【スケジュール実績更新】\n{$step_name} の実施日が{$action_desc}されました。";
             
-            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+            $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
             $stmtMsg->execute([
                 'pid' => $project_id,
                 'sid' => $_SESSION['user_id'],
+                'thread' => $thread_type,
                 'msg' => $chat_msg
             ]);
         }
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;
 }
 
 // 設計開始 (start_design)

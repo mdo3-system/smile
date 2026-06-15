@@ -16,7 +16,14 @@ class ChatController
     {
         $projectId = $_GET['project_id'] ?? null;
         $sinceId = $_GET['since_id'] ?? 0;
-        $threadType = $_GET['thread_type'] ?? 'client_admin';
+        
+        // タブに基づく threadType の決定
+        $tab = $_GET['tab'] ?? '';
+        if ($tab === 'permit' || $tab === '') {
+            $threadType = ['client_admin', 'client_admin_permit'];
+        } else {
+            $threadType = 'client_admin_' . $tab;
+        }
 
         if (!$projectId) {
             echo json_encode([]);

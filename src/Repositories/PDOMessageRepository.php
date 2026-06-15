@@ -14,20 +14,22 @@ class PDOMessageRepository implements MessageRepositoryInterface
         $this->pdo = $pdo;
     }
 
-    public function findByProjectIdAndThread(int $projectId, string $threadType, int $sinceId = 0): array
+    public function findByProjectIdAndThread(int $projectId, $threadType, int $sinceId = 0): array
     {
-        $stmt = $this->pdo->prepare("
+        $threads = (array)$threadType;
+        $placeholders = implode(',', array_fill(0, count($threads), '?'));
+        
+        $sql = "
             SELECT m.*, u.role as sender_role 
             FROM messages m 
             LEFT JOIN users u ON m.sender_id = u.id 
-            WHERE m.project_id = :pid AND m.thread_type = :thread AND m.id > :since 
+            WHERE m.project_id = ? AND m.thread_type IN ($placeholders) AND m.id > ? 
             ORDER BY m.id ASC
-        ");
-        $stmt->execute([
-            'pid' => $projectId,
-            'thread' => $threadType,
-            'since' => $sinceId
-        ]);
+        ";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $params = array_merge([$projectId], $threads, [$sinceId]);
+        $stmt->execute($params);
         
         $messages = [];
         while ($row = $stmt->fetch()) {

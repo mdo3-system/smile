@@ -35,7 +35,15 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
 
 $container = AppContainer::getInstance();
 $chatService = $container->getChatService();
-$threadType = $_POST['thread_type'] ?? 'client_admin';
+$tab = $_POST['tab'] ?? '';
+$threadType = $_POST['thread_type'] ?? '';
+if (!$threadType) {
+    if ($tab === 'permit' || $tab === '') {
+        $threadType = 'client_admin_permit';
+    } else {
+        $threadType = 'client_admin_' . $tab;
+    }
+}
 $success = $chatService->sendMessage(
     (int)$projectId,
     (int)$_SESSION['user_id'],

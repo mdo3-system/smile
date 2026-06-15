@@ -16,40 +16,47 @@
             // 各種目別の成果物定義
             $artifact_sections = [];
             
-            if ($req_permit == 1) {
-                $artifact_sections['許容応力度計算'] = [
-                    'safety_cert' => '安全証明書',
-                    'standard_dwg' => '構造標準図',
-                    'structural_dwg' => '構造図',
-                    'calc_doc' => '構造計算書'
-                ];
+            if ($active_tab === 'permit') {
+                if ($req_permit == 1) {
+                    $artifact_sections['許容応力度計算'] = [
+                        'safety_cert' => '安全証明書',
+                        'standard_dwg' => '構造標準図',
+                        'structural_dwg' => '構造図',
+                        'calc_doc' => '構造計算書'
+                    ];
+                }
+                if ($req_opt_kisohari == 1) {
+                    $artifact_sections['＋OP（基礎・横架材計算書）'] = [
+                        'standard_dwg' => '構造標準図',
+                        'structural_dwg' => '構造図',
+                        'kiso_hari_calc_doc' => '基礎横架材計算書'
+                    ];
+                }
+            } elseif ($active_tab === 'wall') {
+                if ($req_wall == 1) {
+                    $artifact_sections['壁量計算'] = [
+                        'wall_spreadsheet' => '表計算ツール',
+                        'wall_calc_doc' => '壁量計算書'
+                    ];
+                }
+            } elseif ($active_tab === 'skin') {
+                if ($req_skin == 1) {
+                    $artifact_sections['外皮計算'] = [
+                        'skin_calc_doc' => '外皮計算書',
+                        'skin_web_prog' => 'WEBプログラム計算書',
+                        'skin_doc' => '外皮計算資料'
+                    ];
+                }
+            } elseif ($active_tab === 'sky') {
+                if ($req_sky == 1) {
+                    $artifact_sections['天空率'] = [
+                        'sky_dwg' => '天空率図書'
+                    ];
+                }
             }
-            if ($req_wall == 1) {
-                $artifact_sections['壁量計算'] = [
-                    'wall_spreadsheet' => '表計算ツール',
-                    'wall_calc_doc' => '壁量計算書'
-                ];
-            }
-            if ($req_opt_kisohari == 1) {
-                $artifact_sections['＋OP（基礎・横架材計算書）'] = [
-                    'standard_dwg' => '構造標準図',
-                    'structural_dwg' => '構造図',
-                    'kiso_hari_calc_doc' => '基礎横架材計算書'
-                ];
-            }
-            if ($req_skin == 1) {
-                $artifact_sections['外皮計算'] = [
-                    'skin_calc_doc' => '外皮計算書',
-                    'skin_web_prog' => 'WEBプログラム計算書',
-                    'skin_doc' => '外皮計算資料'
-                ];
-            }
-            if ($req_sky == 1) {
-                $artifact_sections['天空率'] = [
-                    'sky_dwg' => '天空率図書'
-                ];
-            }
-            // その他の納品物
+            
+            // その他の納品物 (すべてのタブで表示しておくか、代表タブにまとめるか)
+            // いったんすべてのタブで表示
             $artifact_sections['その他納品物'] = [
                 'other_artifact' => 'その他ファイル'
             ];
@@ -111,6 +118,7 @@
                                     <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:8px; display:flex; gap:5px; align-items:center; border-top:1px dashed #e2e8f0; padding-top:5px;">
                                         <input type="hidden" name="action" value="upload_artifact">
                                         <input type="hidden" name="file_category" value="<?= $cat ?>">
+                                        <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                                         <input type="file" name="artifact_file" required style="font-size:10px; width:150px;">
                                         <button type="submit" style="font-size:10px; background:#3b82f6; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer;">UP</button>
                                     </form>
