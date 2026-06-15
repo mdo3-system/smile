@@ -1,4 +1,4 @@
-<div class="column col-center">
+<div class="column col-center" style="flex: none;">
             <h2 class="section-title" style="background:#8b5cf6;">📂 成果物（納品物）</h2>
             <div style="font-size:12px; color:#555; margin-bottom:15px;">
                 常に最新版が表示されます。過去の履歴もここからダウンロード可能です。<br>

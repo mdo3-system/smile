@@ -62,6 +62,7 @@
                     $dep_date_50 = $project_info['deposit_date_50'] ?? '';
                     $dep_rem = $project_info['deposit_amount_rem'] ?? 0;
                     $dep_date_rem = $project_info['deposit_date_rem'] ?? '';
+                    $additional_deposits = json_decode($project_info['additional_deposits'] ?? '[]', true) ?: [];
 
                     // 合計追加費用
                     $total_add = 0;
@@ -69,8 +70,14 @@
                         $total_add += intval($ae['amount']);
                     }
 
+                    // 追加入金合計
+                    $total_add_dep = 0;
+                    foreach ($additional_deposits as $ad) {
+                        $total_add_dep += intval($ad['amount']);
+                    }
+
                     $total_req = $formal + $total_add;
-                    $total_deposit = $dep_50 + $dep_rem;
+                    $total_deposit = $dep_50 + $dep_rem + $total_add_dep;
                     $balance = $total_req - $total_deposit;
 
                     // 一次請求額の計算 (消費税加算前税抜の50% + 消費税10%)
@@ -114,6 +121,9 @@
                     <div style="font-size:11px; color:#666; margin-left: 10px; line-height:1.4;">
                         <div>・50%着手金: <?= $dep_50 > 0 ? number_format($dep_50).'円 ('.$dep_date_50.')' : '未入金' ?></div>
                         <div>・残金入金: <?= $dep_rem > 0 ? number_format($dep_rem).'円 ('.$dep_date_rem.')' : '未入金' ?></div>
+                        <?php foreach ($additional_deposits as $idx => $ad): ?>
+                            <div>・追加入金 #<?= $idx+1 ?>: <?= number_format($ad['amount']) ?>円 (<?= htmlspecialchars($ad['date'] ?: '-') ?>) <?= !empty($ad['note']) ? '['.htmlspecialchars($ad['note']).']' : '' ?></div>
+                        <?php endforeach; ?>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; margin-top:8px; border-top:1px solid #ccc; padding-top:8px; font-size:15px; font-weight:bold; color:#d32f2f;">
@@ -122,6 +132,7 @@
                 </div>
 
                 <!-- 協力業者との発注・承認・納品ステータス一覧 -->
+                <?php if (!($_SESSION['role'] === 'accountant')): ?>
                 <div style="margin-top:10px; padding:8px; background:#f1f5f9; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:10px;">
                     <strong style="display:block; font-size:11px; color:#334155; margin-bottom:5px;">🤝 外注発注・納品ステータス一覧</strong>
                     <?php if (empty($orders)): ?>
@@ -146,6 +157,7 @@
                         </div>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
 
                 <!-- 請求書発行エリア -->
                 <?php if ($formal > 0): ?>
@@ -268,7 +280,7 @@
                         </div>
 
                         <!-- 入金情報入力エリア -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; background:#f0fdf4; padding:8px; border:1px solid #bbf7d0; border-radius:6px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 5px; background:#f0fdf4; padding:8px; border:1px solid #bbf7d0; border-radius:6px;">
                             <div style="grid-column:1 / -1; font-weight:bold; color:#166534; font-size:11px;">💵 入金履歴管理</div>
                             <div>
                                 <label style="display:block;margin-bottom:2px; font-weight:bold;">50%着手金入金 (円):</label>
@@ -288,7 +300,26 @@
                             </div>
                         </div>
 
+                        <!-- 追加入金履歴（動的追加） -->
+                        <div style="background:#f0fdf4; padding:8px; border:1px solid #bbf7d0; border-radius:6px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:between; align-items:center; margin-bottom:5px;">
+                                <strong style="font-size:11px; color:#166534;">➕ 追加入金（追加見積等）</strong>
+                                <button type="button" onclick="addDepositRow()" style="background:#166534; color:white; border:none; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; margin-left:auto;">追加</button>
+                            </div>
+                            <div id="additional_deposits_container">
+                                <?php foreach ($additional_deposits as $idx => $ad): ?>
+                                    <div class="add-dep-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                                        <input type="number" name="add_dep_amounts[]" value="<?= htmlspecialchars($ad['amount']) ?>" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px; font-size:11px;" required class="form-control-fin-add">
+                                        <input type="date" name="add_dep_dates[]" value="<?= htmlspecialchars($ad['date'] ?: '') ?>" style="width:110px; padding:3px; font-size:11px;" class="form-control-fin-add-date">
+                                        <input type="text" name="add_dep_notes[]" value="<?= htmlspecialchars($ad['note'] ?? '') ?>" placeholder="摘要" style="flex:1; padding:3px; font-size:11px;">
+                                        <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
                         <!-- 協力業者支払状況入力エリア -->
+                        <?php if (!($_SESSION['role'] === 'accountant')): ?>
                         <div style="background:#fffcf5; padding:8px; border:1px solid #fed7aa; border-radius:6px; margin-bottom:10px;">
                             <strong style="display:block; font-size:11px; color:#c2410c; margin-bottom:5px;">🤝 協力業者への支払状況管理</strong>
                             <?php if (empty($orders)): ?>
@@ -321,6 +352,7 @@
                                 </div>
                             <?php endif; ?>
                         </div>
+                        <?php endif; ?>
 
                         <div style="margin-bottom:10px;">
                             <label style="display:block;margin-bottom:2px;">見積書・請求書 宛先名称:</label>
@@ -329,6 +361,68 @@
 
                         <button type="submit" class="btn" style="width:100%; padding:6px; background:#28a745; font-weight:bold;">上記金銭データを保存</button>
                     </form>
+                    
+                    <script>
+                    function addEstimateRow() {
+                        const container = document.getElementById('additional_estimates_container');
+                        const row = document.createElement('div');
+                        row.className = 'add-est-row';
+                        row.style.display = 'flex';
+                        row.style.gap = '5px';
+                        row.style.marginBottom = '5px';
+                        row.style.alignItems = 'center';
+                        row.innerHTML = `
+                            <input type="number" name="add_est_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add" required>
+                            <input type="date" name="add_est_dates[]" value="" style="flex:1; padding:3px;" class="form-control-fin-add-date">
+                            <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
+                        `;
+                        container.appendChild(row);
+                    }
+
+                    function addDepositRow() {
+                        const container = document.getElementById('additional_deposits_container');
+                        const row = document.createElement('div');
+                        row.className = 'add-dep-row';
+                        row.style.display = 'flex';
+                        row.style.gap = '5px';
+                        row.style.marginBottom = '5px';
+                        row.style.alignItems = 'center';
+                        row.innerHTML = `
+                            <input type="number" name="add_dep_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px; font-size:11px;" required class="form-control-fin-add">
+                            <input type="date" name="add_dep_dates[]" value="" style="width:110px; padding:3px; font-size:11px;" class="form-control-fin-add-date">
+                            <input type="text" name="add_dep_notes[]" value="" placeholder="摘要" style="flex:1; padding:3px; font-size:11px;">
+                            <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
+                        `;
+                        container.appendChild(row);
+                    }
+
+                    function recalcFinance() {
+                        const formal = parseInt(document.getElementById('input_formal').value) || 0;
+                        
+                        let totalAdd = 0;
+                        document.querySelectorAll('input[name="add_est_amounts[]"]').forEach(el => {
+                            totalAdd += parseInt(el.value) || 0;
+                        });
+
+                        const totalReq = formal + totalAdd;
+                        
+                        const dep50 = parseInt(document.getElementById('input_dep_50').value) || 0;
+                        const depRem = parseInt(document.getElementById('input_dep_rem').value) || 0;
+                        
+                        let totalAddDep = 0;
+                        document.querySelectorAll('input[name="add_dep_amounts[]"]').forEach(el => {
+                            totalAddDep += parseInt(el.value) || 0;
+                        });
+
+                        const totalDeposit = dep50 + depRem + totalAddDep;
+                        const balance = totalReq - totalDeposit;
+
+                        document.getElementById('disp_formal').innerText = formal.toLocaleString();
+                        document.getElementById('disp_total_req').innerText = totalReq.toLocaleString();
+                        document.getElementById('disp_total_deposit').innerText = totalDeposit.toLocaleString();
+                        document.getElementById('disp_balance').innerText = balance.toLocaleString();
+                    }
+                    </script>
                 </div>
             </div>
             <?php endif; ?>

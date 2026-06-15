@@ -157,14 +157,42 @@ if ($action === 'approve_delivery') {
         }
         $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'completed', completed_at = :completed_at WHERE id = :id");
         $stmtOrder->execute(['completed_at' => $completed_at, 'id' => $order_id]);
-
         // 3. 案件ステータスを「提出済・確認中 (submission)」に更新
         $projectRepo->updateStatus($project_id, 'submission');
+
+        // 4. チャット通知メッセージの送信
+        $stmtTask = $pdo->prepare("SELECT task_title FROM subcontractor_orders WHERE id = :id");
+        $stmtTask->execute(['id' => $order_id]);
+        $task_title = $stmtTask->fetchColumn() ?: '作図業務';
+
+        $notify_sub_msg = "【自動通知】納品タスク「{$task_title}」の承認（納品完了）処理が行われました。";
+        $stmtChatSub = $pdo->prepare("
+            INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+            VALUES (:pid, :sid, 'sub_admin', :msg)
+        ");
+        $stmtChatSub->execute([
+            'pid' => $project_id,
+            'sid' => $_SESSION['user_id'],
+            'msg' => $notify_sub_msg
+        ]);
+
+        if ($order_type === 'struct') {
+            $notify_client_msg = "【自動通知】成果物（構造図）の納品が完了いたしました。成果物パネルよりご確認ください。";
+            $stmtChatClient = $pdo->prepare("
+                INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                VALUES (:pid, :sid, 'client_admin', :msg)
+            ");
+            $stmtChatClient->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $notify_client_msg
+            ]);
+        }
 
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();
         die("承認処理に失敗しました: " . $e->getMessage());
     }
-    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+    header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time()); exit;
 }

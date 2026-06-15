@@ -201,8 +201,10 @@ $chat_messages = $stmtMsgs->fetchAll();
         </div>
     </div>
 
-        <?php if ($has_finance_access): ?>
+        <?php if ($is_admin): ?>
             <?php require __DIR__ . '/components/dashboard_admin.php'; ?>
+        <?php elseif ($is_accountant): ?>
+            <?php require __DIR__ . '/components/dashboard_accountant.php'; ?>
         <?php else: ?>
             <?php require __DIR__ . '/components/dashboard_client.php'; ?>
         <?php endif; ?>

@@ -395,17 +395,22 @@ function calcClientEstimate() {
     if (elGrand) elGrand.innerText = currentTotal.toLocaleString();
 }
 
-function saveAndPrintEstimate(isFormal = false) {
+function saveAndPrintEstimate(isFormal = false, isAdditional = false) {
     calcClientEstimate();
     if (currentEstimate === 0) {
         alert('計算する対象を選択してください。');
         return;
     }
     
-    const btn = isFormal ? document.getElementById('formal_pdf_issue_btn') : document.getElementById('pdf_issue_btn');
+    let btn = document.getElementById('pdf_issue_btn');
+    if (isFormal) btn = document.getElementById('formal_pdf_issue_btn');
+    if (isAdditional) btn = document.getElementById('additional_pdf_issue_btn');
+    
     if (btn) {
         btn.disabled = true;
-        btn.innerText = isFormal ? '本見積確定中...' : 'PDF発行中...';
+        if (isFormal) btn.innerText = '本見積確定中...';
+        else if (isAdditional) btn.innerText = '追加見積発行中...';
+        else btn.innerText = 'PDF発行中...';
     }
     
     const formData = new FormData();
@@ -413,22 +418,28 @@ function saveAndPrintEstimate(isFormal = false) {
     formData.append('total_price', currentEstimate);
     formData.append('note', JSON.stringify(estimateItems));
     formData.append('is_formal', isFormal ? '1' : '0');
+    formData.append('is_additional', isAdditional ? '1' : '0');
     
     fetch('api_save_estimate.php', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (data.success && data.drive_file_id) {
                 // 発行成功時にチャットへも自動送信するロジック
-                let msg = isFormal ? "【本見積書が確定・発行されました】\n" : "【お見積書が発行されました】\n";
+                let msg = "【お見積書が発行されました】\n";
+                if (isFormal) msg = "【本見積書が確定・発行されました】\n";
+                if (isAdditional) msg = "【追加見積書が確定・発行されました】\n";
+                
                 msg += `税抜金額: ${currentEstimate.toLocaleString()}円\n`;
                 msg += `消費税: ${currentTax.toLocaleString()}円\n`;
                 msg += `税込合計: ${currentTotal.toLocaleString()}円\n\n`;
                 msg += "詳細は左パネルの最新の見積書からご確認ください。\n";
                 msg += "\n";
-                if (!isFormal) {
-                    msg += "ご依頼いただける場合は、「設計依頼データの送付」ボタンから必須ファイル（CADデータ等）をアップロードの上、正式にご発注をお願いいたします。";
-                } else {
+                if (isFormal) {
                     msg += "本見積内容にて確定いたしました。追って一次請求書（着手金50%）を発行いたしますので、ご確認のほどよろしくお願いいたします。";
+                } else if (isAdditional) {
+                    msg += "追加見積内容にて確定いたしました。経理・請求管理より追加入金履歴に反映されます。";
+                } else {
+                    msg += "ご依頼いただける場合は、「設計依頼データの送付」ボタンから必須ファイル（CADデータ等）をアップロードの上、正式にご発注をお願いいたします。";
                 }
 
                 // sendMessageを使ってチャットへ投稿（APIへPOST）
@@ -439,7 +450,10 @@ function saveAndPrintEstimate(isFormal = false) {
                 return fetch('api_send_message.php', { method: 'POST', body: chatData })
                     .then(chatRes => chatRes.json())
                     .then(() => {
-                        alert(isFormal ? '本見積書が確定し、PDFが作成されてチャットへ送信されました。' : 'お見積書PDFが作成され、チャットへ送信されました。');
+                        let alertMsg = 'お見積書PDFが作成され、チャットへ送信されました。';
+                        if (isFormal) alertMsg = '本見積書が確定し、PDFが作成されてチャットへ送信されました。';
+                        if (isAdditional) alertMsg = '追加見積書が確定し、PDFが作成されてチャットへ送信されました。';
+                        alert(alertMsg);
                         window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
                         location.reload();
                     });
@@ -451,7 +465,9 @@ function saveAndPrintEstimate(isFormal = false) {
         .finally(() => {
             if (btn) {
                 btn.disabled = false;
-                btn.innerText = isFormal ? '本見積として確定・PDF発行' : '印刷用PDFを発行';
+                if (isFormal) btn.innerText = '本見積として確定・PDF発行';
+                else if (isAdditional) btn.innerText = '追加見積として確定・PDF発行';
+                else btn.innerText = '印刷用PDFを発行';
             }
         });
 }
