@@ -206,6 +206,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
+        // 一次請求書(50%)の自動発行処理
+        if (isset($_POST['issue_primary_invoice']) && $_POST['issue_primary_invoice'] === '1') {
+            require_once __DIR__ . '/action_issue_invoice_helper.php';
+            issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id']);
+        }
+
         header("Location: ../project_detail.php?id=" . $project_id . "&t=" . time());
         exit;
     } catch (Exception $e) {

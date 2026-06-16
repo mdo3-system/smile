@@ -21,7 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
     
     $subcontractorOrderService->acceptOrder($order_id, $user_id, $expected_delivery_date);
 
-    header("Location: project_subcontractor.php");
+    $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
+    $stmtP->execute(['id' => $order_id]);
+    $pid = $stmtP->fetchColumn() ?: 0;
+
+    header("Location: project_subcontractor.php?id=" . $pid . "&t=" . time());
     exit;
 }
 
@@ -145,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         die("納品処理に失敗しました: " . $e->getMessage());
     }
-    header("Location: project_subcontractor.php");
+    header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time());
     exit;
 }
 

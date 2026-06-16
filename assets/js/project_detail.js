@@ -512,6 +512,7 @@ function saveAndPrintEstimate(isFormal = false, isAdditional = false) {
                 const chatData = new FormData();
                 chatData.append('project_id', window.APP_PROJECT_ID);
                 chatData.append('message_text', msg);
+                chatData.append('thread_type', 'client_admin');
 
                 return fetch('api_send_message.php', { method: 'POST', body: chatData })
                     .then(chatRes => chatRes.json())

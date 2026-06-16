@@ -579,6 +579,7 @@
                 </div>
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="submit_primary_response">
+                    <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                     
                     <div style="margin-bottom:10px;">
                         <label style="display:block; font-weight:bold; font-size:11px; margin-bottom:4px;">① 一次回答ファイル (計算書等・必須)</label>

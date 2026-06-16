@@ -187,7 +187,15 @@ if ($action === 'submit_primary_response') {
             
             $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
             
+            $tab = $_POST['tab'] ?? '';
             $file_category = 'calc_doc'; // 構造計算書
+            if ($tab === 'wall') {
+                $file_category = 'wall_calc_doc';
+            } elseif ($tab === 'skin') {
+                $file_category = 'skin_calc_doc';
+            } elseif ($tab === 'sky') {
+                $file_category = 'sky_calc_doc';
+            }
             
             // 既存の同カテゴリファイルを is_latest=0 にする
             $stmtOld = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");

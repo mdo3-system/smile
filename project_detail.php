@@ -140,7 +140,7 @@ if (!array_key_exists($active_tab, $available_tabs)) {
 if ($active_tab === 'permit' || $active_tab === '') {
     $thread_cond = "m.thread_type IN ('client_admin', 'client_admin_permit')";
 } else {
-    $thread_cond = "m.thread_type = 'client_admin_" . $active_tab . "'";
+    $thread_cond = "m.thread_type IN ('client_admin', 'client_admin_" . $active_tab . "')";
 }
 
 $stmtMsgs = $pdo->prepare("
@@ -379,21 +379,15 @@ SMS送付する場合がございますので、ご依頼いただける際は�
         saveForm.append('add_est_date', '<?= htmlspecialchars(!empty($project_info['add_est_date']) ? $project_info['add_est_date'] : '') ?>');
         saveForm.append('deposit_amount', '<?= htmlspecialchars(!empty($project_info['deposit_amount']) ? $project_info['deposit_amount'] : '') ?>');
         saveForm.append('deposit_date', '<?= htmlspecialchars(!empty($project_info['deposit_date']) ? $project_info['deposit_date'] : '') ?>');
+        saveForm.append('issue_primary_invoice', '1');
 
         fetch('actions/admin_finance_post.php', { method: 'POST', body: saveForm })
             .then(res => {
-                // 2. 一次請求書(50%)を発行
-                const issueForm = new FormData();
-                issueForm.append('project_id', <?= $project_id ?>);
-                return fetch('api_issue_primary_invoice.php', { method: 'POST', body: issueForm });
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
+                if (res.ok) {
                     alert('本見積を保存し、一次請求書(50%)を発行しました。');
                     window.location.href = 'project_detail.php?id=' + <?= $project_id ?>;
                 } else {
-                    alert('請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                    alert('請求書の発行に失敗しました。');
                     btn.disabled = false;
                     btn.innerText = '保存して一次請求書(50%)を発行';
                 }
