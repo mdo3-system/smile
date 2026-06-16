@@ -588,8 +588,10 @@ if ($is_admin) {
                             <div style="text-align:center; color:#aaa; font-size:12px; margin-top:20px;">まだメッセージはありません。</div>
                         <?php endif; ?>
                     </div>
+                    <!-- 添付ファイルの強力な視認化機能インジケーター -->
+                    <div id="filePreview_<?= $project_id ?>" style="padding:5px 10px; background:#fff; border-top:1px solid #eee; font-size:11px;"></div>
                     <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px; display:flex; gap:10px; align-items:center;">
-                        <input type="file" id="chatFile_<?= $project_id ?>" accept="image/*,.pdf" style="display:none;" onchange="document.getElementById('fileLabel_<?= $project_id ?>').style.color='#28a745'">
+                        <input type="file" id="chatFile_<?= $project_id ?>" accept="image/*,.pdf" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)">
                         <label for="chatFile_<?= $project_id ?>" id="fileLabel_<?= $project_id ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
                         
                         <textarea id="chatText_<?= $project_id ?>" style="flex:1; border:1px solid #ccc; border-radius:20px; padding:8px 12px; font-size:13px; resize:none;" rows="1" placeholder="メッセージを入力..."></textarea>

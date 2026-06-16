@@ -413,4 +413,29 @@ if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
 
+// ==============================
+// カスタム図書スロット追加（依頼主向け）
+// ==============================
+if ($action === 'add_custom_slot' && !$is_admin) {
+    $custom_label = trim($_POST['custom_slot_label'] ?? '');
+    if ($custom_label !== '') {
+        $file_category = 'custom_' . $custom_label;
+        
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtCheck->execute(['pid' => $project_id, 'cat' => $file_category]);
+        if ($stmtCheck->fetchColumn() == 0) {
+            $stmtInsert = $pdo->prepare("
+                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                VALUES (:pid, :cat, '', NULL, 1, 1)
+            ");
+            $stmtInsert->execute([
+                'pid' => $project_id,
+                'cat' => $file_category
+            ]);
+        }
+    }
+    $tab = $_POST['tab'] ?? '';
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
+}
+
 

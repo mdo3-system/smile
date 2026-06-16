@@ -10,14 +10,28 @@
     $upload_sections = [];
 
     // 1. 共通図書
-    $common_docs = [
+    $default_common_docs = [
         'cad_layout' => '配置図 ※正式依頼時必須',
         'cad_plan_1f' => '1F平面図 ※正式依頼時必須',
         'cad_plan_2f' => '2F平面図 ※正式依頼時必須',
         'cad_elevation' => '立面図 ※正式依頼時必須',
         'cad_section' => '矩計図 ※正式依頼時必須',
-        'app_doc' => '確認申請書（2〜5面）🟡後出し可'
     ];
+    $common_docs = [];
+    foreach ($default_common_docs as $k => $v) {
+        $common_docs[$k] = $v;
+    }
+    // カスタム図書（'custom_'で始まるカテゴリ）を抽出して 矩計図 の下に追加
+    if (isset($files_by_cat) && is_array($files_by_cat)) {
+        foreach ($files_by_cat as $cat => $files) {
+            if (strpos($cat, 'custom_') === 0) {
+                $label = substr($cat, 7);
+                $common_docs[$cat] = $label;
+            }
+        }
+    }
+    // 最後に確認申請書を追加
+    $common_docs['app_doc'] = '確認申請書（2〜5面）🟡後出し可';
     $upload_sections['共通図書'] = $common_docs;
 
     // 2. 専門図書
@@ -77,6 +91,7 @@
                 <?php if (!$is_admin): ?>
                 <button type="button"
                     onclick="document.getElementById('<?= $section_id ?>').style.display='flex'"
+                    title="各ファイルを選択して「一括アップロード」ボタンを押すと、選択したファイルのみ登録されます。&#10;差し替えの場合は差し替え理由を入力してください（差し替え理由は全ファイル共通で適用されます）。"
                     style="background:#f59e0b; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">
                     📤 一括UP/更新
                 </button>
@@ -168,6 +183,26 @@
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
+                <?php if ($section_title === '共通図書' && !$is_admin): ?>
+                    <!-- 別の図書を追加するフォーム -->
+                    <div style="background:#f1f5f9; border:1px dashed #cbd5e1; border-radius:6px; padding:10px; margin-top:10px; text-align:center;">
+                        <button type="button" id="btn_show_custom_slot" onclick="document.getElementById('add_custom_slot_form').style.display='block'; this.style.display='none';" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">
+                            ➕ 別の図書スロットを追加
+                        </button>
+                        <div id="add_custom_slot_form" style="display:none; text-align:left;">
+                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:5px;">
+                                <input type="hidden" name="action" value="add_custom_slot">
+                                <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
+                                <label style="font-size:11px; font-weight:bold; color:#475569;">追加する図書の名称（例：3F平面図）</label>
+                                <div style="display:flex; gap:5px;">
+                                    <input type="text" name="custom_slot_label" placeholder="図書の名称を入力してください" required style="font-size:11px; flex:1; padding:4px; border:1px solid #cbd5e1; border-radius:4px;">
+                                    <button type="submit" style="background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">追加</button>
+                                    <button type="button" onclick="document.getElementById('add_custom_slot_form').style.display='none'; document.getElementById('btn_show_custom_slot').style.display='inline-block';" style="background:#6c757d; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">キャンセル</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 

@@ -344,5 +344,5 @@
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\086951b8-9f29-460f-97f4-e873a39f2405\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.3.13（2026-06-15）
+- **最終バージョン**: v1.3.15（2026-06-16）
 
