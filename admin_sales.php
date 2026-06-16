@@ -25,6 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
             
+            // 変更前データの取得
+            $stmtOld = $pdo->prepare("SELECT deposit_amount, deposit_date, deposit_status, status FROM projects WHERE id = :id");
+            $stmtOld->execute(['id' => $project_id]);
+            $old_data = $stmtOld->fetch(PDO::FETCH_ASSOC);
+            
             // 入金情報更新
             $stmt = $pdo->prepare("
                 UPDATE projects 
@@ -46,6 +51,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtStatus->execute(['status' => $status, 'id' => $project_id]);
             }
             
+            // チャットへの自動通知挿入
+            if ($old_data) {
+                $status_labels_local = [
+                    'unpaid' => '未入金',
+                    'partially_paid' => '一部入金',
+                    'paid' => '完済'
+                ];
+                $proj_status_labels = [
+                    'quote_req' => '見積依頼', 
+                    'quote_sent' => '見積送付済', 
+                    'doc_submitted' => '図書提出済', 
+                    'primary_prep' => '一次回答準備中', 
+                    'contracted' => '受注済', 
+                    'structural_dwg' => '構造図作成中', 
+                    'submission' => '提出済・確認中', 
+                    'correction' => '補正対応中', 
+                    'completed' => '完了'
+                ];
+                
+                $changes = [];
+                if (intval($old_data['deposit_amount']) !== $deposit_amount || $old_data['deposit_status'] !== $deposit_status || $old_data['deposit_date'] !== $deposit_date) {
+                    $old_status_text = $status_labels_local[$old_data['deposit_status']] ?? $old_data['deposit_status'];
+                    $new_status_text = $status_labels_local[$deposit_status] ?? $deposit_status;
+                    $changes[] = "・入金状況: {$old_status_text} ➔ {$new_status_text}\n  入金額: " . number_format($deposit_amount) . "円\n  入金日: " . ($deposit_date ?: '未設定');
+                }
+                
+                if (!empty($status) && $old_data['status'] !== $status) {
+                    $old_p_status = $proj_status_labels[$old_data['status']] ?? $old_data['status'];
+                    $new_p_status = $proj_status_labels[$status] ?? $status;
+                    $changes[] = "・案件ステータス: {$old_p_status} ➔ {$new_p_status}";
+                }
+                
+                if (!empty($changes)) {
+                    $sender_id = $_SESSION['user_id'] ?? 1;
+                    $msg_text = "【経理情報更新】\n経理担当（または管理者）が案件情報を更新しました。\n" . implode("\n", $changes);
+                    
+                    $stmtMsg = $pdo->prepare("
+                        INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                        VALUES (:pid, :sid, 'client_admin', :msg)
+                    ");
+                    $stmtMsg->execute([
+                        'pid' => $project_id,
+                        'sid' => $sender_id,
+                        'msg' => $msg_text
+                    ]);
+                }
+            }
+            
             $pdo->commit();
             header("Location: admin_sales.php?m=" . $current_month . "&msg=deposit_updated");
             exit;
@@ -62,6 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payment_date = !empty($_POST['payment_date']) ? $_POST['payment_date'] : null;
         
         try {
+            $pdo->beginTransaction();
+            
+            // 変更前データの取得
+            $stmtOrder = $pdo->prepare("SELECT project_id, subcontractor_id, task_title, payment_status FROM subcontractor_orders WHERE id = :id");
+            $stmtOrder->execute(['id' => $order_id]);
+            $order_info = $stmtOrder->fetch(PDO::FETCH_ASSOC);
+            
+            // 支払い状況更新
             $stmt = $pdo->prepare("
                 UPDATE subcontractor_orders 
                 SET payment_status = :pay_status,
@@ -73,9 +134,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'pay_date' => $payment_date,
                 'id' => $order_id
             ]);
+            
+            // チャットへの自動通知挿入
+            if ($order_info && $order_info['payment_status'] !== $payment_status) {
+                $pay_status_labels = [
+                    'unpaid' => '未払',
+                    'paid' => '支払済'
+                ];
+                $old_p_text = $pay_status_labels[$order_info['payment_status']] ?? $order_info['payment_status'];
+                $new_p_text = $pay_status_labels[$payment_status] ?? $payment_status;
+                
+                $sender_id = $_SESSION['user_id'] ?? 1;
+                $msg_text = "【お支払い状況更新】\n経理担当がタスク「{$order_info['task_title']}」のお支払い状況を更新しました。\n・支払状況: {$old_p_text} ➔ {$new_p_text}\n・支払日: " . ($payment_date ?: '未設定');
+                
+                $stmtMsg = $pdo->prepare("
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                    VALUES (:pid, :sid, 'sub_admin', :msg)
+                ");
+                $stmtMsg->execute([
+                    'pid' => $order_info['project_id'],
+                    'sid' => $sender_id,
+                    'msg' => $msg_text
+                ]);
+            }
+            
+            $pdo->commit();
             header("Location: admin_sales.php?m=" . $current_month . "&msg=payment_updated");
             exit;
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             $error = "支払い情報の更新に失敗しました: " . $e->getMessage();
         }
     }

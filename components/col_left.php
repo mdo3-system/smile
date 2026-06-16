@@ -172,35 +172,54 @@
                     
                     <script>
                     function issuePrimaryInvoice() {
-                        if (!confirm('本見積額の50%分（消費税加算前50%＋消費税）の一次請求書を発行しますか？\n（発行するとGoogle Driveへアップロードされ、クライアントチャットに自動通知されます）')) {
-                            return;
-                        }
-                        const btn = document.getElementById('issue_primary_invoice_btn');
-                        if (btn) {
-                            btn.disabled = true;
-                            btn.innerText = '発行中...';
-                        }
-                        const formData = new FormData();
-                        formData.append('project_id', <?= (int)$project_id ?>);
+                        // 一次回答ファイルの選択ダイアログを動的に作成
+                        const fileInput = document.createElement('input');
+                        fileInput.type = 'file';
+                        fileInput.accept = '.pdf,.zip,.jww,.dxf';
+                        fileInput.style.display = 'none';
                         
-                        fetch('api_issue_primary_invoice.php', { method: 'POST', body: formData })
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data.success && data.drive_file_id) {
-                                    alert('一次請求書(50%)を発行しました。');
-                                    window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
-                                    location.reload();
-                                } else {
-                                    alert('一次請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
-                                }
-                            })
-                            .catch(e => alert('通信エラー: ' + e))
-                            .finally(() => {
-                                if (btn) {
-                                    btn.disabled = false;
-                                    btn.innerText = '一次請求(50%)発行';
-                                }
-                            });
+                        fileInput.onchange = function() {
+                            if (!fileInput.files || fileInput.files.length === 0) {
+                                return;
+                            }
+                            const file = fileInput.files[0];
+                            if (!confirm(`選択した一次回答ファイル: 「${file.name}」\n\nこのファイルをアップロードし、本見積額の50%分の一次請求書(50%)を発行しますか？\n（Google Driveへアップロードされ、クライアントチャットに自動通知されます）`)) {
+                                return;
+                            }
+                            
+                            const btn = document.getElementById('issue_primary_invoice_btn');
+                            if (btn) {
+                                btn.disabled = true;
+                                btn.innerText = '発行中...';
+                            }
+                            
+                            const formData = new FormData();
+                            formData.append('project_id', <?= (int)$project_id ?>);
+                            formData.append('tab', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>');
+                            formData.append('primary_file', file);
+                            
+                            fetch('api_issue_primary_invoice.php', { method: 'POST', body: formData })
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.success && data.drive_file_id) {
+                                        alert('一次回答ファイルをアップロードし、一次請求書(50%)を発行しました。');
+                                        window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
+                                        location.reload();
+                                    } else {
+                                        alert('一次請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                                    }
+                                })
+                                .catch(e => alert('通信エラー: ' + e))
+                                .finally(() => {
+                                    if (btn) {
+                                        btn.disabled = false;
+                                        btn.innerText = '一次請求(50%)発行';
+                                    }
+                                });
+                        };
+                        
+                        alert('一次回答ファイル（計算書等）を選択してアップロードしてください。');
+                        fileInput.click();
                     }
 
                     function issueFinalInvoice() {
@@ -510,8 +529,11 @@
                     if ($project_info['req_skin']) {
                         echo '<div style="font-size:11px; font-weight:bold; color:#374151; margin-top:5px; margin-bottom:2px;">【外皮計算図書】</div>';
                         echo '<div style="font-size:11px; margin-left:10px;">';
-                        echo '・断熱材/サッシ仕様: ' . (isset($files_by_cat['insulation_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
-                        echo '・設備仕様書: ' . (isset($files_by_cat['equipment_spec']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
+                        echo '・仕様書: ' . (isset($files_by_cat['spec_doc']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
+                        echo '・断熱材資料: ' . (isset($files_by_cat['insulation_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
+                        echo '・サッシ・玄関ドア仕様: ' . (isset($files_by_cat['sash_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
+                        echo '・24時間換気計算図書: ' . (isset($files_by_cat['ventilation_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
+                        echo '・設備機器カタログ: ' . (isset($files_by_cat['equip_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
                         echo '</div>';
                     }
 

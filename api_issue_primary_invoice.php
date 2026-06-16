@@ -40,10 +40,111 @@ if (!$project_id) {
 }
 
 try {
-    logDebug("Starting primary invoice generation for project {$project_id}...");
-    require_once __DIR__ . '/actions/action_issue_invoice_helper.php';
+    logDebug("Starting primary invoice generation with primary response file for project {$project_id}...");
     
+    // 一次回答ファイルの検証
+    if (empty($_FILES['primary_file']['name']) || $_FILES['primary_file']['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception("一次回答ファイル（計算書等）を添付してください。");
+    }
+
+    $pdo->beginTransaction();
+
+    // 1. 案件情報の取得
+    $stmtProj = $pdo->prepare("SELECT * FROM projects WHERE id = :id");
+    $stmtProj->execute(['id' => $project_id]);
+    $project_info = $stmtProj->fetch(PDO::FETCH_ASSOC);
+    if (!$project_info) {
+        throw new Exception("案件が見つかりません。");
+    }
+
+    // 2. アップロード処理 (Google Drive ＋ project_files 登録)
+    require_once __DIR__ . '/google_drive_client.php';
+    $file_name = $_FILES['primary_file']['name'];
+    $tmp_name  = $_FILES['primary_file']['tmp_name'];
+    $mime_type = $_FILES['primary_file']['type'];
+    
+    $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
+
+    // 計算タイプの決定（案件の要求フラグから優先順位か、もしくはPOSTされたtab）
+    $tab = $_POST['tab'] ?? '';
+    if (empty($tab)) {
+        if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
+            $tab = 'permit';
+        } elseif ($project_info['req_wall'] == 1) {
+            $tab = 'wall';
+        } elseif ($project_info['req_skin'] == 1) {
+            $tab = 'skin';
+        } elseif ($project_info['req_sky'] == 1) {
+            $tab = 'sky';
+        } else {
+            $tab = 'permit';
+        }
+    }
+
+    $file_category = 'calc_doc'; // 構造計算書
+    if ($tab === 'wall') {
+        $file_category = 'wall_calc_doc';
+    } elseif ($tab === 'skin') {
+        $file_category = 'skin_calc_doc';
+    } elseif ($tab === 'sky') {
+        $file_category = 'sky_calc_doc';
+    }
+
+    // 既存の同カテゴリファイルを is_latest=0 にする
+    $stmtOld = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+    $stmtOld->execute(['pid' => $project_id, 'cat' => $file_category]);
+    
+    // バージョン番号
+    $stmtVer = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+    $stmtVer->execute(['pid' => $project_id, 'cat' => $file_category]);
+    $next_ver = intval($stmtVer->fetchColumn()) + 1;
+    
+    $stmtNewFile = $pdo->prepare("
+        INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+        VALUES (:pid, :cat, :name, :fid, :ver, 1)
+    ");
+    $stmtNewFile->execute([
+        'pid'  => $project_id,
+        'cat'  => $file_category,
+        'name' => $file_name,
+        'fid'  => $drive_file_id,
+        'ver'  => $next_ver
+    ]);
+
+    // 3. ステータスを submission（提出済・確認中）に更新
+    require_once __DIR__ . '/Repositories/ProjectRepository.php';
+    $projectRepo = new ProjectRepository($pdo);
+    $projectRepo->updateStatus($project_id, 'submission');
+
+    // 4. スケジュール実績 JSON の更新（インデックス 2: 構造計算・図面 初回提示 に今日の日付を設定）
+    $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+    $stmtAct->execute(['id' => $project_id]);
+    $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+    $today = date('Y-m-d');
+    if ($act_row) {
+        $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
+        foreach ($colsToUpdate as $col) {
+            $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+            $actuals[2] = $today; // 初回提示
+            $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+            $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+        }
+    }
+
+    // 5. 一次請求書(50%)の自動発行＆チャット通知 (共通ヘルパーの呼び出し)
+    require_once __DIR__ . '/actions/action_issue_invoice_helper.php';
     $pdfDriveId = issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id']);
+
+    // 6. 一次回答の提示完了チャット通知を追加
+    $msg = "【一次回答の提示 ＆ 請求書発行】\n一次回答の計算図書「{$file_name}」をアップロードし、一次請求書(50%)を発行いたしました。ファイル一覧（成果物）よりご確認ください。\n何卒よろしくお願いいたします。";
+    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+    $stmtMsg->execute([
+        'pid' => $project_id,
+        'sid' => $_SESSION['user_id'],
+        'msg' => $msg
+    ]);
+
+    $pdo->commit();
 
     header('Content-Type: application/json');
     echo json_encode([

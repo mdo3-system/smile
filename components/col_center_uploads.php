@@ -25,8 +25,11 @@
     if (isset($files_by_cat) && is_array($files_by_cat)) {
         foreach ($files_by_cat as $cat => $files) {
             if (strpos($cat, 'custom_') === 0) {
-                $label = substr($cat, 7);
-                $common_docs[$cat] = $label;
+                // custom_skin_, custom_sky_, custom_wall_ で始まるものは専門図書なので共通からは除外
+                if (strpos($cat, 'custom_skin_') !== 0 && strpos($cat, 'custom_sky_') !== 0 && strpos($cat, 'custom_wall_') !== 0) {
+                    $label = substr($cat, 7);
+                    $common_docs[$cat] = $label;
+                }
             }
         }
     }
@@ -47,6 +50,15 @@
         }
     } elseif ($active_tab === 'wall') {
         $specialized_docs['pdf_precut'] = 'プレカット図等';
+        // 壁量計算用カスタム図書を抽出
+        if (isset($files_by_cat) && is_array($files_by_cat)) {
+            foreach ($files_by_cat as $cat => $files) {
+                if (strpos($cat, 'custom_wall_') === 0) {
+                    $label = substr($cat, 12);
+                    $specialized_docs[$cat] = $label;
+                }
+            }
+        }
     } elseif ($active_tab === 'skin') {
         $specialized_docs = [
             'spec_doc' => '仕様書',
@@ -55,6 +67,15 @@
             'ventilation_data' => '24時間換気計算図書',
             'equip_data' => '設備機器カタログ'
         ];
+        // 外皮計算用カスタム図書を抽出
+        if (isset($files_by_cat) && is_array($files_by_cat)) {
+            foreach ($files_by_cat as $cat => $files) {
+                if (strpos($cat, 'custom_skin_') === 0) {
+                    $label = substr($cat, 12);
+                    $specialized_docs[$cat] = $label;
+                }
+            }
+        }
     } elseif ($active_tab === 'sky') {
         $req_road = true;
         $req_north = true;
@@ -75,6 +96,15 @@
         }
         if ($req_road) $specialized_docs['road_data'] = '道路の資料';
         if ($req_north) $specialized_docs['true_north'] = '真北の資料';
+        // 天空率用カスタム図書を抽出
+        if (isset($files_by_cat) && is_array($files_by_cat)) {
+            foreach ($files_by_cat as $cat => $files) {
+                if (strpos($cat, 'custom_sky_') === 0) {
+                    $label = substr($cat, 11);
+                    $specialized_docs[$cat] = $label;
+                }
+            }
+        }
     }
 
     if (!empty($specialized_docs)) {
@@ -183,21 +213,34 @@
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
-                <?php if ($section_title === '共通図書' && !$is_admin): ?>
+                <?php 
+                $show_add_slot = false;
+                if (!$is_admin) {
+                    if ($section_title === '共通図書') {
+                        $show_add_slot = true;
+                    } elseif ($section_title === '専門図書' && in_array($active_tab, ['wall', 'skin', 'sky'])) {
+                        $show_add_slot = true;
+                    }
+                }
+                if ($show_add_slot): 
+                    $btn_id = 'btn_show_custom_slot_' . $section_idx;
+                    $form_id = 'add_custom_slot_form_' . $section_idx;
+                ?>
                     <!-- 別の図書を追加するフォーム -->
                     <div style="background:#f1f5f9; border:1px dashed #cbd5e1; border-radius:6px; padding:10px; margin-top:10px; text-align:center;">
-                        <button type="button" id="btn_show_custom_slot" onclick="document.getElementById('add_custom_slot_form').style.display='block'; this.style.display='none';" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">
+                        <button type="button" id="<?= $btn_id ?>" onclick="document.getElementById('<?= $form_id ?>').style.display='block'; this.style.display='none';" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">
                             ➕ 別の図書スロットを追加
                         </button>
-                        <div id="add_custom_slot_form" style="display:none; text-align:left;">
+                        <div id="<?= $form_id ?>" style="display:none; text-align:left;">
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:5px;">
                                 <input type="hidden" name="action" value="add_custom_slot">
                                 <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
+                                <input type="hidden" name="section_type" value="<?= htmlspecialchars($section_title, ENT_QUOTES) ?>">
                                 <label style="font-size:11px; font-weight:bold; color:#475569;">追加する図書の名称（例：3F平面図）</label>
                                 <div style="display:flex; gap:5px;">
                                     <input type="text" name="custom_slot_label" placeholder="図書の名称を入力してください" required style="font-size:11px; flex:1; padding:4px; border:1px solid #cbd5e1; border-radius:4px;">
                                     <button type="submit" style="background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">追加</button>
-                                    <button type="button" onclick="document.getElementById('add_custom_slot_form').style.display='none'; document.getElementById('btn_show_custom_slot').style.display='inline-block';" style="background:#6c757d; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">キャンセル</button>
+                                    <button type="button" onclick="document.getElementById('<?= $form_id ?>').style.display='none'; document.getElementById('<?= $btn_id ?>').style.display='inline-block';" style="background:#6c757d; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">キャンセル</button>
                                 </div>
                             </form>
                         </div>

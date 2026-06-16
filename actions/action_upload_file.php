@@ -418,8 +418,15 @@ if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
 // ==============================
 if ($action === 'add_custom_slot' && !$is_admin) {
     $custom_label = trim($_POST['custom_slot_label'] ?? '');
+    $tab = $_POST['tab'] ?? '';
+    $section_type = $_POST['section_type'] ?? '';
+    
     if ($custom_label !== '') {
-        $file_category = 'custom_' . $custom_label;
+        $prefix = 'custom_';
+        if ($section_type === '専門図書' && in_array($tab, ['wall', 'skin', 'sky'])) {
+            $prefix = 'custom_' . $tab . '_';
+        }
+        $file_category = $prefix . $custom_label;
         
         $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
         $stmtCheck->execute(['pid' => $project_id, 'cat' => $file_category]);
@@ -434,7 +441,6 @@ if ($action === 'add_custom_slot' && !$is_admin) {
             ]);
         }
     }
-    $tab = $_POST['tab'] ?? '';
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
 
