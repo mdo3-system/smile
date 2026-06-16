@@ -27,8 +27,8 @@ class PDOEstimateRepository implements EstimateRepositoryInterface
     public function save(Estimate $estimate): bool
     {
         $stmt = $this->pdo->prepare("
-            INSERT INTO estimates (project_id, base_price, area, grade_price, total_price, note, pdf_drive_file_id, req_permit, req_wall, req_skin, req_sky)
-            VALUES (:pid, :base, :area, :grade, :total, :note, :pdf, :permit, :wall, :skin, :sky)
+            INSERT INTO estimates (project_id, base_price, area, grade_price, total_price, note, pdf_drive_file_id, req_permit, req_wall, req_skin, req_sky, inputs_json)
+            VALUES (:pid, :base, :area, :grade, :total, :note, :pdf, :permit, :wall, :skin, :sky, :inputs_json)
         ");
         $success = $stmt->execute([
             'pid' => $estimate->projectId,
@@ -41,7 +41,8 @@ class PDOEstimateRepository implements EstimateRepositoryInterface
             'permit' => (int)$estimate->reqPermit,
             'wall' => (int)$estimate->reqWall,
             'skin' => (int)$estimate->reqSkin,
-            'sky' => (int)$estimate->reqSky
+            'sky' => (int)$estimate->reqSky,
+            'inputs_json' => $estimate->inputsJson
         ]);
         if ($success) {
             $estimate->id = (int)$this->pdo->lastInsertId();

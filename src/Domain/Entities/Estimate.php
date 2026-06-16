@@ -15,6 +15,7 @@ class Estimate
     public bool $reqWall;
     public bool $reqSkin;
     public bool $reqSky;
+    public ?string $inputsJson;
     public ?string $createdAt;
 
     public function __construct(
@@ -30,6 +31,7 @@ class Estimate
         bool $reqWall = false,
         bool $reqSkin = false,
         bool $reqSky = false,
+        ?string $inputsJson = null,
         ?string $createdAt = null
     ) {
         $this->id = $id;
@@ -44,6 +46,7 @@ class Estimate
         $this->reqWall = $reqWall;
         $this->reqSkin = $reqSkin;
         $this->reqSky = $reqSky;
+        $this->inputsJson = $inputsJson;
         $this->createdAt = $createdAt;
     }
 
@@ -67,6 +70,7 @@ class Estimate
             (bool)($data['req_wall'] ?? false),
             (bool)($data['req_skin'] ?? false),
             (bool)($data['req_sky'] ?? false),
+            $data['inputs_json'] ?? null,
             $data['created_at'] ?? null
         );
     }

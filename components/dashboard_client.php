@@ -485,7 +485,12 @@
                                             <a href="<?= $furl ?>" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>
                                         <?php endif; ?>
                                     <?php endif; ?>
-                                    <div class="chat-time"><?= $timeStr ?></div>
+                                    <div class="chat-time">
+                                        <?= $timeStr ?>
+                                        <?php if ($isMe || $_SESSION['role'] === 'admin'): ?>
+                                            <span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>

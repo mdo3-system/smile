@@ -27,7 +27,8 @@ class EstimateCalculatorService
             (bool)($data['req_permit'] ?? false),
             (bool)($data['req_wall'] ?? false),
             (bool)($data['req_skin'] ?? false),
-            (bool)($data['req_sky'] ?? false)
+            (bool)($data['req_sky'] ?? false),
+            $data['inputs_json'] ?? null
         );
 
         return $this->estimateRepo->save($estimate);

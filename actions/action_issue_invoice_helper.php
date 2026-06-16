@@ -81,6 +81,16 @@ function issuePrimaryInvoiceHelper($pdo, $project_id, $user_id) {
             'msg' => $msg
         ]);
 
+        if ($is_local_transaction) {
+            $pdo->commit();
+        }
+    } catch (Exception $e) {
+        if ($is_local_transaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
     return $pdfDriveId;
 }
 

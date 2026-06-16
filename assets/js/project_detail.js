@@ -40,13 +40,18 @@ function buildBubble(msg) {
     const nameHtml = !isMe ? `<div class="chat-name">${senderName}</div>` : '';
     const textHtml = msg.message_text ? `<div class="chat-bubble ${bubbleClass}">${msg.message_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>` : '';
 
+    let deleteBtnHtml = '';
+    if (isMe || window.APP_USER_ROLE === 'admin') {
+        deleteBtnHtml = `<span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px;" onclick="deleteChatMessage(${msg.id})">取り消し</span>`;
+    }
+
     return `<div class="chat-bubble-row ${rowClass}" data-msg-id="${msg.id}">
         ${avatarHtml}
         <div class="chat-content">
             ${nameHtml}
             ${textHtml}
             ${fileHtml}
-            <div class="chat-time">${timeStr}</div>
+            <div class="chat-time">${timeStr}${deleteBtnHtml}</div>
         </div>
     </div>`;
 }
@@ -449,12 +454,37 @@ function saveAndPrintEstimate(isFormal = false, isAdditional = false) {
         else btn.innerText = 'PDF発行中...';
     }
     
+    // シミュレーターの入力値を収集
+    const inputs = {};
+    const estimatorInputs = document.querySelectorAll('[id^="est_active_"], [id^="est_base_"], [id^="est_area_"], [id^="est_mult_"], [id^="est_grade_"], [id^="est_kanamono_"], [id^="est_special_"], [id^="est_dwg_"], [id^="est_jintsu_"], [id^="est_moya_"], [id^="est_kisohari_"], [id^="est_kisotachi_"], [id^="est_setsumei_"], [id^="est_road_"], [id^="est_north_"], [id^="est_extra_"], [id^="est_site_area_"], [id^="est_building_area_"], [id^="est_detail_"]');
+    estimatorInputs.forEach(el => {
+        if (el.type === 'checkbox') {
+            inputs[el.id] = el.checked;
+        } else {
+            inputs[el.id] = el.value;
+        }
+    });
+    // 手動追加項目も収集
+    const manualItems = [];
+    document.querySelectorAll('.manual-est-row').forEach(row => {
+        const nameInput = row.querySelector('.manual-est-name');
+        const priceInput = row.querySelector('.manual-est-price');
+        if (nameInput && priceInput) {
+            manualItems.push({
+                name: nameInput.value,
+                price: priceInput.value
+            });
+        }
+    });
+    inputs['manual_items'] = manualItems;
+
     const formData = new FormData();
     formData.append('project_id', window.APP_PROJECT_ID);
     formData.append('total_price', currentEstimate);
     formData.append('note', JSON.stringify(estimateItems));
     formData.append('is_formal', isFormal ? '1' : '0');
     formData.append('is_additional', isAdditional ? '1' : '0');
+    formData.append('inputs_json', JSON.stringify(inputs));
     
     fetch('api_save_estimate.php', { method: 'POST', body: formData })
         .then(r => r.json())
@@ -551,4 +581,26 @@ function showUpdateToast() {
 // 15秒ごとにポーリング
 if (window.APP_PROJECT_ID) {
     autoPollInterval = setInterval(checkUpdates, 15000);
+}
+
+function deleteChatMessage(msgId) {
+    if (!confirm('このメッセージを取り消しますか？')) return;
+    const formData = new FormData();
+    formData.append('message_id', msgId);
+
+    fetch('api_delete_message.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // 画面から該当バブルを削除
+                const bubbleRow = document.querySelector(`[data-msg-id="${msgId}"]`);
+                if (bubbleRow) {
+                    bubbleRow.remove();
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(data.error || 'メッセージの取り消しに失敗しました。');
+            }
+        }).catch(e => alert('通信エラー: ' + e));
 }

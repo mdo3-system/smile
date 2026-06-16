@@ -176,6 +176,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
+        // 経理全体の更新通知を投稿
+        $admin_finance_msg = "【経理情報更新】経理担当者によって案件の財務・経理情報が更新されました。";
+        $stmtChat = $pdo->prepare("
+            INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
+            VALUES (:pid, :sid, 'client_admin', :msg, NOW())
+        ");
+        $stmtChat->execute([
+            'pid' => $project_id,
+            'sid' => $_SESSION['user_id'],
+            'msg' => $admin_finance_msg
+        ]);
+
         // 協力業者支払情報の更新
         $order_payment_statuses = $_POST['order_payment_statuses'] ?? [];
         $order_payment_dates = $_POST['order_payment_dates'] ?? [];

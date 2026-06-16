@@ -22,7 +22,7 @@ class ChatController
         if ($tab === 'permit' || $tab === '') {
             $threadType = ['client_admin', 'client_admin_permit'];
         } else {
-            $threadType = 'client_admin_' . $tab;
+            $threadType = ['client_admin', 'client_admin_' . $tab];
         }
 
         if (!$projectId) {

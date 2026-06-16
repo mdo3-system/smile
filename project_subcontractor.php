@@ -149,78 +149,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
-// 自分の担当発注タスクリストを取得・プロジェクトごとにグループ化（業者の場合）
+// 対象プロジェクトIDの決定
+$project_id = intval($_GET['id'] ?? 0);
+if ($project_id <= 0) {
+    if (!$is_admin) {
+        header("Location: subcontractor_portal.php");
+        exit;
+    } else {
+        die("案件IDが指定されていません。");
+    }
+}
+
+// 案件情報を取得
+$stmtProj = $pdo->prepare("SELECT * FROM projects WHERE id = :id");
+$stmtProj->execute(['id' => $project_id]);
+$project_info = $stmtProj->fetch();
+if (!$project_info) {
+    die("指定された案件が存在しません。");
+}
+
+// 自分の担当発注タスクリストを取得（業者の場合）
 $my_projects = [];
+$subcontractors = [];
+$admin_orders = [];
+$default_floor_area = '';
+
 if (!$is_admin) {
     $stmt = $pdo->prepare("
         SELECT o.*, p.project_name, p.status AS project_status 
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        WHERE o.subcontractor_id = :sub_id 
+        WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid
         ORDER BY o.created_at DESC
     ");
-    $stmt->execute(['sub_id' => $user_id]);
+    $stmt->execute(['sub_id' => $user_id, 'pid' => $project_id]);
     $orders = $stmt->fetchAll();
     
-    foreach ($orders as $order) {
-        $pid = $order['project_id'];
-        if (!isset($my_projects[$pid])) {
-            $my_projects[$pid] = [
-                'project_id' => $pid,
-                'project_name' => $order['project_name'],
-                'project_status' => $order['project_status'],
-                'tasks' => []
-            ];
-        }
-        $my_projects[$pid]['tasks'][] = $order;
+    if (empty($orders)) {
+        die("この案件へのアクセス権限がありません。");
     }
-}
+    
+    $my_projects[$project_id] = [
+        'project_id' => $project_id,
+        'project_name' => $project_info['project_name'],
+        'project_status' => $project_info['status'],
+        'tasks' => $orders
+    ];
+} else {
+    // 管理者の場合、業者リストを取得
+    $stmtSub = $pdo->prepare("SELECT id, contact_name FROM users WHERE role = 'subcontractor'");
+    $stmtSub->execute();
+    $subcontractors = $stmtSub->fetchAll();
 
-// 管理者の場合、対象プロジェクトの情報と業者リストを取得
-$project_id = 0;
-$project_info = null;
-$subcontractors = [];
-$admin_orders = [];
-$default_floor_area = ''; // 意匠図作図依頼からの引き継ぎ面積
-if ($is_admin) {
-    $project_id = intval($_GET['id'] ?? 0);
-    if ($project_id > 0) {
-        $stmtProj = $pdo->prepare("SELECT * FROM projects WHERE id = :id");
-        $stmtProj->execute(['id' => $project_id]);
-        $project_info = $stmtProj->fetch();
+    // 意匠図作図依頼（order_type = 'design'）から最も新しい床面積を取得
+    $stmtArea = $pdo->prepare("
+        SELECT floor_area 
+        FROM subcontractor_orders 
+        WHERE project_id = :pid AND order_type = 'design' AND status != 'cancelled'
+        ORDER BY id DESC LIMIT 1
+    ");
+    $stmtArea->execute(['pid' => $project_id]);
+    $default_floor_area = $stmtArea->fetchColumn();
 
-        // 業者リストを取得
-        $stmtSub = $pdo->prepare("SELECT id, contact_name FROM users WHERE role = 'subcontractor'");
-        $stmtSub->execute();
-        $subcontractors = $stmtSub->fetchAll();
-
-        // 意匠図作図依頼（order_type = 'design'）から最も新しい床面積を取得
-        $stmtArea = $pdo->prepare("
-            SELECT floor_area 
-            FROM subcontractor_orders 
-            WHERE project_id = :pid AND order_type = 'design' AND status != 'cancelled'
-            ORDER BY id DESC LIMIT 1
-        ");
-        $stmtArea->execute(['pid' => $project_id]);
-        $default_floor_area = $stmtArea->fetchColumn();
-
-        // この案件の発注履歴を取得（納品ファイルも結合）
-        $stmtOrd = $pdo->prepare("
-            SELECT o.*, u.contact_name,
-                   f1.drive_file_id AS pdf_id, f1.file_name AS pdf_name, f1.version AS pdf_ver,
-                   f2.drive_file_id AS arc_d_id, f2.file_name AS arc_d_name, f2.version AS arc_d_ver,
-                   f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
-            FROM subcontractor_orders o 
-            JOIN users u ON o.subcontractor_id = u.id 
-            LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
-            LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend_design' AND f2.is_latest = 1
-            LEFT JOIN project_files f3 ON o.project_id = f3.project_id AND f3.file_category = 'sub_architrend_struct' AND f3.is_latest = 1
-            WHERE o.project_id = :pid 
-            ORDER BY o.created_at DESC
-        ");
-        $stmtOrd->execute(['pid' => $project_id]);
-        $admin_orders = $stmtOrd->fetchAll();
-    }
+    // この案件の発注履歴を取得（納品ファイルも結合）
+    $stmtOrd = $pdo->prepare("
+        SELECT o.*, u.contact_name,
+               f1.drive_file_id AS pdf_id, f1.file_name AS pdf_name, f1.version AS pdf_ver,
+               f2.drive_file_id AS arc_d_id, f2.file_name AS arc_d_name, f2.version AS arc_d_ver,
+               f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
+        FROM subcontractor_orders o 
+        JOIN users u ON o.subcontractor_id = u.id 
+        LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
+        LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend_design' AND f2.is_latest = 1
+        LEFT JOIN project_files f3 ON o.project_id = f3.project_id AND f3.file_category = 'sub_architrend_struct' AND f3.is_latest = 1
+        WHERE o.project_id = :pid 
+        ORDER BY o.created_at DESC
+    ");
+    $stmtOrd->execute(['pid' => $project_id]);
+    $admin_orders = $stmtOrd->fetchAll();
 }
 ?>
 
@@ -567,7 +573,12 @@ if ($is_admin) {
                             $senderName = $isMe ? 'あなた (管理者)' : '協力業者';
                         ?>
                             <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
-                                <span style="font-size:10px; color:#666; margin-bottom:2px;"><?= $senderName ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
+                                <span style="font-size:10px; color:#666; margin-bottom:2px;">
+                                    <?= $senderName ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)
+                                    <?php if ($isMe || $is_admin): ?>
+                                        <span style="cursor:pointer; color:#ef4444; font-size:9px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                    <?php endif; ?>
+                                </span>
                                 <?php if (!empty($msg['message_text'])): ?>
                                     <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:80%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
                                 <?php endif; ?>
@@ -811,7 +822,12 @@ if ($is_admin) {
                                     $sender = $isMe ? 'あなた' : '管理者';
                                 ?>
                                     <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
-                                        <span style="font-size:10px; color:#666; margin-bottom:2px;"><?php if (!$isMe): ?><?= $sender ?> <?php endif; ?>(<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)</span>
+                                        <span style="font-size:10px; color:#666; margin-bottom:2px;">
+                                            <?php if (!$isMe): ?><?= $sender ?> <?php endif; ?>(<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)
+                                            <?php if ($isMe || $is_admin): ?>
+                                                <span style="cursor:pointer; color:#ef4444; font-size:9px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                            <?php endif; ?>
+                                        </span>
                                         <?php if (!empty($msg['message_text'])): ?>
                                             <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:85%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
                                         <?php endif; ?>
@@ -945,6 +961,22 @@ if ($is_admin) {
             });
     }
     
+    function deleteChatMessage(msgId) {
+        if (!confirm('このメッセージを取り消しますか？')) return;
+        const formData = new FormData();
+        formData.append('message_id', msgId);
+
+        fetch('api_delete_message.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'メッセージの取り消しに失敗しました。');
+                }
+            }).catch(e => alert('通信エラー: ' + e));
+    }
+
     // スクロールを最下部に
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[id^="chatList_"]').forEach(el => {

@@ -35,6 +35,9 @@ class EstimateController
             try {
                 $pdo->exec("ALTER TABLE estimates ADD COLUMN pdf_drive_file_id VARCHAR(255) NULL");
             } catch (\Exception $e) { /* ignore */ }
+            try {
+                $pdo->exec("ALTER TABLE estimates ADD COLUMN inputs_json TEXT NULL");
+            } catch (\Exception $e) { /* ignore */ }
 
             // 1. まず見積もりデータをDBに保存（この時点ではDrive IDは無し）
             $service = $this->container->getEstimateCalculatorService();
