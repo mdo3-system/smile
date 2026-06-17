@@ -90,27 +90,6 @@ try {
         $file_category = 'sky_calc_doc';
     }
 
-    // 既存の同カテゴリファイルを is_latest=0 にする
-    $stmtOld = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
-    $stmtOld->execute(['pid' => $project_id, 'cat' => $file_category]);
-    
-    // バージョン番号
-    $stmtVer = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-    $stmtVer->execute(['pid' => $project_id, 'cat' => $file_category]);
-    $next_ver = intval($stmtVer->fetchColumn()) + 1;
-    
-    $stmtNewFile = $pdo->prepare("
-        INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
-        VALUES (:pid, :cat, :name, :fid, :ver, 1)
-    ");
-    $stmtNewFile->execute([
-        'pid'  => $project_id,
-        'cat'  => $file_category,
-        'name' => $file_name,
-        'fid'  => $drive_file_id,
-        'ver'  => $next_ver
-    ]);
-
     // 3. ステータスを submission（提出済・確認中）に更新
     require_once __DIR__ . '/Repositories/ProjectRepository.php';
     $projectRepo = new ProjectRepository($pdo);
@@ -135,13 +114,14 @@ try {
     require_once __DIR__ . '/actions/action_issue_invoice_helper.php';
     $pdfDriveId = issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id']);
 
-    // 6. 一次回答の提示完了チャット通知を追加
-    $msg = "【一次回答の提示 ＆ 請求書発行】\n一次回答の計算図書「{$file_name}」をアップロードし、一次請求書(50%)を発行いたしました。ファイル一覧（成果物）よりご確認ください。\n何卒よろしくお願いいたします。";
-    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+    // 6. 一次回答の提示完了チャット通知を追加 (計算書ファイルをチャットにUP)
+    $msg = "【一次回答の提示 ＆ 請求書発行】\n一次回答の計算図書「{$file_name}」をアップロードし、一次請求書(50%)を発行いたしました。\n何卒よろしくお願いいたします。";
+    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path) VALUES (:pid, :sid, 'client_admin', :msg, :fpath)");
     $stmtMsg->execute([
         'pid' => $project_id,
         'sid' => $_SESSION['user_id'],
-        'msg' => $msg
+        'msg' => $msg,
+        'fpath' => $drive_file_id
     ]);
 
     $pdo->commit();

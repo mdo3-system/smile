@@ -90,7 +90,12 @@
                         <?php foreach ($categories as $cat => $label): ?>
                             <?php $history = $artifacts_by_cat[$cat] ?? []; ?>
                             <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:8px;">
-                                <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px;"><?= $label ?></div>
+                                <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px; display:flex; align-items:center; justify-content:space-between;">
+                                    <span><?= $label ?></span>
+                                    <?php if ($is_admin && strpos($cat, 'custom_deliverable_') === 0): ?>
+                                        <button type="button" onclick="renameCustomDeliverable('<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($label, ENT_QUOTES) ?>')" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-size:10px; padding:0; display:inline-flex; align-items:center; gap:2px; font-weight:normal;" title="名称変更">🖊 編集</button>
+                                    <?php endif; ?>
+                                </div>
                                 
                                 <?php if (!empty($history)): 
                                     $latest = $history[0]; 
@@ -150,12 +155,31 @@
                         <button type="submit" class="btn" style="background:#8b5cf6; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">➕ 別の成果物スロットを追加</button>
                     </form>
                 </div>
+                <form id="renameCustomDeliverableForm" action="project_detail.php?id=<?= $project_id ?>" method="POST" style="display:none;">
+                    <input type="hidden" name="action" value="rename_custom_deliverable">
+                    <input type="hidden" name="old_category" id="rename_old_category" value="">
+                    <input type="hidden" name="new_label" id="rename_new_label" value="">
+                    <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
+                </form>
                 <script>
                 function promptCustomDeliverable(form) {
                     const name = prompt("追加する成果物の名前を入力してください（例: 特記仕様書）:");
                     if (!name || name.trim() === "") return false;
                     document.getElementById('custom_deliverable_label').value = name.trim();
                     return true;
+                }
+                function renameCustomDeliverable(cat, currentLabel) {
+                    const newName = prompt("成果物スロットの新しい名称を入力してください:", currentLabel);
+                    if (newName === null) return;
+                    const trimmed = newName.trim();
+                    if (trimmed === "") {
+                        alert("名前を入力してください。");
+                        return;
+                    }
+                    if (trimmed === currentLabel) return;
+                    document.getElementById('rename_old_category').value = cat;
+                    document.getElementById('rename_new_label').value = trimmed;
+                    document.getElementById('renameCustomDeliverableForm').submit();
                 }
                 </script>
             <?php endif; ?>

@@ -128,3 +128,27 @@ if ($action === 'add_custom_deliverable' && $is_admin) {
     }
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
+
+// ==============================
+// カスタム成果物スロット名称変更（管理者向け）
+// ==============================
+if ($action === 'rename_custom_deliverable' && $is_admin) {
+    $old_category = trim($_POST['old_category'] ?? '');
+    $new_label = trim($_POST['new_label'] ?? '');
+    $tab = $_POST['tab'] ?? '';
+    
+    if ($old_category !== '' && $new_label !== '') {
+        try {
+            $uploadService->renameCustomDeliverable(
+                $project_id,
+                $old_category,
+                $new_label,
+                $tab,
+                $_SESSION['user_id'] ?? 1
+            );
+        } catch (Exception $e) {
+            die("カスタム成果物スロットの名称変更に失敗しました: " . $e->getMessage());
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
+}

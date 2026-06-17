@@ -126,11 +126,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmtGetSubName->execute(['uid' => $user_id]);
             $sub_name = $stmtGetSubName->fetchColumn() ?: '協力業者';
 
-            if ($via_archiserver) {
-                $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品（アーキトレンドサーバーへのアップロード完了連絡）が行われました。\n";
-            } else {
-                $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品（ファイルアップロード）が行われました。\n";
-            }
+                        $deliver_type_label = '';
+            if (isset($_POST['deliver_type'])) {
+                if ($_POST['deliver_type'] === 'design') {
+                    $deliver_type_label = '（意匠図）';
+                } elseif ($_POST['deliver_type'] === 'struct') {
+                    $deliver_type_label = '（構造図）';
+                }
+            }
+
+            if ($via_archiserver) {
+                $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品{$deliver_type_label}（アーキトレンドサーバーへのアップロード完了連絡）が行われました。\n";
+            } else {
+                $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品{$deliver_type_label}（ファイルアップロード）が行われました。\n";
+            }
             $notify_msg .= "管理者画面にて内容をご確認の上、承認（クライアントへの公開）処理を行ってください。";
 
             $stmtChat = $pdo->prepare("
@@ -752,92 +761,179 @@ if (!$is_admin) {
                                         <div style="font-size:13px; color:#555;">完了納期予定日: <strong><?= !empty($task['expected_delivery_date']) ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></div>
                                     </div>
 
-                                    <?php if ($task['status'] !== 'cancelled'): ?>
-                                        <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px;">
-                                            <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
-                                            <p style="font-size:11px; color:#666; margin:4px 0 10px 0;">※個別にアップロード可能です。差し替えた場合も履歴が残ります。</p>
-                                            <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:10px; margin:0;" onsubmit="return false;">
-                                                <input type="hidden" name="action" value="deliver_task">
-                                                <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
-                                                <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
-                                                
-                                                
-                                                 <!-- 作図基準チェックリスト -->
-                                                 <div class="checklist-section" style="margin-bottom: 15px; border: 1px solid #fed7aa; background: #fff7ed; padding: 12px; border-radius: 6px;">
-                                                     <strong style="color: #c2410c; display: block; margin-bottom: 8px; font-size: 14px;">📝 成果物作成時の確認チェック項目 (全項目確認必須):</strong>
-                                                     <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 1.4;">
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>新規ﾃﾞｰﾀ作成からの作図</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>ｸﾞﾘｯﾄﾞ、ﾓｼﾞｭｰﾙの設定は意匠図に合わせる</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>高さの設定（設定→物件初期設定→基準高さ情報、平均GLからの高さとする、構造では平均GLは基礎高さで調整する）</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>車庫・吹き抜け・階段の部屋属性、室内の部屋を外部部屋としない</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>最高（屋根）の高さは軒高での調整はNG、屋根属性で調整、最後の手段で屋根厚で調整</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>屋根仕上げが矩計で読めたら屋根材は図面通りとする</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>軒の出、ｹﾗﾊﾞの出は図面に整合させる。Minは130とする。</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>屋根属性：垂木WHとﾋﾟｯﾁは矩計図と整合させる</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>ﾊﾞﾙｺﾆｰの仕上げは一般外壁と同じものとする</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>窓ｻｲｽﾞWHと設置高さはできる限り意匠図に整合</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>不整合に気づいたら報告する</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>柱は四角内に×表示とする</span>
-                                                         </label>
-                                                         <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
-                                                             <input type="checkbox" class="deliver-check" style="margin-top: 2px;">
-                                                             <span>疑義あるときは作業をすすめないで相談する</span>
-                                                         </label>
-                                                     </div>
-                                                 </div>
-<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                                                    <label style="width:150px; font-weight:bold; color:#0056b3;">意匠図用アーキデータ:</label>
-                                                    <input type="file" name="architrend_design" style="font-size:12px;">
-                                                </div>
-                                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                                                    <label style="width:150px; font-weight:bold; color:#0056b3;">構造図用アーキデータ:</label>
-                                                    <input type="file" name="architrend_struct" style="font-size:12px;">
-                                                </div>
-                                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                                                    <label style="width:150px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
-                                                    <input type="file" name="structural_pdf" style="font-size:12px;">
-                                                </div>
-                                                <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
-                                                    <button type="button" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleDeliverSubmit(event, this, false)">選択したファイルを納品・差し替えする</button>
-                                                    <button type="button" name="via_archiserver" value="1" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleDeliverSubmit(event, this, true)">☁ アーキサーバーへUP</button>
-                                                </div>
-                                            </form>
-                                        </div>
+                                    <?php if ($task['status'] !== 'cancelled'): ?>
+                                        <?php 
+                                        $show_struct_delivery = ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1);
+                                        ?>
+                                        <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px; display:flex; flex-direction:column; gap:20px; margin-top: 10px;">
+                                            <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
+                                            <p style="font-size:11px; color:#666; margin:-5px 0 5px 0;">※個別にアップロード可能です。差し替えた場合も履歴が残ります。</p>
+                                            
+                                            <!-- ■ 意匠図の納品エリア -->
+                                            <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:15px; border-radius:6px;">
+                                                <strong style="color:#0f172a; font-size:14px; display:block; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">📐 意匠図の納品・差し替え</strong>
+                                                
+                                                <form id="design_deliver_form_<?= $task['id'] ?>" method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:10px; margin:0;" onsubmit="return false;">
+                                                    <input type="hidden" name="action" value="deliver_task">
+                                                    <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
+                                                    <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
+                                                    <input type="hidden" name="deliver_type" value="design">
+                                                    
+                                                    <!-- 意匠図チェックリスト -->
+                                                    <div style="margin-bottom: 12px; border: 1px solid #fed7aa; background: #fff7ed; padding: 12px; border-radius: 6px;">
+                                                        <strong style="color: #c2410c; display: block; margin-bottom: 8px; font-size: 13px;">📝 意匠図作図基準チェック項目 (全項目確認必須):</strong>
+                                                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 1.4;">
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>新規ﾃﾞｰﾀ作成からの作図</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>ｸﾞﾘｯﾄﾞ、ﾓｼﾞｭｰﾙの設定は意匠図に合わせる</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>高さの設定（設定→物件初期設定→基準高さ情報、平均GLからの高さとする、構造では平均GLは基礎高さで調整する）</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>車庫・吹き抜け・階段 of 部屋属性、室内の部屋を外部部屋としない</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>最高（屋根）の高さは軒高での調整はNG、屋根属性で調整、最後の手段で屋根厚で調整</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>屋根仕上げが矩計で読めたら屋根材は図面通りとする</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>軒の出、ｹﾗﾊﾞの出は図面に整合させる。Minは130とする。</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>屋根属性：垂木WHとﾋﾟｯﾁは矩計図と整合させる</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>ﾊﾞﾙｺﾆｰの仕上げは一般外壁と同じものとする</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>窓ｻｲｽﾞWHと設置高さはできる限り意匠図に整合</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>不整合に気づいたら報告する</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>柱は四角内に×表示とする</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>疑義あるときは作業をすすめないで相談する</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                                        <label style="width:150px; font-weight:bold; color:#0056b3;">意匠図用アーキデータ:</label>
+                                                        <input type="file" name="architrend_design" style="font-size:12px;">
+                                                    </div>
+
+                                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                                        <button type="button" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, false, 'design')">意匠図ファイルを納品</button>
+                                                        <button type="button" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, true, 'design')">☁ 意匠図アーキサーバーUP報告</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+
+                                            <?php if ($show_struct_delivery): ?>
+                                                <!-- ■ 構造図の納品エリア -->
+                                                <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:15px; border-radius:6px;">
+                                                    <strong style="color:#0f172a; font-size:14px; display:block; margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">🏗 構造図の納品・差し替え</strong>
+                                                    
+                                                    <form id="struct_deliver_form_<?= $task['id'] ?>" method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:10px; margin:0;" onsubmit="return false;">
+                                                        <input type="hidden" name="action" value="deliver_task">
+                                                        <input type="hidden" name="order_id" value="<?= $task['id'] ?>">
+                                                        <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
+                                                        <input type="hidden" name="deliver_type" value="struct">
+                                                        
+                                                        <!-- 構造図チェックリスト (12項目) -->
+                                                        <div style="margin-bottom: 12px; border: 1px solid #fed7aa; background: #fff7ed; padding: 12px; border-radius: 6px;">
+                                                            <strong style="color: #c2410c; display: block; margin-bottom: 8px; font-size: 13px;">📝 構造図作図時チェック項目 (全項目確認必須):</strong>
+                                                            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 1.4;">
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>1. 意匠図の不整合（柱・耐力壁・サイズ等）の有無を相互チェックしました。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>2. 土台・大引・柱・横架材・小屋束・母屋・棟木・垂木・金物・耐力壁は指定した部材寸法（木材・金物）と合致している。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>3. プレカットの打ち合わせ内容（配置等）と合致している。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>4. 火打梁（梁・床面）は設定されている。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>5. 吹き抜け・階段・バルコニーまわりの補強梁は設定されている。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>6. 基礎伏せ、基礎断面の寸法（深さ・立ち上がり等）は意匠図および構造上の要件と合致している。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>7. 耐力壁の位置は意匠図の筋交いや面材の位置と整合している。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>8. 柱・耐力壁の直下率を意識し、不整合（偏心・耐力バランス）がないか確認した。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>9. アンカーボルト、ホールダウン金物の位置は確認した。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>10. 各階の平面図、立面図、断面図と構造部材の干渉（窓・ダクト・階段等）がないか確認した。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>11. 特記仕様書の設計基準（積雪荷重、風圧力、地震力等）を正しく設定した。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>12. 疑義がある場合は作業を中断し、管理者と相談して解決済みである。</span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                                            <label style="width:150px; font-weight:bold; color:#0056b3;">構造図用アーキデータ:</label>
+                                                            <input type="file" name="architrend_struct" style="font-size:12px;">
+                                                        </div>
+                                                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                                            <label style="width:150px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
+                                                            <input type="file" name="structural_pdf" style="font-size:12px;">
+                                                        </div>
+
+                                                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                                            <button type="button" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, false, 'struct')">構造図ファイルを納品</button>
+                                                            <button type="button" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, true, 'struct')">☁ 構造図アーキサーバーUP報告</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            <?php endif; ?>
+
+                                        </div>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -932,105 +1028,132 @@ if (!$is_admin) {
     <?php endif; ?>
 
     <script>
-    function previewSubFile(input, projectId) {
-        const preview = document.getElementById('filePreview_' + projectId);
-        const label = document.getElementById('fileLabel_' + projectId);
-        const textarea = document.getElementById('chatText_' + projectId);
-        const sendBtn = textarea.parentElement.querySelector('button');
-
-        if (input.files && input.files[0]) {
-            preview.innerHTML = `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); animation: pulse-green-border 2s infinite;">📎 【送信待ち】 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2e2; border-radius:50%;" onclick="removeSubChatFile('${input.id}', ${projectId})">×</span></span>`;
-            if (label) {
-                label.style.background = '#10b981';
-                label.style.color = '#fff';
-                label.style.padding = '4px 8px';
-                label.style.borderRadius = '4px';
-            }
-            if (textarea) {
-                textarea.style.background = '#f0fdf4';
-                textarea.style.borderColor = '#10b981';
-                textarea.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
-            }
-            if (sendBtn) {
-                sendBtn.style.background = '#10b981';
-                sendBtn.style.animation = 'pulse-green 1.5s infinite';
-            }
-        } else {
-            preview.innerHTML = '';
-            if (label) {
-                label.style.background = '';
-                label.style.color = '#6c757d';
-                label.style.padding = '';
-                label.style.borderRadius = '';
-            }
-            if (textarea) {
-                textarea.style.background = '';
-                textarea.style.borderColor = '';
-                textarea.style.boxShadow = '';
-            }
-            if (sendBtn) {
-                sendBtn.style.background = '#3b82f6';
-                sendBtn.style.animation = '';
-            }
-        }
-    }
-
-    function removeSubChatFile(inputId, projectId) {
-        const input = document.getElementById(inputId);
-        if (input) {
-            input.value = '';
-            previewSubFile(input, projectId);
-        }
-    }
-
-    function sendProjMessage(projectId) {
-        const textEl = document.getElementById('chatText_' + projectId);
-        const fileEl = document.getElementById('chatFile_' + projectId);
-        const msg = textEl.value.trim();
-        
-        if (!msg && (!fileEl.files || fileEl.files.length === 0)) return;
-
-        const formData = new FormData();
-        formData.append('project_id', projectId);
-        formData.append('action', 'send_message');
-        formData.append('thread_type', 'sub_admin');
-        formData.append('message_text', msg);
-        if (fileEl.files && fileEl.files.length > 0) {
-            for (let i = 0; i < fileEl.files.length; i++) {
-                formData.append('files[]', fileEl.files[i]);
-            }
-        }
-
-        const sendBtn = fileEl.parentElement.querySelector('button');
-        if (sendBtn) {
-            sendBtn.disabled = true;
-            sendBtn.textContent = '...';
-        }
-
-        fetch('api_send_message.php', { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    textEl.value = '';
-                    fileEl.value = '';
-                    previewSubFile(fileEl, projectId);
-                    window.location.reload();
-                } else {
-                    alert('送信エラー');
-                }
-            })
-            .catch(e => {
-                console.error(e);
-                alert('通信エラー');
-            })
-            .finally(() => {
-                if (sendBtn) {
-                    sendBtn.disabled = false;
-                    sendBtn.textContent = '➤';
-                }
-            });
-    }
-    
+    let subcontractorChatSelectedFiles = {};
+
+    function previewSubFile(input, projectId) {
+        if (!subcontractorChatSelectedFiles[projectId]) {
+            subcontractorChatSelectedFiles[projectId] = [];
+        }
+        const preview = document.getElementById('filePreview_' + projectId);
+        const label = document.getElementById('fileLabel_' + projectId);
+        const textarea = document.getElementById('chatText_' + projectId);
+        const sendBtn = textarea.parentElement.querySelector('button');
+
+        if (input.files && input.files.length > 0) {
+            Array.from(input.files).forEach(f => {
+                if (!subcontractorChatSelectedFiles[projectId].some(existing => existing.name === f.name)) {
+                    subcontractorChatSelectedFiles[projectId].push(f);
+                }
+            });
+            input.value = '';
+        }
+        renderSubcontractorChatFilePreview(projectId);
+    }
+
+    function renderSubcontractorChatFilePreview(projectId) {
+        const preview = document.getElementById('filePreview_' + projectId);
+        const label = document.getElementById('fileLabel_' + projectId);
+        const textarea = document.getElementById('chatText_' + projectId);
+        const sendBtn = textarea ? textarea.parentElement.querySelector('button') : null;
+        const files = subcontractorChatSelectedFiles[projectId] || [];
+
+        if (files.length > 0) {
+            let badgesHtml = '';
+            files.forEach((f, index) => {
+                badgesHtml += `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-right:5px; margin-bottom:5px;">📎 ${f.name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2e2; border-radius:50%;" onclick="removeSubChatFile(${index}, ${projectId})">×</span></span>`;
+            });
+            preview.innerHTML = badgesHtml;
+            if (label) {
+                label.style.background = '#10b981';
+                label.style.color = '#fff';
+                label.style.padding = '4px 8px';
+                label.style.borderRadius = '4px';
+            }
+            if (textarea) {
+                textarea.style.background = '#f0fdf4';
+                textarea.style.borderColor = '#10b981';
+                textarea.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
+            }
+            if (sendBtn) {
+                sendBtn.style.background = '#10b981';
+                sendBtn.style.animation = 'pulse-green 1.5s infinite';
+            }
+        } else {
+            preview.innerHTML = '';
+            if (label) {
+                label.style.background = '';
+                label.style.color = '#6c757d';
+                label.style.padding = '';
+                label.style.borderRadius = '';
+            }
+            if (textarea) {
+                textarea.style.background = '';
+                textarea.style.borderColor = '';
+                textarea.style.boxShadow = '';
+            }
+            if (sendBtn) {
+                sendBtn.style.background = '#3b82f6';
+                sendBtn.style.animation = '';
+            }
+        }
+    }
+
+    function removeSubChatFile(index, projectId) {
+        if (subcontractorChatSelectedFiles[projectId]) {
+            subcontractorChatSelectedFiles[projectId].splice(index, 1);
+            renderSubcontractorChatFilePreview(projectId);
+        }
+    }
+
+    function sendProjMessage(projectId) {
+        const textEl = document.getElementById('chatText_' + projectId);
+        const fileEl = document.getElementById('chatFile_' + projectId);
+        const msg = textEl.value.trim();
+        const files = subcontractorChatSelectedFiles[projectId] || [];
+        
+        if (!msg && files.length === 0) return;
+
+        const formData = new FormData();
+        formData.append('project_id', projectId);
+        formData.append('action', 'send_message');
+        formData.append('thread_type', 'sub_admin');
+        formData.append('message_text', msg);
+        if (files.length > 0) {
+            files.forEach(f => {
+                formData.append('files[]', f);
+            });
+        }
+
+        const sendBtn = fileEl.parentElement.querySelector('button');
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.textContent = '...';
+        }
+
+        fetch('api_send_message.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    textEl.value = '';
+                    subcontractorChatSelectedFiles[projectId] = [];
+                    renderSubcontractorChatFilePreview(projectId);
+                    window.location.reload();
+                } else {
+                    alert('送信エラー');
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('通信エラー');
+            })
+            .finally(() => {
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '➤';
+                }
+            });
+    }
+
     function deleteChatMessage(msgId) {
         if (!confirm('このメッセージを取り消しますか？')) return;
         const formData = new FormData();
@@ -1056,100 +1179,128 @@ if (!$is_admin) {
     </script>
 
     <!-- 作図完了報告モーダル -->
-    <div id="subDeliverModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
-        <div style="background:white; padding:25px; border-radius:10px; max-width:500px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); animation: fadeIn 0.3s ease;">
-            <h3 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px; display:flex; align-items:center; gap:8px;">📢 作図完了報告の確認</h3>
-            <p style="font-size:14px; color:#475569; line-height:1.6;">
-                以下の作図基準及び確認条件をすべて満たし、成果物（図面・データ）の作成が完了したことを報告します。
-            </p>
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:6px; max-height:200px; overflow-y:auto; font-size:12px; color:#64748b; margin-bottom:20px;">
-                <ul style="margin:0; padding-left:20px; line-height:1.8;">
-                    <li>新規ﾃﾞｰﾀ作成からの作図</li>
-                    <li>ｸﾞﾘｯﾄﾞ、ﾓｼﾞｭｰﾙの設定は意匠図に合わせる</li>
-                    <li>高さの設定（平均GLからの高さ、構造は基礎高さで調整）</li>
-                    <li>車庫・吹き抜け・階段の部屋属性（室内の部屋を外部としない）</li>
-                    <li>最高（屋根）の高さは軒高調整NG（屋根属性・厚みで調整）</li>
-                    <li>屋根仕上げは矩計通りの屋根材とする</li>
-                    <li>軒の出、ｹﾗﾊﾞの出は図面に整合（Min 130）</li>
-                    <li>屋根属性：垂木WHとﾋﾟｯﾁは矩計図に整合</li>
-                    <li>ﾊﾞﾙｺﾆｰの仕上げは一般外壁と同一</li>
-                    <li>窓ｻｲｽﾞWHと設置高さは意匠図に整合</li>
-                    <li>不整合部分の報告義務</li>
-                    <li>柱は四角内に×表示</li>
-                    <li>疑義がある場合は作業を止め相談・解決済み</li>
-                </ul>
-            </div>
-            <div style="display:flex; gap:10px; justify-content:flex-end;">
-                <button type="button" onclick="closeDeliverModal()" style="background:#64748b; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">キャンセル</button>
-                <button type="button" id="confirmDeliverBtn" style="background:#28a745; color:white; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">はい、完了報告します</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    let pendingFormToSubmit = null;
-    let viaArchiserverValue = null;
-
-    function handleDeliverSubmit(event, button, viaArchiserver) {
-        event.preventDefault();
-        const form = button.closest('form');
-        const checkboxes = form.querySelectorAll('.deliver-check');
-        let allChecked = true;
-        
-        checkboxes.forEach(cb => {
-            if (!cb.checked) {
-                allChecked = false;
-            }
-        });
-
-        if (!allChecked) {
-            alert("成果物作成時のチェック項目をすべて確認し、チェックを入れてください。");
-            return false;
-        }
-
-        // Save form reference and submission type
-        pendingFormToSubmit = form;
-        viaArchiserverValue = viaArchiserver;
-
-        // Show Modal
-        const modal = document.getElementById('subDeliverModal');
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-        return false;
-    }
-
-    function closeDeliverModal() {
-        const modal = document.getElementById('subDeliverModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        pendingFormToSubmit = null;
-        viaArchiserverValue = null;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const confirmBtn = document.getElementById('confirmDeliverBtn');
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => {
-                if (pendingFormToSubmit) {
-                    if (viaArchiserverValue) {
-                        const hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'hidden';
-                        hiddenInput.name = 'via_archiserver';
-                        hiddenInput.value = '1';
-                        pendingFormToSubmit.appendChild(hiddenInput);
-                    }
-                    // We need to bypass the form's onsubmit="return false;"
-                    // To do that, we can temporarily change action or submit directly
-                    pendingFormToSubmit.onsubmit = null;
-                    pendingFormToSubmit.submit();
-                }
-                closeDeliverModal();
-            });
-        }
-    });
-    </script>
-
-</body>
+    <div id="subDeliverModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:white; padding:25px; border-radius:10px; max-width:500px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); animation: fadeIn 0.3s ease;">
+            <h3 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px; display:flex; align-items:center; gap:8px;">📢 作図完了報告の確認</h3>
+            <p style="font-size:14px; color:#475569; line-height:1.6;">
+                以下の作図基準及び確認条件をすべて満たし、成果物（図面・データ）の作成が完了したことを報告します。
+            </p>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:6px; max-height:200px; overflow-y:auto; font-size:12px; color:#64748b; margin-bottom:20px;">
+                <div id="design_checklist_modal">
+                    <strong style="color: #c2410c; display:block; margin-bottom:5px;">意匠図作図基準チェック項目:</strong>
+                    <ul style="margin:0; padding-left:20px; line-height:1.8;">
+                        <li>新規ﾃﾞｰﾀ作成からの作図</li>
+                        <li>ｸﾞﾘｯﾄﾞ、ﾓｼﾞｭｰﾙの設定は意匠図に合わせる</li>
+                        <li>高さの設定（平均GLからの高さとする、構造は基礎高さで調整）</li>
+                        <li>車庫・吹き抜け・階段 of 部屋属性（室内の部屋を外部部屋としない）</li>
+                        <li>最高（屋根）の高さは軒高での調整はNG、屋根属性・屋根厚で調整</li>
+                        <li>屋根仕上げが矩計で読めたら屋根材は図面通りとする</li>
+                        <li>軒の出、ｹﾗﾊﾞの出は図面に整合（Min 130）</li>
+                        <li>屋根属性：垂木WHとﾋﾟｯﾁは矩計図と整合</li>
+                        <li>ﾊﾞﾙｺﾆｰの仕上げは一般外壁と同一</li>
+                        <li>窓ｻｲｽﾞWHと設置高さはできる限り意匠図に整合</li>
+                        <li>不整合に気づいたら報告する</li>
+                        <li>柱は四角内に×表示</li>
+                        <li>疑義あるときは作業をすすめないで相談する</li>
+                    </ul>
+                </div>
+                <div id="struct_checklist_modal" style="display:none;">
+                    <strong style="color: #c2410c; display:block; margin-bottom:5px;">構造図作図基準チェック項目:</strong>
+                    <ul style="margin:0; padding-left:20px; line-height:1.8;">
+                        <li>1. 意匠図の不整合（柱・耐力壁・サイズ等）の有無を相互チェックしました。</li>
+                        <li>2. 土台・大引・柱・横架材・小屋束・母屋・棟木・垂木・金物・耐力壁は指定した部材寸法（木材・金物）と合致している。</li>
+                        <li>3. プレカットの打ち合わせ内容（配置等）と合致している。</li>
+                        <li>4. 火打梁（梁・床面）は設定されている。</li>
+                        <li>5. 吹き抜け・階段・バルコニーまわりの補強梁は設定されている。</li>
+                        <li>6. 基礎伏せ、基礎断面の寸法（深さ・立ち上がり等）は意匠図および構造上の要件と合致している。</li>
+                        <li>7. 耐力壁の位置は意匠図の筋交いや面材の位置と整合している。</li>
+                        <li>8. 柱・耐力壁の直下率を意識し、不整合（偏心・耐力バランス）がないか確認した。</li>
+                        <li>9. アンカーボルト、ホールダウン金物の位置は確認した。</li>
+                        <li>10. 各階の平面図、立面図、断面図と構造部材の干渉（窓・ダクト・階段等）がないか確認した。</li>
+                        <li>11. 特記仕様書の設計基準（積雪荷重、風圧力、地震力等）を正しく設定した。</li>
+                        <li>12. 疑義がある場合は作業を中断し、管理者と相談して解決済みである。</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="closeDeliverModal()" style="background:#64748b; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">キャンセル</button>
+                <button type="button" id="confirmDeliverBtn" style="background:#28a745; color:white; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">はい、完了報告します</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let pendingFormToSubmit = null;
+    let viaArchiserverValue = null;
+
+    function handleIndividualDeliverSubmit(event, button, viaArchiserver, type) {
+        event.preventDefault();
+        const form = button.closest('form');
+        const checkClass = type === 'design' ? '.design-deliver-check' : '.struct-deliver-check';
+        const checkboxes = form.querySelectorAll(checkClass);
+        let allChecked = true;
+        
+        checkboxes.forEach(cb => {
+            if (!cb.checked) {
+                allChecked = false;
+            }
+        });
+
+        if (!allChecked) {
+            alert("成果物作成時のチェック項目をすべて確認し、チェックを入れてください。");
+            return false;
+        }
+
+        // Show/hide correct list in modal
+        if (type === 'design') {
+            document.getElementById('design_checklist_modal').style.display = 'block';
+            document.getElementById('struct_checklist_modal').style.display = 'none';
+        } else {
+            document.getElementById('design_checklist_modal').style.display = 'none';
+            document.getElementById('struct_checklist_modal').style.display = 'block';
+        }
+
+        // Save form reference and submission type
+        pendingFormToSubmit = form;
+        viaArchiserverValue = viaArchiserver;
+
+        // Show Modal
+        const modal = document.getElementById('subDeliverModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+        return false;
+    }
+
+    function closeDeliverModal() {
+        const modal = document.getElementById('subDeliverModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        pendingFormToSubmit = null;
+        viaArchiserverValue = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const confirmBtn = document.getElementById('confirmDeliverBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                if (pendingFormToSubmit) {
+                    if (viaArchiserverValue) {
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'via_archiserver';
+                        hiddenInput.value = '1';
+                        pendingFormToSubmit.appendChild(hiddenInput);
+                    }
+                    pendingFormToSubmit.onsubmit = null;
+                    pendingFormToSubmit.submit();
+                }
+                closeDeliverModal();
+            });
+        }
+    });
+    </script>
+
+    </body>
 </html>

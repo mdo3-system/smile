@@ -638,4 +638,67 @@ class UploadService
         }
         return false;
     }
+
+    /**
+     * カスタム成果物スロット名称変更 (管理者用)
+     *
+     * @param int $projectId
+     * @param string $oldCategory
+     * @param string $newLabel
+     * @param string $tab
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     */
+    public function renameCustomDeliverable(int $projectId, string $oldCategory, string $newLabel, string $tab, int $userId): bool
+    {
+        if (empty($newLabel) || strpos($oldCategory, 'custom_deliverable_') !== 0) {
+            return false;
+        }
+
+        $newCategory = 'custom_deliverable_' . $newLabel;
+
+        // すでに存在するカテゴリ名かどうかチェック
+        $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtCheck->execute(['pid' => $projectId, 'cat' => $newCategory]);
+        if ($stmtCheck->fetchColumn() > 0) {
+            throw new Exception("既に同じ名称の成果物スロットが存在します。");
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmtUpdate = $this->pdo->prepare("
+                UPDATE project_files 
+                SET file_category = :new_cat 
+                WHERE project_id = :pid AND file_category = :old_cat
+            ");
+            $stmtUpdate->execute([
+                'pid' => $projectId,
+                'old_cat' => $oldCategory,
+                'new_cat' => $newCategory
+            ]);
+
+            // チャットへ通知
+            $oldLabel = substr($oldCategory, strlen('custom_deliverable_'));
+            $uploaderRoleName = '設計担当';
+            $chatMsg = "【成果物スロット名称変更】\n{$uploaderRoleName}が成果物スロット「{$oldLabel}」の名称を「{$newLabel}」に変更しました。";
+            $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+
+            $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $projectId,
+                'sid' => $userId,
+                'thread' => $threadType,
+                'msg' => $chatMsg
+            ]);
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
 }
