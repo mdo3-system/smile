@@ -83,6 +83,13 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         <?= renderUploadSlot('3F・PH・RF 平面図 (CAD)', 'cad_plan_3f', false, '該当する場合のみ') ?>
         <?= renderUploadSlot('立面図 (CAD)', 'cad_elevation', true, '各方向の立面図') ?>
         <?= renderUploadSlot('矩計図 (CAD)', 'cad_section', false, '必要に応じて提出') ?>
+        
+        <!-- 動的スロット追加先 -->
+        <div id="dynamic_cad_slots_container"></div>
+        <div style="text-align: right; margin-top: 10px; margin-bottom: 10px;">
+            <button type="button" onclick="addDynamicCadSlot()" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">➕ 別のCAD図面スロットを追加</button>
+        </div>
+
         <div style="background:#fff8e1; border:1px solid #f59e0b; border-radius:4px; padding:6px; font-size:11px; color:#92400e; margin-top:8px;">
             💡 全図面を一括ZIPにまとめてアップロードすることもできます → 「配置図」スロットにZIPを添付してください。
         </div>
@@ -360,6 +367,9 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
     }
     </script>
 
+    <?php endif; ?>
+
+    <script>
     const pastProjectsSpecs = <?php echo json_encode($past_projects_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
     
     function loadPastSpecs(checked) {
@@ -489,6 +499,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
             }
         }
     }
+    
     // 2F平面図が未提出の場合の送信前確認
     document.addEventListener('DOMContentLoaded', function() {
         var form = document.querySelector('#orderModal form') || document.querySelector('form[action]');
@@ -504,7 +515,36 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
             });
         }
     });
+
+    function addDynamicCadSlot() {
+        const label = prompt("追加する図面の名称を入力してください (例: 3F平面図, パースなど)");
+        if (!label) return;
+        const trimmedLabel = label.trim();
+        if (trimmedLabel === "") return;
+
+        const catName = "custom_" + trimmedLabel;
+
+        if (document.getElementById("file_" + catName)) {
+            alert("その名称のスロットは既に存在します。");
+            return;
+        }
+
+        const container = document.getElementById("dynamic_cad_slots_container");
+        if (!container) return;
+
+        const div = document.createElement("div");
+        div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
+        div.innerHTML = `
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} (CAD) <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
+                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
+                <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
+                    <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
+                </label>
+            </div>
+        `;
+        container.appendChild(div);
+    }
     </script>
-    <?php endif; ?>
 
 </div>

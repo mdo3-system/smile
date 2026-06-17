@@ -80,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         ];
         
         $uploaded_any = false;
+        $via_archiserver = isset($_POST['via_archiserver']) && $_POST['via_archiserver'] == '1';
         
         foreach ($files_to_upload as $input_name => $category) {
             if (isset($_FILES[$input_name]) && $_FILES[$input_name]['error'] === UPLOAD_ERR_OK) {
@@ -115,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
         
-        if ($uploaded_any) {
+        if ($uploaded_any || $via_archiserver) {
             // 発注ステータスを delivered (納品済) に更新
             $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered', updated_at = NOW() WHERE id = :id AND subcontractor_id = :sub_id");
             $stmtOrder->execute(['id' => $order_id, 'sub_id' => $user_id]);
@@ -125,7 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmtGetSubName->execute(['uid' => $user_id]);
             $sub_name = $stmtGetSubName->fetchColumn() ?: '協力業者';
 
-            $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品（ファイルアップロード）が行われました。\n";
+            if ($via_archiserver) {
+                $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品（アーキトレンドサーバーへのアップロード完了連絡）が行われました。\n";
+            } else {
+                $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品（ファイルアップロード）が行われました。\n";
+            }
             $notify_msg .= "管理者画面にて内容をご確認の上、承認（クライアントへの公開）処理を行ってください。";
 
             $stmtChat = $pdo->prepare("
@@ -141,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $pdo->commit();
         } else {
             $pdo->rollBack();
-            die("ファイルが選択されていません。");
+            die("ファイルが選択されていないか、アーキサーバーへのUPボタンが押されていません。");
         }
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
@@ -443,22 +448,22 @@ if (!$is_admin) {
                                                 </li>
                                             <?php endif; ?>
                                         </ul>
+                                    </div>
+                                <?php endif; ?>
 
-                                        <?php if ($o['status'] === 'delivered'): ?>
-                                            <div style="margin-top:8px;">
-                                                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:6px;">
-                                                    <input type="hidden" name="action" value="approve_delivery">
-                                                    <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                                    <div style="display:flex; align-items:center; gap:5px;">
-                                                        <label style="font-size:11px; color:#555;">完了日を指定:</label>
-                                                        <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
-                                                    </div>
-                                                    <div style="display:flex; gap:5px;">
-                                                        <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品タスクを完了（承認）しますか？')">納品完了</button>
-                                                    </div>
-                                                </form>
+                                <?php if ($o['status'] === 'delivered'): ?>
+                                    <div style="margin-top:8px; padding:8px; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px;">
+                                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:6px;">
+                                            <input type="hidden" name="action" value="approve_delivery">
+                                            <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                            <div style="display:flex; align-items:center; gap:5px;">
+                                                <label style="font-size:11px; color:#555;">完了日を指定:</label>
+                                                <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
                                             </div>
-                                        <?php endif; ?>
+                                            <div style="display:flex; gap:5px;">
+                                                <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品タスクを完了（承認）しますか？')">納品完了</button>
+                                            </div>
+                                        </form>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -768,8 +773,9 @@ if (!$is_admin) {
                                                     <label style="width:150px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
                                                     <input type="file" name="structural_pdf" style="font-size:12px;">
                                                 </div>
-                                                <div style="margin-top:8px;">
+                                                <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
                                                     <button type="submit" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">選択したファイルを納品・差し替えする</button>
+                                                    <button type="submit" name="via_archiserver" value="1" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="return confirm('アーキトレンドサーバーへアップロードした旨を報告し、納品としますか？')">☁ アーキサーバーへUP</button>
                                                 </div>
                                             </form>
                                         </div>
