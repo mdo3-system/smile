@@ -304,7 +304,7 @@ if (!empty($all_estimates)) {
         <div style="margin-top:10px; display:flex; gap:10px; flex-direction:column;">
             <div style="display:flex; gap:5px; flex-wrap:wrap;">
                 <button type="button" onclick="calcClientEstimate()" style="flex:1; min-width:80px; background:#fff; border:1px solid #28a745; color:#28a745; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">再計算</button>
-                <button type="button" id="pdf_issue_btn" onclick="saveAndPrintEstimate(false)" style="flex:1; min-width:110px; background:#ff9800; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">印刷用PDFを発行</button>
+                <button type="button" id="pdf_issue_btn" onclick="saveAndPrintEstimate(false)" style="flex:1; min-width:110px; background:#ff9800; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">初回見積PDFを発行</button>
                 <button type="button" id="formal_pdf_issue_btn" onclick="saveAndPrintEstimate(true)" style="flex:1; min-width:150px; background:#dc3545; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">本見積として確定・PDF発行</button>
                 <button type="button" id="additional_pdf_issue_btn" onclick="saveAndPrintEstimate(false, true)" style="flex:1; min-width:150px; background:#ea580c; border:none; color:white; padding:5px; font-size:11px; cursor:pointer; font-weight:bold; border-radius:3px;">追加見積として確定・PDF発行</button>
             </div>

@@ -39,10 +39,17 @@ $needs_soil   = ($is_permit || $is_kisohari);
 
 // 初回ユーザー判定（過去に completed/primary_prep 以降まで進んだ案件が0件）
 $has_past_projects = false;
+$past_projects_data = [];
 try {
-    $stmtPast = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE client_id = :uid AND status NOT IN ('quote_req') AND id != :current");
+    $stmtPast = $pdo->prepare("
+        SELECT p.id, p.project_name, s.wood_details, s.wall_details, s.hardware_details, s.soil_status
+        FROM projects p
+        JOIN project_specs s ON p.id = s.project_id
+        WHERE p.client_id = :uid AND p.id != :current AND p.status NOT IN ('quote_req')
+    ");
     $stmtPast->execute(['uid' => $_SESSION['user_id'], 'current' => $project_id]);
-    $has_past_projects = ((int)$stmtPast->fetchColumn()) > 0;
+    $past_projects_data = $stmtPast->fetchAll(PDO::FETCH_ASSOC);
+    $has_past_projects = count($past_projects_data) > 0;
 } catch(Exception $e) { $has_past_projects = false; }
 
 // 天空率の道路・北側の必要有無を見積明細から判定
@@ -195,9 +202,17 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <strong style="color:#5b21b6;">🟣 【許容応力度・基礎梁計算】構造材種・金物・耐力壁の指定（ここで指定するか、依頼主アップロード図書内のプレカット図等にUPしてください）</strong>
             <?php if ($has_past_projects): ?>
-            <label style="font-size:11px; background:#fff; border:1px solid #ccc; padding:2px 8px; border-radius:4px; cursor:pointer; color:#374151;">
-                <input type="checkbox" id="copy_past_specs" onchange="loadPastSpecs(this.checked)"> 過去の案件と同じ
-            </label>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <label style="font-size:11px; background:#fff; border:1px solid #ccc; padding:2px 8px; border-radius:4px; cursor:pointer; color:#374151;">
+                    <input type="checkbox" id="copy_past_specs" onchange="loadPastSpecs(this.checked)"> 過去の案件と同じ
+                </label>
+                <select id="past_projects_selector" onchange="loadPastProjectSpecs(this.value)" style="font-size:11px; padding:2px 5px; border-radius:4px; border:1px solid #ccc; display:none; max-width:200px;">
+                    <option value="">- 過去の案件を選択 -</option>
+                    <?php foreach ($past_projects_data as $pp): ?>
+                        <option value="<?= $pp['id'] ?>"><?= htmlspecialchars($pp['project_name'], ENT_QUOTES) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <?php else: ?>
             <span style="font-size:11px; color:#9ca3af; background:#f3f4f6; padding:2px 8px; border-radius:4px;">過去の案件と同じ（初回は利用不可）</span>
             <?php endif; ?>
@@ -345,9 +360,134 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
     }
     </script>
 
-    <script>
+    const pastProjectsSpecs = <?php echo json_encode($past_projects_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    
     function loadPastSpecs(checked) {
-        if (checked) { alert('過去の案件からデータをロードする機能は準備中です。'); document.getElementById('copy_past_specs').checked = false; }
+        const selector = document.getElementById('past_projects_selector');
+        if (selector) {
+            selector.style.display = checked ? 'inline-block' : 'none';
+            if (!checked) selector.value = '';
+        }
+    }
+
+    function loadPastProjectSpecs(projId) {
+        if (!projId) return;
+        const proj = pastProjectsSpecs.find(p => p.id == projId);
+        if (!proj) return;
+        
+        try {
+            const wood = JSON.parse(proj.wood_details || '{}');
+            const wall = JSON.parse(proj.wall_details || '{}');
+            const hw = JSON.parse(proj.hardware_details || '{}');
+            
+            // 各項目の自動入力
+            autoFillSpec('spec_dodai', wood.dodai, ['ﾋﾉｷKD', 'ﾍﾞｲﾏﾂ', 'ﾍﾞｲﾂｶﾞKD']);
+            autoFillSpec('spec_obiki', wood.obiki, ['ﾋﾉｷKD', 'ﾍﾞｲﾂｶﾞKD', 'ｽｷﾞKD']);
+            autoFillSpec('spec_hashira', wood.hashira, ['ﾋﾉｷKD', 'ｽｷﾞKD', 'ｽｷﾞ集成', 'WW集成']);
+            autoFillSpec('spec_hari', wood.hari, ['ﾍﾞｲﾏﾂKD', 'ｽｷﾞKD', 'ｽｷﾞ集成', 'RE集成', 'ﾊｲﾌﾞﾘｯﾄﾞ集成']);
+            autoFillSpec('spec_koyatsuka', wood.koya, ['ｽｷﾞKD', 'ﾍﾞｲﾏﾂKD']);
+            autoFillSpec('spec_moya', wood.moya, ['ｽｷﾞKD', 'ﾍﾞｲﾏﾂKD']);
+            autoFillSpec('spec_munagi', wood.munagi, ['ｽｷﾞKD', 'ﾍﾞｲﾏﾂKD']);
+            
+            // 垂木の処理
+            fillTarukiSpec(wood.taruki);
+            
+            // 金物
+            const kanamonoInput = document.querySelector('input[name="spec_kanamono"]');
+            if (kanamonoInput) kanamonoInput.value = hw.type || '';
+            
+            // 耐力壁
+            const wallInput = document.querySelector('input[name="spec_wall"]');
+            if (wallInput) wallInput.value = wall.type || '';
+            
+            // 地盤
+            if (proj.soil_status) {
+                const soilRadio = document.querySelector(`input[name="soil_status"][value="${proj.soil_status}"]`);
+                if (soilRadio) soilRadio.checked = true;
+            }
+        } catch (e) {
+            console.error("過去データの読み込みに失敗しました:", e);
+            alert("データのロードに失敗しました。");
+        }
+    }
+    
+    function autoFillSpec(prefix, fullVal, options) {
+        const typeSelect = document.querySelector(`select[name="${prefix}_type"]`);
+        const sizeInput = document.querySelector(`input[name="${prefix}_size"]`);
+        if (!typeSelect || !sizeInput) return;
+
+        if (!fullVal) {
+            typeSelect.value = '';
+            sizeInput.value = '';
+            return;
+        }
+        let matchedType = '';
+        let rest = fullVal;
+        for (const opt of options) {
+            if (fullVal.indexOf(opt) === 0) {
+                matchedType = opt;
+                rest = fullVal.substring(opt.length).trim();
+                break;
+            }
+        }
+        if (!matchedType && fullVal !== '') {
+            matchedType = 'その他';
+            rest = fullVal;
+        }
+        typeSelect.value = matchedType;
+        sizeInput.value = rest;
+    }
+
+    function fillTarukiSpec(tarukiVal) {
+        const typeSelect = document.getElementById('spec_taruki_type');
+        const wInput = document.getElementsByName('spec_taruki_w')[0];
+        const hInput = document.getElementsByName('spec_taruki_h')[0];
+        const pitchInput = document.getElementsByName('spec_taruki_pitch')[0];
+        const otherInput = document.getElementById('taruki_other_field');
+        
+        if (!typeSelect) return;
+
+        if (!tarukiVal) {
+            typeSelect.value = '';
+            if (wInput) wInput.value = '';
+            if (hInput) hInput.value = '';
+            if (pitchInput) pitchInput.value = '';
+            if (otherInput) otherInput.value = '';
+            toggleTarukiInput('');
+            return;
+        }
+        let matchedType = '';
+        let rest = tarukiVal;
+        const options = ['ﾍﾞｲﾏﾂKD', 'ｽｷﾞKD'];
+        for (const opt of options) {
+            if (tarukiVal.indexOf(opt) === 0) {
+                matchedType = opt;
+                rest = tarukiVal.substring(opt.length).trim();
+                break;
+            }
+        }
+        if (!matchedType && tarukiVal !== '') {
+            matchedType = 'その他';
+            rest = tarukiVal;
+        }
+        
+        typeSelect.value = matchedType;
+        toggleTarukiInput(matchedType);
+        
+        if (matchedType === 'その他') {
+            if (otherInput) otherInput.value = rest;
+        } else {
+            const m = rest.match(/(\d+)\s*×\s*(\d+)\s*@\s*(\d+)/);
+            if (m) {
+                if (wInput) wInput.value = m[1];
+                if (hInput) hInput.value = m[2];
+                if (pitchInput) pitchInput.value = m[3];
+            } else {
+                typeSelect.value = 'その他';
+                toggleTarukiInput('その他');
+                if (otherInput) otherInput.value = tarukiVal;
+            }
+        }
     }
     // 2F平面図が未提出の場合の送信前確認
     document.addEventListener('DOMContentLoaded', function() {

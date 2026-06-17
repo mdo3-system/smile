@@ -242,13 +242,14 @@ if ($action === 'submit_primary_response') {
             require_once __DIR__ . '/action_issue_invoice_helper.php';
             issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id']);
 
-            // F. 一次回答の提示完了チャット通知を追加
+            // F. 一次回答の提示完了チャット通知を追加 (計算書ファイルをチャットにUP)
             $msg = "【一次回答の提示】\n一次回答の計算図書「{$file_name}」をアップロードいたしました。ファイル一覧（成果物）よりご確認ください。\n何卒よろしくお願いいたします。";
-            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path) VALUES (:pid, :sid, 'client_admin', :msg, :fpath)");
             $stmtMsg->execute([
                 'pid' => $project_id,
                 'sid' => $_SESSION['user_id'],
-                'msg' => $msg
+                'msg' => $msg,
+                'fpath' => $drive_file_id
             ]);
 
             $pdo->commit();

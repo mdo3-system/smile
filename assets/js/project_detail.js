@@ -534,7 +534,7 @@ function saveAndPrintEstimate(isFormal = false, isAdditional = false) {
                 btn.disabled = false;
                 if (isFormal) btn.innerText = '本見積として確定・PDF発行';
                 else if (isAdditional) btn.innerText = '追加見積として確定・PDF発行';
-                else btn.innerText = '印刷用PDFを発行';
+                else btn.innerText = '初回見積PDFを発行';
             }
         });
 }

@@ -217,7 +217,19 @@ function get_or_create_project_drive_folder($pdo, $project_id) {
         $client_folder_name = "依頼主_ID_" . $data['client_id'];
     }
     
-    if (empty($client_folder_id)) {
+    // 実際に Drive 上に存在するかチェックする
+    $client_folder_exists = false;
+    if (!empty($client_folder_id)) {
+        try {
+            $service = get_google_drive_service();
+            $service->files->get($client_folder_id, ['supportsAllDrives' => true]);
+            $client_folder_exists = true;
+        } catch (Exception $e) {
+            $client_folder_exists = false;
+        }
+    }
+
+    if (empty($client_folder_id) || !$client_folder_exists) {
         // Google Drive上で同名フォルダを検索
         $client_folder_id = find_google_drive_folder($client_folder_name, $root_folder_id);
         if (!$client_folder_id) {
@@ -235,14 +247,28 @@ function get_or_create_project_drive_folder($pdo, $project_id) {
         $project_folder_name = "案件_ID_" . $project_id;
     }
     
-    $project_folder_id = find_google_drive_folder($project_folder_name, $client_folder_id);
-    if (!$project_folder_id) {
-        $project_folder_id = create_google_drive_folder($project_folder_name, $client_folder_id);
+    // 実際に Drive 上に存在するかチェックする
+    $project_folder_id = $data['project_folder_id'];
+    $project_folder_exists = false;
+    if (!empty($project_folder_id)) {
+        try {
+            $service = get_google_drive_service();
+            $service->files->get($project_folder_id, ['supportsAllDrives' => true]);
+            $project_folder_exists = true;
+        } catch (Exception $e) {
+            $project_folder_exists = false;
+        }
     }
-    
-    // 案件のDBにフォルダIDを保存
-    $stmtUpdateProject = $pdo->prepare("UPDATE projects SET drive_folder_id = :fid WHERE id = :pid");
-    $stmtUpdateProject->execute(['fid' => $project_folder_id, 'pid' => $project_id]);
+
+    if (empty($project_folder_id) || !$project_folder_exists) {
+        $project_folder_id = find_google_drive_folder($project_folder_name, $client_folder_id);
+        if (!$project_folder_id) {
+            $project_folder_id = create_google_drive_folder($project_folder_name, $client_folder_id);
+        }
+        // 案件のDBにフォルダIDを保存
+        $stmtUpdateProject = $pdo->prepare("UPDATE projects SET drive_folder_id = :fid WHERE id = :pid");
+        $stmtUpdateProject->execute(['fid' => $project_folder_id, 'pid' => $project_id]);
+    }
     
     return $project_folder_id;
 }

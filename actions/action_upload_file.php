@@ -50,17 +50,17 @@ if ($action === 'upload_artifact' && $is_admin) {
             }
             
             // 2. 申請図書一式UPの自動入力
-            // 許容応力度 (Index 5)
+            // 許容応力度 (Index 4)
             if ($file_category === 'structural_dwg' && ($project['req_permit'] == 1 || $project['req_opt_kisohari'] == 1)) {
                 $colsToUpdate[] = 'schedule_actuals';
-                $targetIndex = 5;
-                $msgTitle = "構造図・申請図書一式";
+                $targetIndex = 4;
+                $msgTitle = "構造図UP";
             }
             // 壁量計算 (Index 4)
             if (($file_category === 'wall_calc_doc' || $file_category === 'wall_spreadsheet') && $project['req_wall'] == 1) {
                 $colsToUpdate[] = 'schedule_actuals_wall';
                 $targetIndex = 4;
-                $msgTitle = "壁量計算・申請図書一式";
+                $msgTitle = "壁量計算書";
             }
             // 外皮計算 (Index 4) - 外皮計算書、WEBプログラム、外皮計算資料が全て揃っている場合のみ
             if (($file_category === 'skin_calc_doc' || $file_category === 'skin_doc' || $file_category === 'skin_web_prog') && $project['req_skin'] == 1) {
@@ -88,7 +88,7 @@ if ($action === 'upload_artifact' && $is_admin) {
                 if ($has_all) {
                     $colsToUpdate[] = 'schedule_actuals_skin';
                     $targetIndex = 4;
-                    $msgTitle = "外皮計算・申請図書一式";
+                    $msgTitle = "外皮計算書";
                 }
             }
             // 外皮計算・初回提示 (Index 2) は WEBプログラム計算書をUPした時
@@ -101,7 +101,7 @@ if ($action === 'upload_artifact' && $is_admin) {
             if ($file_category === 'sky_dwg' && $project['req_sky'] == 1) {
                 $colsToUpdate[] = 'schedule_actuals_sky';
                 $targetIndex = 3;
-                $msgTitle = "天空率図書・申請図書一式";
+                $msgTitle = "天空率図面";
             }
             
             if (!empty($colsToUpdate) && $targetIndex !== null) {

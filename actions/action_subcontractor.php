@@ -145,6 +145,20 @@ if ($action === 'approve_delivery') {
                     'fpath' => $pdf_file['drive_file_id'],
                     'ver' => $new_v
                 ]);
+                
+                // スケジュール自動入力処理
+                $today = date('Y-m-d');
+                $stmtAct = $pdo->prepare("SELECT schedule_actuals FROM projects WHERE id = :id");
+                $stmtAct->execute(['id' => $project_id]);
+                $current_actuals_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+                if ($current_actuals_row) {
+                    $actuals = json_decode($current_actuals_row['schedule_actuals'] ?? '{}', true) ?: [];
+                    if (empty($actuals[4])) { // 4: 構造図UP
+                        $actuals[4] = $today;
+                        $stmtUpdateSchedule = $pdo->prepare("UPDATE projects SET schedule_actuals = :act WHERE id = :pid");
+                        $stmtUpdateSchedule->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                    }
+                }
             }
         }
 
