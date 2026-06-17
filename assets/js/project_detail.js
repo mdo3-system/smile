@@ -95,7 +95,9 @@ function sendMessage(text) {
         formData.append('target_file', targetSelect.value);
     }
     if (fileInput && fileInput.files.length > 0) {
-        formData.append('file', fileInput.files[0]);
+        for (let i = 0; i < fileInput.files.length; i++) {
+            formData.append('files[]', fileInput.files[i]);
+        }
     }
 
     const sendBtn = document.querySelector('.chat-send-btn');
@@ -138,8 +140,9 @@ function previewFile(input) {
     const textarea = document.getElementById('chatTextarea');
     const sendBtn = document.querySelector('.chat-send-btn');
 
-    if (input.files && input.files[0]) {
-        preview.innerHTML = `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); animation: pulse-green-border 2s infinite;">📎 【送信待ち】 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2fee; border-radius:50%;" onclick="removeChatFile('${input.id}')">×</span></span>`;
+    if (input.files && input.files.length > 0) {
+        const names = Array.from(input.files).map(f => f.name).join(', ');
+        preview.innerHTML = `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); animation: pulse-green-border 2s infinite;">📎 【送信待ち】 ${names} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2fee; border-radius:50%;" onclick="removeChatFile('${input.id}')">×</span></span>`;
         if (label) {
             label.classList.add('attached');
             label.style.background = '#10b981';
@@ -194,7 +197,9 @@ function sendSubMessage() {
     formData.append('thread_type', 'sub_admin');
     formData.append('message_text', msg);
     if (fileInput && fileInput.files.length > 0) {
-        formData.append('file', fileInput.files[0]);
+        for (let i = 0; i < fileInput.files.length; i++) {
+            formData.append('files[]', fileInput.files[i]);
+        }
     }
 
     fetch('api_send_message.php', { method: 'POST', body: formData })
@@ -223,8 +228,9 @@ function handleSubKey(e) {
 function previewSubFile(input) {
     const preview = document.getElementById('subFilePreview');
     const label = input.closest('.chat-attach-btn');
-    if (input.files && input.files[0]) {
-        preview.innerHTML = `<span class="preview-badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:4px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:1px solid #bae6fd; font-weight:bold;">📎 ${input.files[0].name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:3px; font-size:14px; line-height:1;" onclick="removeChatFile('${input.id}')">×</span></span>`;
+    if (input.files && input.files.length > 0) {
+        const names = Array.from(input.files).map(f => f.name).join(', ');
+        preview.innerHTML = `<span class="preview-badge" style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:4px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:1px solid #bae6fd; font-weight:bold;">📎 ${names} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:3px; font-size:14px; line-height:1;" onclick="removeChatFile('${input.id}')">×</span></span>`;
         if (label) label.classList.add('attached');
     } else {
         preview.innerHTML = '';

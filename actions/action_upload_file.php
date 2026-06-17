@@ -106,3 +106,25 @@ if ($action === 'add_custom_slot' && !$is_admin) {
     }
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
+
+// ==============================
+// カスタム成果物スロット追加（管理者向け）
+// ==============================
+if ($action === 'add_custom_deliverable' && $is_admin) {
+    $custom_label = trim($_POST['custom_label'] ?? '');
+    $tab = $_POST['tab'] ?? '';
+    
+    if ($custom_label !== '') {
+        try {
+            $uploadService->addCustomDeliverable(
+                $project_id,
+                $custom_label,
+                $tab,
+                $_SESSION['user_id'] ?? 1
+            );
+        } catch (Exception $e) {
+            die("カスタム成果物スロットの追加に失敗しました: " . $e->getMessage());
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
+}

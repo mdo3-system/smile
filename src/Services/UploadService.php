@@ -581,4 +581,61 @@ class UploadService
         }
         return false;
     }
+
+    /**
+     * カスタム成果物スロット追加 (管理者用)
+     *
+     * @param int $projectId
+     * @param string $customLabel
+     * @param string $tab
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     */
+    public function addCustomDeliverable(int $projectId, string $customLabel, string $tab, int $userId): bool
+    {
+        if (empty($customLabel)) {
+            return false;
+        }
+
+        $fileCategory = 'custom_deliverable_' . $customLabel;
+
+        $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtCheck->execute(['pid' => $projectId, 'cat' => $fileCategory]);
+        if ($stmtCheck->fetchColumn() == 0) {
+            $this->pdo->beginTransaction();
+            try {
+                $stmtInsert = $this->pdo->prepare("
+                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                    VALUES (:pid, :cat, '', NULL, 1, 1)
+                ");
+                $stmtInsert->execute([
+                    'pid' => $projectId,
+                    'cat' => $fileCategory
+                ]);
+
+                // チャットへ通知
+                $uploaderRoleName = '設計担当';
+                $chatMsg = "【成果物スロット追加】\n{$uploaderRoleName}が新しい成果物スロット「{$customLabel}」を追加しました。";
+                $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+
+                $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                $stmtMsg->execute([
+                    'pid' => $projectId,
+                    'sid' => $userId,
+                    'thread' => $threadType,
+                    'msg' => $chatMsg
+                ]);
+
+                $this->pdo->commit();
+                return true;
+            } catch (Exception $e) {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                throw $e;
+            }
+        }
+        return false;
+    }
 }

@@ -22,15 +22,38 @@ if (!$projectId) {
     exit;
 }
 
-$uploadedDriveId = null;
-$fileType = null;
-if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+$uploadedFiles = [];
+
+// files[] という名前で複数ファイルを受け取れるようにする
+if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
+    foreach ($_FILES['files']['name'] as $i => $name) {
+        if ($_FILES['files']['error'][$i] === UPLOAD_ERR_OK) {
+            $fileTmp = $_FILES['files']['tmp_name'][$i];
+            $fileName = $_FILES['files']['name'][$i];
+            $mimeType = $_FILES['files']['type'][$i];
+            
+            $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType, $projectId, $pdo);
+            $fileType = (strpos($mimeType, 'image/') === 0) ? 'image' : 'pdf';
+            
+            $uploadedFiles[] = [
+                'drive_id' => $uploadedDriveId,
+                'type' => $fileType
+            ];
+        }
+    }
+} elseif (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+    // 既存の単一ファイルアップロード（file）
     $fileTmp = $_FILES['file']['tmp_name'];
     $fileName = $_FILES['file']['name'];
     $mimeType = $_FILES['file']['type'];
     
     $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType, $projectId, $pdo);
     $fileType = (strpos($mimeType, 'image/') === 0) ? 'image' : 'pdf';
+    
+    $uploadedFiles[] = [
+        'drive_id' => $uploadedDriveId,
+        'type' => $fileType
+    ];
 }
 
 $container = AppContainer::getInstance();
@@ -44,15 +67,44 @@ if (!$threadType) {
         $threadType = 'client_admin_' . $tab;
     }
 }
-$success = $chatService->sendMessage(
-    (int)$projectId,
-    (int)$_SESSION['user_id'],
-    $threadType,
-    $messageText,
-    $uploadedDriveId,
-    $fileType,
-    $targetFile
-);
+
+$success = true;
+if (empty($uploadedFiles)) {
+    $success = $chatService->sendMessage(
+        (int)$projectId,
+        (int)$_SESSION['user_id'],
+        $threadType,
+        $messageText,
+        null,
+        null,
+        $targetFile
+    );
+} else {
+    // 最初のファイルとメッセージテキストを送信
+    $first = array_shift($uploadedFiles);
+    $success = $chatService->sendMessage(
+        (int)$projectId,
+        (int)$_SESSION['user_id'],
+        $threadType,
+        $messageText,
+        $first['drive_id'],
+        $first['type'],
+        $targetFile
+    );
+    
+    // 残りのファイルを個別メッセージとして送信（テキストと対象ファイル情報は空）
+    foreach ($uploadedFiles as $f) {
+        $chatService->sendMessage(
+            (int)$projectId,
+            (int)$_SESSION['user_id'],
+            $threadType,
+            '',
+            $f['drive_id'],
+            $f['type'],
+            null
+        );
+    }
+}
 
 header('Content-Type: application/json');
 echo json_encode(['success' => $success]);

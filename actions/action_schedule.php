@@ -199,27 +199,6 @@ if ($action === 'submit_primary_response') {
                 $file_category = 'sky_calc_doc';
             }
             
-            // 既存の同カテゴリファイルを is_latest=0 にする
-            $stmtOld = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
-            $stmtOld->execute(['pid' => $project_id, 'cat' => $file_category]);
-            
-            // バージョン番号
-            $stmtVer = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-            $stmtVer->execute(['pid' => $project_id, 'cat' => $file_category]);
-            $next_ver = intval($stmtVer->fetchColumn()) + 1;
-            
-            $stmtNewFile = $pdo->prepare("
-                INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
-                VALUES (:pid, :cat, :name, :fid, :ver, 1)
-            ");
-            $stmtNewFile->execute([
-                'pid'  => $project_id,
-                'cat'  => $file_category,
-                'name' => $file_name,
-                'fid'  => $drive_file_id,
-                'ver'  => $next_ver
-            ]);
-
             // C. ステータスを submission（提出済・確認中）に更新
             $projectRepo->updateStatus($project_id, 'submission');
 

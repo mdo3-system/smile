@@ -55,6 +55,18 @@
                 }
             }
             
+            // カスタム成果物の抽出
+            $custom_cats = [];
+            foreach ($artifacts_by_cat as $cat => $history) {
+                if (strpos($cat, 'custom_deliverable_') === 0) {
+                    $lbl = substr($cat, strlen('custom_deliverable_'));
+                    $custom_cats[$cat] = $lbl;
+                }
+            }
+            if (!empty($custom_cats)) {
+                $artifact_sections['追加成果物'] = $custom_cats;
+            }
+
             // その他の納品物 (すべてのタブで表示しておくか、代表タブにまとめるか)
             // いったんすべてのタブで表示
             $artifact_sections['その他納品物'] = [
@@ -128,4 +140,23 @@
                     </div>
                 </div>
             <?php endforeach; ?>
+
+            <?php if ($is_admin): ?>
+                <div style="margin-top: 15px; text-align: center;">
+                    <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="display:inline-block;" onsubmit="return promptCustomDeliverable(this);">
+                        <input type="hidden" name="action" value="add_custom_deliverable">
+                        <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
+                        <input type="hidden" name="custom_label" id="custom_deliverable_label" value="">
+                        <button type="submit" class="btn" style="background:#8b5cf6; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">➕ 別の成果物スロットを追加</button>
+                    </form>
+                </div>
+                <script>
+                function promptCustomDeliverable(form) {
+                    const name = prompt("追加する成果物の名前を入力してください（例: 特記仕様書）:");
+                    if (!name || name.trim() === "") return false;
+                    document.getElementById('custom_deliverable_label').value = name.trim();
+                    return true;
+                }
+                </script>
+            <?php endif; ?>
 </div>

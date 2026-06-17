@@ -114,4 +114,34 @@ class UploadServiceTest extends TestCase
         $this->assertNotFalse($msg);
         $this->assertStringContainsString('新しいカスタムスロット「3F平面図」を追加しました', $msg['message_text']);
     }
+
+    public function testAddCustomDeliverableSuccess(): void
+    {
+        $projectId = 1;
+        $customLabel = '特記仕様書';
+        $tab = 'permit';
+        $userId = 1;
+
+        $result = $this->service->addCustomDeliverable($projectId, $customLabel, $tab, $userId);
+        $this->assertTrue($result);
+
+        // 重複追加の防止検証
+        $resultDuplicate = $this->service->addCustomDeliverable($projectId, $customLabel, $tab, $userId);
+        $this->assertFalse($resultDuplicate);
+
+        // DB確認
+        $stmt = $this->pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmt->execute(['pid' => $projectId, 'cat' => 'custom_deliverable_特記仕様書']);
+        $file = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertNotFalse($file);
+        $this->assertEquals(1, $file['version']);
+        $this->assertEquals(1, $file['is_latest']);
+
+        // チャット通知確認
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($msg);
+        $this->assertStringContainsString('新しい成果物スロット「特記仕様書」を追加しました', $msg['message_text']);
+    }
 }
