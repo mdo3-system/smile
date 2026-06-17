@@ -155,12 +155,6 @@
                         <button type="submit" class="btn" style="background:#8b5cf6; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">➕ 別の成果物スロットを追加</button>
                     </form>
                 </div>
-                <form id="renameCustomDeliverableForm" action="project_detail.php?id=<?= $project_id ?>" method="POST" style="display:none;">
-                    <input type="hidden" name="action" value="rename_custom_deliverable">
-                    <input type="hidden" name="old_category" id="rename_old_category" value="">
-                    <input type="hidden" name="new_label" id="rename_new_label" value="">
-                    <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
-                </form>
                 <script>
                 function promptCustomDeliverable(form) {
                     const name = prompt("追加する成果物の名前を入力してください（例: 特記仕様書）:");
@@ -177,9 +171,24 @@
                         return;
                     }
                     if (trimmed === currentLabel) return;
-                    document.getElementById('rename_old_category').value = cat;
-                    document.getElementById('rename_new_label').value = trimmed;
-                    document.getElementById('renameCustomDeliverableForm').submit();
+                    
+                    const formData = new FormData();
+                    formData.append('action', 'rename_custom_deliverable');
+                    formData.append('old_category', cat);
+                    formData.append('new_label', trimmed);
+                    formData.append('tab', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>');
+                    
+                    fetch('project_detail.php?id=<?= $project_id ?>', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(() => {
+                        window.location.reload();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("エラーが発生しました");
+                    });
                 }
                 </script>
             <?php endif; ?>

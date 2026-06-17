@@ -144,4 +144,36 @@ class UploadServiceTest extends TestCase
         $this->assertNotFalse($msg);
         $this->assertStringContainsString('新しい成果物スロット「特記仕様書」を追加しました', $msg['message_text']);
     }
+
+    public function testRenameCustomDeliverableSuccess(): void
+    {
+        $projectId = 1;
+        $oldCategory = 'custom_deliverable_特記仕様書';
+        $newLabel = '特記仕様書最新版';
+        $tab = 'permit';
+        $userId = 1;
+
+        // まず追加する
+        $this->service->addCustomDeliverable($projectId, '特記仕様書', $tab, $userId);
+
+        // 名前を変更する
+        $result = $this->service->renameCustomDeliverable($projectId, $oldCategory, $newLabel, $tab, $userId);
+        $this->assertTrue($result);
+
+        // 旧カテゴリが残っていないか、新カテゴリが登録されているか確認
+        $stmtOld = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtOld->execute(['pid' => $projectId, 'cat' => $oldCategory]);
+        $this->assertEquals(0, $stmtOld->fetchColumn());
+
+        $stmtNew = $this->pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtNew->execute(['pid' => $projectId, 'cat' => 'custom_deliverable_特記仕様書最新版']);
+        $file = $stmtNew->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($file);
+
+        // チャット通知確認
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($msg);
+        $this->assertStringContainsString('成果物スロット「特記仕様書」の名称を「特記仕様書最新版」に変更しました', $msg['message_text']);
+    }
 }
