@@ -328,7 +328,7 @@
                             <div id="additional_deposits_container">
                                 <?php foreach ($additional_deposits as $idx => $ad): ?>
                                     <div class="add-dep-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-                                        <input type="number" name="add_dep_amounts[]" value="<?= htmlspecialchars($ad['amount']) ?>" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px; font-size:11px;" required class="form-control-fin-add">
+                                        <input type="number" name="add_dep_amounts[]" value="<?= htmlspecialchars($ad['amount']) ?>" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px; font-size:11px;" class="form-control-fin-add">
                                         <input type="date" name="add_dep_dates[]" value="<?= htmlspecialchars($ad['date'] ?: '') ?>" style="width:110px; padding:3px; font-size:11px;" class="form-control-fin-add-date">
                                         <input type="text" name="add_dep_notes[]" value="<?= htmlspecialchars($ad['note'] ?? '') ?>" placeholder="摘要" style="flex:1; padding:3px; font-size:11px;">
                                         <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
@@ -391,7 +391,7 @@
                         row.style.marginBottom = '5px';
                         row.style.alignItems = 'center';
                         row.innerHTML = `
-                            <input type="number" name="add_est_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add" required>
+                            <input type="number" name="add_est_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add">
                             <input type="date" name="add_est_dates[]" value="" style="flex:1; padding:3px;" class="form-control-fin-add-date">
                             <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
                         `;
@@ -407,7 +407,7 @@
                         row.style.marginBottom = '5px';
                         row.style.alignItems = 'center';
                         row.innerHTML = `
-                            <input type="number" name="add_dep_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px; font-size:11px;" required class="form-control-fin-add">
+                            <input type="number" name="add_dep_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px; font-size:11px;" class="form-control-fin-add">
                             <input type="date" name="add_dep_dates[]" value="" style="width:110px; padding:3px; font-size:11px;" class="form-control-fin-add-date">
                             <input type="text" name="add_dep_notes[]" value="" placeholder="摘要" style="flex:1; padding:3px; font-size:11px;">
                             <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>

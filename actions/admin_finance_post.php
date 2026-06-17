@@ -82,13 +82,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $last_add_date = $ae['date'];
             }
         }
-        // 既存の入金値を取得
-        $stmtGetOld = $pdo->prepare("SELECT deposit_amount_50, deposit_amount_rem, additional_deposits FROM projects WHERE id = :id");
+        // 既存の財務データを取得
+        $stmtGetOld = $pdo->prepare("
+            SELECT initial_est_amount, initial_est_date, formal_est_amount, formal_est_date, 
+                   add_est_amount, add_est_date, deposit_amount, deposit_date, 
+                   deposit_amount_50, deposit_amount_rem, deposit_date_50, deposit_date_rem, 
+                   additional_estimates, additional_deposits, billing_company_name 
+            FROM projects WHERE id = :id
+        ");
         $stmtGetOld->execute(['id' => $project_id]);
-        $old_finance = $stmtGetOld->fetch();
+        $old_finance = $stmtGetOld->fetch(PDO::FETCH_ASSOC);
+
         $old_dep_50 = $old_finance ? (int)$old_finance['deposit_amount_50'] : 0;
         $old_dep_rem = $old_finance ? (int)$old_finance['deposit_amount_rem'] : 0;
-        $old_add_deps = json_decode($old_finance['additional_deposits'] ?? '[]', true) ?: [];
+        $old_add_deps_json = $old_finance ? $old_finance['additional_deposits'] : '[]';
+        $old_add_deps = json_decode($old_add_deps_json ?? '[]', true) ?: [];
         $old_add_deps_total = 0;
         foreach ($old_add_deps as $oad) {
             $old_add_deps_total += (int)$oad['amount'];
@@ -115,11 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE id = :id
         ");
         
+        $new_initial_amt = $_POST['initial_est_amount'] === '' ? null : (int)$_POST['initial_est_amount'];
+        $new_initial_date = $_POST['initial_est_date'] === '' ? null : $_POST['initial_est_date'];
+        $new_formal_amt = $_POST['formal_est_amount'] === '' ? null : (int)$_POST['formal_est_amount'];
+        $new_formal_date = $_POST['formal_est_date'] === '' ? null : $_POST['formal_est_date'];
+        $new_billing_name = $_POST['billing_company_name'] ?? null;
+
         $stmt->execute([
-            'initial_amt' => $_POST['initial_est_amount'] === '' ? null : (int)$_POST['initial_est_amount'],
-            'initial_date' => $_POST['initial_est_date'] === '' ? null : $_POST['initial_est_date'],
-            'formal_amt' => $_POST['formal_est_amount'] === '' ? null : (int)$_POST['formal_est_amount'],
-            'formal_date' => $_POST['formal_est_date'] === '' ? null : $_POST['formal_est_date'],
+            'initial_amt' => $new_initial_amt,
+            'initial_date' => $new_initial_date,
+            'formal_amt' => $new_formal_amt,
+            'formal_date' => $new_formal_date,
             'add_amt' => $total_add_est,
             'add_date' => $last_add_date,
             'dep_amt' => $total_dep,
@@ -130,63 +144,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'dep_date_rem' => $dep_date_rem,
             'add_estimates_json' => $add_estimates_json,
             'additional_deposits_json' => $additional_deposits_json,
-            'billing_name' => $_POST['billing_company_name'] ?? null,
+            'billing_name' => $new_billing_name,
             'id' => $project_id
         ]);
 
-        // 入金増加のチェックと自動チャット送信
-        $diff_dep_50 = $dep_50 - $old_dep_50;
-        $diff_dep_rem = $dep_rem - $old_dep_rem;
-        $diff_add_dep = $total_add_dep - $old_add_deps_total;
+        // 差分検知と詳細チャットメッセージ構築
+        if ($old_finance) {
+            $changes = [];
 
-        if ($diff_dep_50 > 0) {
-            $msg_text = "（経理担当）" . number_format($diff_dep_50) . "円ご入金ありがとうございました。入金確認いたしました";
-            $stmtChat = $pdo->prepare("
-                INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
-                VALUES (:pid, :sid, 'client_admin', :msg, NOW())
-            ");
-            $stmtChat->execute([
-                'pid' => $project_id,
-                'sid' => $_SESSION['user_id'],
-                'msg' => $msg_text
-            ]);
-        }
-        if ($diff_dep_rem > 0) {
-            $msg_text = "（経理担当）" . number_format($diff_dep_rem) . "円ご入金ありがとうございました。入金確認いたしました";
-            $stmtChat = $pdo->prepare("
-                INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
-                VALUES (:pid, :sid, 'client_admin', :msg, NOW())
-            ");
-            $stmtChat->execute([
-                'pid' => $project_id,
-                'sid' => $_SESSION['user_id'],
-                'msg' => $msg_text
-            ]);
-        }
-        if ($diff_add_dep > 0) {
-            $msg_text = "（経理担当）追加入金 " . number_format($diff_add_dep) . "円ご入金ありがとうございました。入金確認いたしました";
-            $stmtChat = $pdo->prepare("
-                INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
-                VALUES (:pid, :sid, 'client_admin', :msg, NOW())
-            ");
-            $stmtChat->execute([
-                'pid' => $project_id,
-                'sid' => $_SESSION['user_id'],
-                'msg' => $msg_text
-            ]);
-        }
+            // 初期見積額/日
+            if ((int)$old_finance['initial_est_amount'] !== (int)$new_initial_amt || $old_finance['initial_est_date'] !== $new_initial_date) {
+                $old_val = $old_finance['initial_est_amount'] ? number_format($old_finance['initial_est_amount']) . "円" : "未設定";
+                $new_val = $new_initial_amt ? number_format($new_initial_amt) . "円" : "未設定";
+                $old_dt = $old_finance['initial_est_date'] ?: "未設定";
+                $new_dt = $new_initial_date ?: "未設定";
+                $changes[] = "・初期見積額: {$old_val} ({$old_dt}) ➔ {$new_val} ({$new_dt})";
+            }
 
-        // 経理全体の更新通知を投稿
-        $admin_finance_msg = "【経理情報更新】経理担当者によって案件の財務・経理情報が更新されました。";
-        $stmtChat = $pdo->prepare("
-            INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
-            VALUES (:pid, :sid, 'client_admin', :msg, NOW())
-        ");
-        $stmtChat->execute([
-            'pid' => $project_id,
-            'sid' => $_SESSION['user_id'],
-            'msg' => $admin_finance_msg
-        ]);
+            // 本見積額/日
+            if ((int)$old_finance['formal_est_amount'] !== (int)$new_formal_amt || $old_finance['formal_est_date'] !== $new_formal_date) {
+                $old_val = $old_finance['formal_est_amount'] ? number_format($old_finance['formal_est_amount']) . "円" : "未設定";
+                $new_val = $new_formal_amt ? number_format($new_formal_amt) . "円" : "未設定";
+                $old_dt = $old_finance['formal_est_date'] ?: "未設定";
+                $new_dt = $new_formal_date ?: "未設定";
+                $changes[] = "・本見積額: {$old_val} ({$old_dt}) ➔ {$new_val} ({$new_dt})";
+            }
+
+            // 追加見積の変動
+            if (($old_finance['additional_estimates'] ?? '[]') !== ($add_estimates_json ?? '[]')) {
+                $old_add_total = 0;
+                $old_add_arr = json_decode($old_finance['additional_estimates'] ?? '[]', true) ?: [];
+                foreach ($old_add_arr as $oae) $old_add_total += (int)$oae['amount'];
+                $changes[] = "・追加見積合計: " . number_format($old_add_total) . "円 ➔ " . number_format($total_add_est) . "円";
+            }
+
+            // 50%着手金入金
+            if ($old_dep_50 !== $dep_50 || $old_finance['deposit_date_50'] !== $dep_date_50) {
+                $old_val = $old_dep_50 ? number_format($old_dep_50) . "円" : "未設定";
+                $new_val = $dep_50 ? number_format($dep_50) . "円" : "未設定";
+                $old_dt = $old_finance['deposit_date_50'] ?: "未設定";
+                $new_dt = $dep_date_50 ?: "未設定";
+                $changes[] = "・50%着手金入金: {$old_val} ({$old_dt}) ➔ {$new_val} ({$new_dt})";
+            }
+
+            // 残金入金
+            if ($old_dep_rem !== $dep_rem || $old_finance['deposit_date_rem'] !== $dep_date_rem) {
+                $old_val = $old_dep_rem ? number_format($old_dep_rem) . "円" : "未設定";
+                $new_val = $dep_rem ? number_format($dep_rem) . "円" : "未設定";
+                $old_dt = $old_finance['deposit_date_rem'] ?: "未設定";
+                $new_dt = $dep_date_rem ?: "未設定";
+                $changes[] = "・残金入金: {$old_val} ({$old_dt}) ➔ {$new_val} ({$new_dt})";
+            }
+
+            // 追加入金の変動
+            if ($old_add_deps_json !== ($additional_deposits_json ?? '[]')) {
+                $changes[] = "・追加入金合計: " . number_format($old_add_deps_total) . "円 ➔ " . number_format($total_add_dep) . "円";
+            }
+
+            // 宛名
+            if (($old_finance['billing_company_name'] ?? '') !== ($new_billing_name ?? '')) {
+                $old_name = $old_finance['billing_company_name'] ?: "未設定";
+                $new_name = $new_billing_name ?: "未設定";
+                $changes[] = "・宛名: 「{$old_name}」 ➔ 「{$new_name}」";
+            }
+
+            if (!empty($changes)) {
+                $msg_text = "【経理情報更新】\n経理担当（または管理者）が金銭データを更新しました。\n" . implode("\n", $changes);
+                $stmtChat = $pdo->prepare("
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
+                    VALUES (:pid, :sid, 'client_admin', :msg, NOW())
+                ");
+                $stmtChat->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => $msg_text
+                ]);
+            }
+        }
 
         // 協力業者支払情報の更新
         $order_payment_statuses = $_POST['order_payment_statuses'] ?? [];

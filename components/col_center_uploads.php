@@ -134,8 +134,19 @@
                     <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:8px;">
                         <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px;"><?= $label ?></div>
                         
-                        <?php if (!empty($history)): 
-                            $latest = $history[0]; 
+                        <?php 
+                        $actual_history = [];
+                        if (!empty($history)) {
+                            foreach ($history as $h) {
+                                if (!empty($h['drive_file_id']) || $h['file_name'] === '【他ファイルに記載】') {
+                                    $actual_history[] = $h;
+                                }
+                            }
+                        }
+                        $has_actual_file = !empty($actual_history);
+                        
+                        if ($has_actual_file): 
+                            $latest = $actual_history[0]; 
                             $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
                                 ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
                                 : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
@@ -164,10 +175,10 @@
                                     </form>
                                 <?php endif; ?>
 
-                                <?php if (count($history) > 1): ?>
+                                <?php if (count($actual_history) > 1): ?>
                                     <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
                                         <option value="">過去バージョン...</option>
-                                        <?php foreach ($history as $idx => $h): 
+                                        <?php foreach ($actual_history as $idx => $h): 
                                             if ($idx === 0) continue; 
                                             $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
                                                 ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
@@ -194,9 +205,9 @@
                                 <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                                 
                                 <div style="display:flex; gap:3px; align-items:center;">
-                                    <input type="file" name="upload_file" id="file_<?= $cat ?>" <?= empty($history) ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:90px; padding:2px;">
+                                    <input type="file" name="upload_file" id="file_<?= $cat ?>" <?= !$has_actual_file ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:90px; padding:2px;">
                                     
-                                    <?php if (empty($history)): ?>
+                                    <?php if (!$has_actual_file): ?>
                                     <label style="font-size:9px; display:flex; align-items:center; gap:2px; color:#d97706; white-space:nowrap; cursor:pointer;" title="他のCADファイルに記載がある場合">
                                         <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 
                                         別ﾌｧｲﾙ済
@@ -206,7 +217,7 @@
                                     <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; white-space:nowrap;">UP/更新</button>
                                 </div>
                                 
-                                <?php if (!empty($history)): ?>
+                                <?php if ($has_actual_file): ?>
                                     <input type="text" name="update_reason" placeholder="差し替え理由を入力して下さい" required style="font-size:10px; width:100%; padding:2px; border:1px solid #cbd5e1; border-radius:3px; box-sizing:border-box;">
                                 <?php endif; ?>
                             </form>
