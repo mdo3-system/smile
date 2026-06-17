@@ -178,6 +178,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $changes[] = "・追加見積合計: " . number_format($old_add_total) . "円 ➔ " . number_format($total_add_est) . "円";
             }
 
+            $is_deposit_updated = false;
+
             // 50%着手金入金
             if ($old_dep_50 !== $dep_50 || $old_finance['deposit_date_50'] !== $dep_date_50) {
                 $old_val = $old_dep_50 ? number_format($old_dep_50) . "円" : "未設定";
@@ -185,6 +187,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $old_dt = $old_finance['deposit_date_50'] ?: "未設定";
                 $new_dt = $dep_date_50 ?: "未設定";
                 $changes[] = "・50%着手金入金: {$old_val} ({$old_dt}) ➔ {$new_val} ({$new_dt})";
+                if ($dep_50 > $old_dep_50 || (!empty($dep_date_50) && empty($old_finance['deposit_date_50']))) {
+                    $is_deposit_updated = true;
+                }
             }
 
             // 残金入金
@@ -194,11 +199,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $old_dt = $old_finance['deposit_date_rem'] ?: "未設定";
                 $new_dt = $dep_date_rem ?: "未設定";
                 $changes[] = "・残金入金: {$old_val} ({$old_dt}) ➔ {$new_val} ({$new_dt})";
+                if ($dep_rem > $old_dep_rem || (!empty($dep_date_rem) && empty($old_finance['deposit_date_rem']))) {
+                    $is_deposit_updated = true;
+                }
             }
 
             // 追加入金の変動
             if ($old_add_deps_json !== ($additional_deposits_json ?? '[]')) {
                 $changes[] = "・追加入金合計: " . number_format($old_add_deps_total) . "円 ➔ " . number_format($total_add_dep) . "円";
+                if ($total_add_dep > $old_add_deps_total) {
+                    $is_deposit_updated = true;
+                }
             }
 
             // 宛名
@@ -209,7 +220,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!empty($changes)) {
-                $msg_text = "【経理情報更新】\n経理担当（または管理者）が金銭データを更新しました。\n" . implode("\n", $changes);
+                $prefix = "";
+                if ($is_deposit_updated) {
+                    $prefix = "ご入金ありがとうございました。入金確認いたしました。\n\n";
+                }
+                $msg_text = $prefix . "【経理情報更新】\n経理担当（または管理者）が金銭データを更新しました。\n" . implode("\n", $changes);
                 $stmtChat = $pdo->prepare("
                     INSERT INTO messages (project_id, sender_id, thread_type, message_text, created_at)
                     VALUES (:pid, :sid, 'client_admin', :msg, NOW())

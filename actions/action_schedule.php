@@ -102,30 +102,32 @@ if ($action === 'update_schedule_actual') {
             $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
             $stmt->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
 
-            // チャットへ自動通知メッセージを投稿
-            $base_days = getScheduleBaseDays($project_info);
-            if ($schedule_type === 'permit') {
-                $steps = getScheduleSteps($base_days);
-            } elseif ($schedule_type === 'wall') {
-                $steps = getScheduleStepsWall($base_days);
-            } elseif ($schedule_type === 'skin') {
-                $steps = getScheduleStepsSkin($base_days);
-            } else {
-                $steps = getScheduleStepsSky($base_days);
+            // チャットへ自動通知メッセージを投稿 (実績日が空の場合は通知しない)
+            if (!empty($actual_date)) {
+                $base_days = getScheduleBaseDays($project_info);
+                if ($schedule_type === 'permit') {
+                    $steps = getScheduleSteps($base_days);
+                } elseif ($schedule_type === 'wall') {
+                    $steps = getScheduleStepsWall($base_days);
+                } elseif ($schedule_type === 'skin') {
+                    $steps = getScheduleStepsSkin($base_days);
+                } else {
+                    $steps = getScheduleStepsSky($base_days);
+                }
+                
+                $step_name = $steps[$step_idx]['name'] ?? "工程 #{$step_idx}";
+                $action_desc = "「{$actual_date}」に設定";
+                $chat_msg = "【スケジュール実績更新】\n{$step_name} の実施日が{$action_desc}されました。";
+                
+                $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
+                $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                $stmtMsg->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'thread' => $thread_type,
+                    'msg' => $chat_msg
+                ]);
             }
-            
-            $step_name = $steps[$step_idx]['name'] ?? "工程 #{$step_idx}";
-            $action_desc = empty($actual_date) ? "削除" : "「{$actual_date}」に設定";
-            $chat_msg = "【スケジュール実績更新】\n{$step_name} の実施日が{$action_desc}されました。";
-            
-            $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
-            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
-            $stmtMsg->execute([
-                'pid' => $project_id,
-                'sid' => $_SESSION['user_id'],
-                'thread' => $thread_type,
-                'msg' => $chat_msg
-            ]);
         }
     }
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;

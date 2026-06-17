@@ -238,20 +238,76 @@ if ($_POST['action_type'] ?? '' === 'single_upload' && ($is_upload || $is_includ
                 'reason' => $update_reason
             ]);
 
-            // 差し替え理由があればメッセージに投稿
-            if (!empty($update_reason)) {
-                $cat_label = $file_category; // 簡易的にカテゴリーキーを使用。必要ならマップ用意。
-                $msg = "【図書差し替え通知】\n対象: {$cat_label}\n理由: {$update_reason}";
-                $tab = $_POST['tab'] ?? '';
-                $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
-                $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
-                $stmtMsg->execute([
-                    'pid' => $project_id,
-                    'sid' => $_SESSION['user_id'] ?? 1,
-                    'thread' => $thread_type,
-                    'msg' => $msg
-                ]);
+            // カテゴリーキーから日本語ラベルを取得するヘルパー関数
+            if (!function_exists('getFileCategoryLabel')) {
+                function getFileCategoryLabel($category) {
+                    global $file_categories_left_pdf, $file_categories_left_cad, $file_categories_center, $money_categories;
+                    $map = array_merge(
+                        $file_categories_left_pdf ?? [],
+                        $file_categories_left_cad ?? [],
+                        $file_categories_center ?? [],
+                        $money_categories ?? [],
+                        [
+                            'pdf_area_calc' => '求積図',
+                            'all_in_one_zip' => '一括図書圧縮ファイル(ZIP)',
+                            'calc_doc' => '構造計算書',
+                            'qa_doc' => '疑義照会・回答書',
+                            'correction_doc' => '補正・指示図書',
+                            'other' => 'その他参考資料',
+                            'other_file' => 'その他図書',
+                        ]
+                    );
+                    if (isset($map[$category])) {
+                        return $map[$category];
+                    }
+                    if (strpos($category, 'custom_') === 0) {
+                        $parts = explode('_', $category);
+                        return end($parts);
+                    }
+                    return $category;
+                }
             }
+
+            // 図書提出・差し替えチャット通知
+            $uploader_role_name = '担当者';
+            if (isset($_SESSION['role'])) {
+                if (in_array($_SESSION['role'], ['admin', 'accountant'])) {
+                    $uploader_role_name = '設計担当（または管理者）';
+                } elseif ($_SESSION['role'] === 'client') {
+                    $uploader_role_name = '依頼主';
+                } elseif ($_SESSION['role'] === 'subcontractor') {
+                    $uploader_role_name = '協力業者';
+                }
+            }
+
+            $cat_label = getFileCategoryLabel($file_category);
+            $tab = $_POST['tab'] ?? '';
+            $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+            
+            if ($new_version > 1) {
+                if ($is_included) {
+                    $msg = "【図書差し替え設定】\n{$uploader_role_name}が「{$cat_label}」を「他ファイルに記載」に設定変更しました。";
+                } else {
+                    $msg = "【図書差し替え】\n{$uploader_role_name}が「{$cat_label}」に「{$file_name}」をアップロード（差し替え）しました。";
+                }
+                if (!empty($update_reason)) {
+                    $msg .= "\n差し替え理由: {$update_reason}";
+                }
+            } else {
+                if ($is_included) {
+                    $msg = "【図書提出設定】\n{$uploader_role_name}が「{$cat_label}」を「他ファイルに記載」に設定しました。";
+                } else {
+                    $msg = "【図書提出】\n{$uploader_role_name}が「{$cat_label}」に「{$file_name}」をアップロードしました。";
+                }
+            }
+
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'] ?? 1,
+                'thread' => $thread_type,
+                'msg' => $msg
+            ]);
 
             // ============================
             // 後出し図書充足トリガー：一次回答晱山の自動起算
@@ -388,17 +444,70 @@ if (($_POST['action_type'] ?? '') === 'bulk_upload' && !$is_admin) {
                 $uploaded_cats[] = $cat;
             }
 
+            // カテゴリーキーから日本語ラベルを取得するヘルパー関数
+            if (!function_exists('getFileCategoryLabel')) {
+                function getFileCategoryLabel($category) {
+                    global $file_categories_left_pdf, $file_categories_left_cad, $file_categories_center, $money_categories;
+                    $map = array_merge(
+                        $file_categories_left_pdf ?? [],
+                        $file_categories_left_cad ?? [],
+                        $file_categories_center ?? [],
+                        $money_categories ?? [],
+                        [
+                            'pdf_area_calc' => '求積図',
+                            'all_in_one_zip' => '一括図書圧縮ファイル(ZIP)',
+                            'calc_doc' => '構造計算書',
+                            'qa_doc' => '疑義照会・回答書',
+                            'correction_doc' => '補正・指示図書',
+                            'other' => 'その他参考資料',
+                            'other_file' => 'その他図書',
+                        ]
+                    );
+                    if (isset($map[$category])) {
+                        return $map[$category];
+                    }
+                    if (strpos($category, 'custom_') === 0) {
+                        $parts = explode('_', $category);
+                        return end($parts);
+                    }
+                    return $category;
+                }
+            }
+
             // 差し替え理由をチャットへ1回投稿
             $tab = $_POST['tab'] ?? '';
             $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
-            if ($has_replace && !empty($bulk_reason) && !empty($uploaded_cats)) {
-                $cat_list = implode(', ', $uploaded_cats);
-                $chat_msg = "【一括図書差し替え通知】\n対象: {$cat_list}\n理由: {$bulk_reason}";
-                $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)")
-                    ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'thread' => $thread_type, 'msg' => $chat_msg]);
-            } elseif (!$has_replace && !empty($uploaded_cats)) {
-                $cat_list = implode(', ', $uploaded_cats);
-                $chat_msg = "【一括図書提出通知】\n提出カテゴリ: {$cat_list}";
+            if (!empty($uploaded_cats)) {
+                $uploader_role_name = '担当者';
+                if (isset($_SESSION['role'])) {
+                    if (in_array($_SESSION['role'], ['admin', 'accountant'])) {
+                        $uploader_role_name = '設計担当（または管理者）';
+                    } elseif ($_SESSION['role'] === 'client') {
+                        $uploader_role_name = '依頼主';
+                    }
+                }
+                
+                $details = [];
+                foreach ($uploaded_cats as $cat) {
+                    $cat_label = getFileCategoryLabel($cat);
+                    $is_inc = isset($bulk_included[$cat]) && $bulk_included[$cat] == '1';
+                    if ($is_inc) {
+                        $details[] = "・{$cat_label}: 他ファイルに記載として設定";
+                    } else {
+                        $fname = $bulk_files['name'][$cat] ?? '';
+                        $details[] = "・{$cat_label}: {$fname}";
+                    }
+                }
+                
+                if ($has_replace) {
+                    $chat_msg = "【一括図書差し替え通知】\n{$uploader_role_name}が一括で図書を差し替えました。\n" . implode("\n", $details);
+                    if (!empty($bulk_reason)) {
+                        $chat_msg .= "\n理由: {$bulk_reason}";
+                    }
+                } else {
+                    $chat_msg = "【一括図書提出通知】\n{$uploader_role_name}が一括で図書を提出しました。\n" . implode("\n", $details);
+                }
+                
                 $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)")
                     ->execute(['pid' => $project_id, 'sid' => $_SESSION['user_id'] ?? 1, 'thread' => $thread_type, 'msg' => $chat_msg]);
             }
@@ -438,6 +547,19 @@ if ($action === 'add_custom_slot' && !$is_admin) {
             $stmtInsert->execute([
                 'pid' => $project_id,
                 'cat' => $file_category
+            ]);
+
+            // チャットへ通知
+            $uploader_role_name = '依頼主';
+            $chat_msg = "【カスタムスロット追加】\n{$uploader_role_name}が新しいカスタムスロット「{$custom_label}」を追加しました。";
+            $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+            
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'] ?? 1,
+                'thread' => $thread_type,
+                'msg' => $chat_msg
             ]);
         }
     }
