@@ -82,7 +82,6 @@ if (!empty($all_estimates)) {
                 </div>
                 <div>
                     形状・仕様加算（基本料金+面積割増に乗算）<br>
-                    <label><input type="checkbox" id="est_mult_permit_1" class="est_mult_permit" value="0.2" onchange="calcClientEstimate()" <?= ($saved_inputs['est_mult_permit_1'] ?? false) ? 'checked' : '' ?>> 準耐火/耐火構造 (+20%)</label><br>
                     <label><input type="checkbox" id="est_mult_permit_2" class="est_mult_permit" value="0.2" onchange="calcClientEstimate()" <?= ($saved_inputs['est_mult_permit_2'] ?? false) ? 'checked' : '' ?>> PH階がある (+20%)</label><br>
                     <label><input type="checkbox" id="est_mult_permit_3" class="est_mult_permit" value="0.1" onchange="calcClientEstimate()" <?= ($saved_inputs['est_mult_permit_3'] ?? false) ? 'checked' : '' ?>> 小屋裏収納がある (+10%)</label><br>
                     <label><input type="checkbox" id="est_mult_permit_4" class="est_mult_permit" value="0.1" onchange="calcClientEstimate()" <?= ($saved_inputs['est_mult_permit_4'] ?? false) ? 'checked' : '' ?>> スキップ等レベル違い (+10%)</label><br>
@@ -92,7 +91,18 @@ if (!empty($all_estimates)) {
                 <div>
                     その他加算（固定額）<br>
                     <label>金物工法階数: <input type="number" id="est_kanamono_permit" value="<?= htmlspecialchars($saved_inputs['est_kanamono_permit'] ?? '0', ENT_QUOTES) ?>" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 階 (+15,000円/階)</label><br>
-                    <label>斜め壁等特殊箇所数: <input type="number" id="est_special_permit" value="<?= htmlspecialchars($saved_inputs['est_special_permit'] ?? '0', ENT_QUOTES) ?>" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+15,000円/箇所)</label>
+                    <div style="margin: 3px 0;">
+                        人通口補強計算:<br>
+                        <?php $val_jintsu_permit = $saved_inputs['est_jintsu_permit'] ?? '0'; ?>
+                        <select id="est_jintsu_permit" onchange="calcClientEstimate()" style="width:100%; font-size:11px; padding:2px;">
+                            <option value="0" <?= $val_jintsu_permit == '0' ? 'selected' : '' ?>>なし (0円)</option>
+                            <option value="5000" <?= $val_jintsu_permit == '5000' ? 'selected' : '' ?>>10箇所未満 (+5,000円)</option>
+                            <option value="10000" <?= $val_jintsu_permit == '10000' ? 'selected' : '' ?>>10箇所以上 (+10,000円)</option>
+                        </select>
+                    </div>
+                    <label>母屋下がり箇所数: <input type="number" id="est_moya_permit" value="<?= htmlspecialchars($saved_inputs['est_moya_permit'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+15,000円/箇所)</label><br>
+                    <label>斜め壁等（耐力壁なし）箇所数: <input type="number" id="est_slant_wall_no_bearing" value="<?= htmlspecialchars($saved_inputs['est_slant_wall_no_bearing'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+15,000円/箇所)</label><br>
+                    <label>斜め壁等（耐力壁あり）箇所数: <input type="number" id="est_slant_wall_bearing" value="<?= htmlspecialchars($saved_inputs['est_slant_wall_bearing'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+30,000円/箇所)</label>
                 </div>
             </div>
         </div>
@@ -237,14 +247,16 @@ if (!empty($all_estimates)) {
                         "許容応力度計算 基本料金",
                         "許容応力度計算 構造床面積割増",
                         "目標等級加算",
-                        "準耐火/耐火構造",
                         "PH階がある",
                         "小屋裏収納がある",
                         "スキップ等レベル違い",
                         "平面不整形",
                         "立面不整形",
                         "金物工法割増",
-                        "特殊箇所割増",
+                        "許容応力度計算 人通口補強計算",
+                        "許容応力度計算 母屋下がり加算",
+                        "許容応力度計算 斜め壁等（耐力壁なし）",
+                        "許容応力度計算 斜め壁等（耐力壁あり）",
                         "性能表示壁量計算 基本料金",
                         "性能表示壁量計算 構造床面積割増",
                         "性能表示壁量計算 PH階がある",

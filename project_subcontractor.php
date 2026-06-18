@@ -237,9 +237,9 @@ if (!$is_admin) {
                f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
         FROM subcontractor_orders o 
         JOIN users u ON o.subcontractor_id = u.id 
-        LEFT JOIN project_files f1 ON o.project_id = f1.project_id AND f1.file_category = 'sub_structural_pdf' AND f1.is_latest = 1
-        LEFT JOIN project_files f2 ON o.project_id = f2.project_id AND f2.file_category = 'sub_architrend_design' AND f2.is_latest = 1
-        LEFT JOIN project_files f3 ON o.project_id = f3.project_id AND f3.file_category = 'sub_architrend_struct' AND f3.is_latest = 1
+        LEFT JOIN (SELECT project_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_structural_pdf' AND is_latest = 1 GROUP BY project_id) f1 ON o.project_id = f1.project_id
+        LEFT JOIN (SELECT project_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_architrend_design' AND is_latest = 1 GROUP BY project_id) f2 ON o.project_id = f2.project_id
+        LEFT JOIN (SELECT project_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_architrend_struct' AND is_latest = 1 GROUP BY project_id) f3 ON o.project_id = f3.project_id
         WHERE o.project_id = :pid 
         ORDER BY o.created_at DESC
     ");
@@ -921,7 +921,7 @@ if (!$is_admin) {
                                                             <input type="file" name="architrend_struct" style="font-size:12px;">
                                                         </div>
                                                         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-                                                            <label style="width:150px; font-weight:bold; color:#dc3545;">構造図PDF (依頼主公開):</label>
+                                                            <label style="width:150px; font-weight:bold; color:#dc3545;">構造図PDF:</label>
                                                             <input type="file" name="structural_pdf" style="font-size:12px;">
                                                         </div>
 

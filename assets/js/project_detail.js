@@ -349,7 +349,10 @@ function calcClientEstimate() {
 
         let grade = parseInt(document.getElementById('est_grade_permit').value) || 0;
         let kanamono = parseInt(document.getElementById('est_kanamono_permit').value) || 0;
-        let special = parseInt(document.getElementById('est_special_permit').value) || 0;
+        let jintsu_permit = parseInt(document.getElementById('est_jintsu_permit').value) || 0;
+        let moya_permit = parseInt(document.getElementById('est_moya_permit').value) || 0;
+        let slant_no_bearing = parseInt(document.getElementById('est_slant_wall_no_bearing').value) || 0;
+        let slant_bearing = parseInt(document.getElementById('est_slant_wall_bearing').value) || 0;
         
         // 全部の等級をリストアップしたいが、selectなので選ばれたものだけが確定。他もリストアップするか？
         // Selectは選択されたもの以外は「0円」などのオプションなので、選択されたものだけを表示でOKとする。
@@ -361,7 +364,10 @@ function calcClientEstimate() {
         currentEstimate += pushEstimateItem(gradeName, 1, "式", grade, grade > 0);
 
         currentEstimate += pushEstimateItem("許容応力度計算 金物工法割増", kanamono > 0 ? kanamono : 1, "階", 15000, kanamono > 0);
-        currentEstimate += pushEstimateItem("許容応力度計算 特殊箇所割増", special > 0 ? special : 1, "箇所", 15000, special > 0);
+        currentEstimate += pushEstimateItem("許容応力度計算 人通口補強計算", 1, "式", jintsu_permit, jintsu_permit > 0);
+        currentEstimate += pushEstimateItem("許容応力度計算 母屋下がり加算", moya_permit > 0 ? moya_permit : 1, "箇所", 15000, moya_permit > 0);
+        currentEstimate += pushEstimateItem("許容応力度計算 斜め壁等（耐力壁なし）", slant_no_bearing > 0 ? slant_no_bearing : 1, "箇所", 15000, slant_no_bearing > 0);
+        currentEstimate += pushEstimateItem("許容応力度計算 斜め壁等（耐力壁あり）", slant_bearing > 0 ? slant_bearing : 1, "箇所", 30000, slant_bearing > 0);
     }
     
     // 2. 性能表示壁量計算
@@ -505,7 +511,7 @@ function saveAndPrintEstimate(isFormal = false, isAdditional = false) {
     
     // シミュレーターの入力値を収集
     const inputs = {};
-    const estimatorInputs = document.querySelectorAll('[id^="est_active_"], [id^="est_base_"], [id^="est_area_"], [id^="est_mult_"], [id^="est_grade_"], [id^="est_kanamono_"], [id^="est_special_"], [id^="est_dwg_"], [id^="est_jintsu_"], [id^="est_moya_"], [id^="est_kisohari_"], [id^="est_kisotachi_"], [id^="est_setsumei_"], [id^="est_road_"], [id^="est_north_"], [id^="est_extra_"], [id^="est_site_area_"], [id^="est_building_area_"], [id^="est_detail_"]');
+    const estimatorInputs = document.querySelectorAll('[id^="est_active_"], [id^="est_base_"], [id^="est_area_"], [id^="est_mult_"], [id^="est_grade_"], [id^="est_kanamono_"], [id^="est_special_"], [id^="est_dwg_"], [id^="est_jintsu_"], [id^="est_moya_"], [id^="est_kisohari_"], [id^="est_kisotachi_"], [id^="est_setsumei_"], [id^="est_road_"], [id^="est_north_"], [id^="est_extra_"], [id^="est_site_area_"], [id^="est_building_area_"], [id^="est_detail_"], [id^="est_slant_"]');
     estimatorInputs.forEach(el => {
         if (el.type === 'checkbox') {
             inputs[el.id] = el.checked;

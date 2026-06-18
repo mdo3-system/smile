@@ -59,6 +59,7 @@ if ($action === 'order_subcontractor') {
         $order_amount_formatted = number_format($_POST['order_amount']);
         $msg = "【新規発注のお知らせ】\n";
         $msg .= "業務: " . $_POST['task_title'] . "\n";
+        $msg .= "希望納品日: " . ($due_date ? date('Y/m/d', strtotime($due_date)) : '-') . "\n";
         $msg .= "発注額: {$order_amount_formatted} 円\n";
         $msg .= "計算式: {$formula}\n\n";
         $msg .= "上記の通り発注いたしました。よろしくお願いいたします。";
