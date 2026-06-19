@@ -69,6 +69,10 @@ if ($action === 'set_primary_due_date') {
             ]);
         }
     }
+    try {
+        $calendarService = new \App\Services\GoogleCalendarService($pdo);
+        $calendarService->syncProjectEvents($project_id);
+    } catch (Exception $cal_err) {}
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
@@ -130,6 +134,10 @@ if ($action === 'update_schedule_actual') {
             }
         }
     }
+    try {
+        $calendarService = new \App\Services\GoogleCalendarService($pdo);
+        $calendarService->syncProjectEvents($project_id);
+    } catch (Exception $cal_err) {}
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;
 }
 
@@ -237,5 +245,60 @@ if ($action === 'submit_primary_response') {
             die("一次回答の登録に失敗しました: " . $e->getMessage());
         }
     }
+    try {
+        $calendarService = new \App\Services\GoogleCalendarService($pdo);
+        $calendarService->syncProjectEvents($project_id);
+    } catch (Exception $cal_err) {}
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
+
+// 審査完了 (complete_review) - 依頼主または管理者による操作
+if ($action === 'complete_review') {
+    $projectRepo->updateStatus($project_id, 'completed');
+    
+    // スケジュール実績 JSON の更新（審査完了時の実績日設定）
+    $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+    $stmtAct->execute(['id' => $project_id]);
+    $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+    $today = date('Y-m-d');
+    if ($act_row) {
+        $cols_to_steps = [
+            'schedule_actuals' => [8, 9],
+            'schedule_actuals_wall' => [5, 6],
+            'schedule_actuals_skin' => [5, 6],
+            'schedule_actuals_sky' => [5, 6],
+        ];
+        foreach ($cols_to_steps as $col => $steps) {
+            $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+            foreach ($steps as $step_idx) {
+                if (empty($actuals[$step_idx])) {
+                    $actuals[$step_idx] = $today;
+                }
+            }
+            $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+            $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+        }
+    }
+    
+    // 自動メッセージ
+    $msg = "【通知】確認機関の「審査完了（審査合格）」が登録されました。ステータスが「完了」に変更されました。\nこれに伴い、設計業務を完了とし、残金のご精算（完了後7日以内）の手続きを開始いたします。";
+    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+    $stmtMsg->execute([
+        'pid' => $project_id,
+        'sid' => $_SESSION['user_id'],
+        'msg' => $msg
+    ]);
+
+    // Googleカレンダー連携が有効な場合はカレンダーへも適宜反映されるようにする
+    try {
+        if (class_exists('App\Services\GoogleCalendarService')) {
+            $calendarService = new \App\Services\GoogleCalendarService($pdo);
+            $calendarService->syncProjectEvents($project_id);
+        }
+    } catch (Exception $cal_err) {
+        // カレンダー連携エラーはログに記録するか無視して進行
+    }
+
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+}
+

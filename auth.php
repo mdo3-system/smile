@@ -34,6 +34,8 @@ if (isset($_GET['token'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
             $_SESSION['contact_name'] = $user['contact_name'];
+            $_SESSION['allowed_project_id'] = $user['allowed_project_id'];
+            $_SESSION['parent_id'] = $user['parent_id'];
             
             // トークンパラメータを除去したURLへリダイレクトしてログインセッションを保持
             $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
@@ -56,16 +58,34 @@ function check_auth($allowed_roles = []) {
 
     // 常にDBから最新情報を取得してセッションを同期
     if (isset($pdo)) {
-        $stmt = $pdo->prepare("SELECT role, contact_name FROM users WHERE id = :id");
+        $stmt = $pdo->prepare("SELECT role, contact_name, allowed_project_id, parent_id FROM users WHERE id = :id");
         $stmt->execute(['id' => $_SESSION['user_id']]);
         $user = $stmt->fetch();
         if ($user) {
             $_SESSION['role'] = $user['role'];
             $_SESSION['contact_name'] = $user['contact_name'];
+            $_SESSION['allowed_project_id'] = $user['allowed_project_id'];
+            $_SESSION['parent_id'] = $user['parent_id'];
         } else {
             session_destroy();
             header("Location: login.php");
             exit;
+        }
+    }
+
+    // allowed_project_id によるアクセス制限
+    if (!empty($_SESSION['allowed_project_id'])) {
+        $allowed_pid = (int)$_SESSION['allowed_project_id'];
+        $current_script = basename($_SERVER['SCRIPT_NAME']);
+        if ($current_script !== 'project_detail.php') {
+            header("Location: project_detail.php?id=" . $allowed_pid);
+            exit;
+        } else {
+            $requested_pid = (int)($_GET['id'] ?? 0);
+            if ($requested_pid !== $allowed_pid) {
+                header("HTTP/1.1 403 Forbidden");
+                die("この案件へのアクセス権限がありません。");
+            }
         }
     }
 

@@ -32,6 +32,17 @@
                         $status_ja = $status_labels[$project_info['status']] ?? $project_info['status'];
                     ?>
                     <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span>
+                    <?php if ($project_info['status'] === 'submission'): ?>
+                        <div style="margin-top: 12px;">
+                            <form method="POST" style="margin: 0;" onsubmit="return confirm('確認機関の審査が完了（合格）したことを登録し、設計業務を完了にしてよろしいですか？');">
+                                <input type="hidden" name="action" value="complete_review">
+                                <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
+                                    💮 審査完了にする（審査合格）
+                                </button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

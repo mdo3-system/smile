@@ -233,10 +233,27 @@ $chat_messages = $stmtMsgs->fetchAll();
 </head>
 <body>
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center;">
+        <div style="display:flex; align-items:center; gap: 10px;">
+            <?php 
+            $ball = \App\Helpers\StatusHelper::getBallStatus($project_info, $pdo);
+            ?>
             <span style="font-size: 18px; font-weight: bold; color: #0056b3;"><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></span>
+            <span style="background-color: <?= $ball['color'] ?>; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block;">
+                <?= htmlspecialchars($ball['label'], ENT_QUOTES) ?>
+            </span>
         </div>
         <div style="display:flex; align-items:center; gap:15px;">
+            <?php
+            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+            $host = $_SERVER['HTTP_HOST'];
+            $script_dir = dirname($_SERVER['SCRIPT_NAME']);
+            $script_dir = str_replace('\\', '/', $script_dir);
+            $script_dir = rtrim($script_dir, '/');
+            $invite_url = "{$protocol}://{$host}{$script_dir}/register.php?invite_project_id=" . $project_id;
+            ?>
+            <button onclick="navigator.clipboard.writeText('<?= $invite_url ?>'); alert('この案件専用の招待リンクをクリップボードにコピーしました！\nこのリンクから登録したユーザーは、本案件のみ表示可能です。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
+                🔗 施工業者・設計者を招待
+            </button>
             <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold; margin-right: 10px;">➔ 案件一覧に戻る</a>
             <?php if ($has_finance_access): ?>
                 <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>

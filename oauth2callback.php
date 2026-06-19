@@ -15,6 +15,7 @@ if (!file_exists($credentials_path)) {
 $client = new Google\Client();
 $client->setAuthConfig($credentials_path);
 $client->addScope(Google\Service\Drive::DRIVE);
+$client->addScope(Google\Service\Calendar::CALENDAR);
 $client->setAccessType('offline');
 
 $app_url = getenv('APP_URL') ?: 'https://system.thanks.work';

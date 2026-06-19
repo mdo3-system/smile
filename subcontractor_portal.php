@@ -17,6 +17,12 @@ if ($is_admin) {
     }
 } else {
     $target_sub_id = $user_id;
+    $stmtParent = $pdo->prepare("SELECT parent_id FROM users WHERE id = :id");
+    $stmtParent->execute(['id' => $user_id]);
+    $p_id = $stmtParent->fetchColumn();
+    if ($p_id) {
+        $target_sub_id = $p_id;
+    }
 }
 
 // 業者情報を取得
@@ -113,15 +119,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// 表示モードの判定（担当者ベース or 業者全体）
+$sub_view_mode = $_SESSION['sub_view_mode'] ?? 'all';
+if (isset($_GET['sub_view_mode'])) {
+    $sub_view_mode = ($_GET['sub_view_mode'] === 'personal') ? 'personal' : 'all';
+    $_SESSION['sub_view_mode'] = $sub_view_mode;
+}
+
 // スケジュール（進行中のタスク一覧）
-$stmtTasks = $pdo->prepare("
-    SELECT o.*, p.project_name 
-    FROM subcontractor_orders o 
-    JOIN projects p ON o.project_id = p.id 
-    WHERE o.subcontractor_id = :sub_id 
-    ORDER BY o.created_at DESC
-");
-$stmtTasks->execute(['sub_id' => $target_sub_id]);
+// 招待されたスタッフ（parent_id がある）かつ「自分の案件のみ（personal）」の場合は自分宛てのタスクに制限する
+$stmtUserParent = $pdo->prepare("SELECT parent_id FROM users WHERE id = :id");
+$stmtUserParent->execute(['id' => $user_id]);
+$has_parent = (bool)$stmtUserParent->fetchColumn();
+
+if ($has_parent && $sub_view_mode === 'personal') {
+    $stmtTasks = $pdo->prepare("
+        SELECT o.*, p.project_name 
+        FROM subcontractor_orders o 
+        JOIN projects p ON o.project_id = p.id 
+        WHERE o.subcontractor_id = :user_id 
+        ORDER BY o.created_at DESC
+    ");
+    $stmtTasks->execute(['user_id' => $user_id]);
+} else {
+    // 業者全体（本アカウント宛て ＋ スタッフ宛て）またはメインアカウントの場合
+    $stmtTasks = $pdo->prepare("
+        SELECT o.*, p.project_name 
+        FROM subcontractor_orders o 
+        JOIN projects p ON o.project_id = p.id 
+        WHERE o.subcontractor_id = :sub_id OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id)
+        ORDER BY o.created_at DESC
+    ");
+    $stmtTasks->execute(['sub_id' => $target_sub_id]);
+}
 $tasks = $stmtTasks->fetchAll();
 
 // 月次集計データの作成 (25日締め)
@@ -195,6 +225,19 @@ $global_messages = $stmtChat->fetchAll();
     <div style="max-width:1200px; margin: 0 auto 15px; display:flex; justify-content:space-between; align-items:center;">
         <h2><?= htmlspecialchars($subcontractor['contact_name']) ?> 様 - 協力業者ポータル</h2>
         <div style="display:flex; align-items:center; gap:15px;">
+            <?php if (!$is_admin): ?>
+                <?php
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+                $host = $_SERVER['HTTP_HOST'];
+                $script_dir = dirname($_SERVER['SCRIPT_NAME']);
+                $script_dir = str_replace('\\', '/', $script_dir);
+                $script_dir = rtrim($script_dir, '/');
+                $invite_url_sub = "{$protocol}://{$host}{$script_dir}/register.php?invite_parent_id=" . $target_sub_id;
+                ?>
+                <button onclick="navigator.clipboard.writeText('<?= $invite_url_sub ?>'); alert('スタッフ招待リンクをコピーしました！\nこのリンクから登録したスタッフは、貴社宛の全案件へ自動的に権限が付与されます。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
+                    👥 スタッフを招待する
+                </button>
+            <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
             <?php if ($is_admin): ?>
                 <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
@@ -208,6 +251,13 @@ $global_messages = $stmtChat->fetchAll();
         <!-- 左カラム：案件スケジュール -->
         <div class="col-main box">
             <h3>📋 担当案件・スケジュール</h3>
+            <?php if ($has_parent): ?>
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; font-size: 13px;">
+                    <span style="font-weight: bold; align-self: center;">表示範囲:</span>
+                    <a href="subcontractor_portal.php?sub_view_mode=all" style="padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; <?= $sub_view_mode === 'all' ? 'background:#3b82f6; color:white;' : 'background:#e2e8f0; color:#333;' ?>">業者全体 (すべての案件)</a>
+                    <a href="subcontractor_portal.php?sub_view_mode=personal" style="padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; <?= $sub_view_mode === 'personal' ? 'background:#3b82f6; color:white;' : 'background:#e2e8f0; color:#333;' ?>">担当者ベース (自分の案件のみ)</a>
+                </div>
+            <?php endif; ?>
             <?php if (count($tasks) > 0): ?>
                 <?php foreach ($tasks as $t): ?>
                     <div class="task-card">

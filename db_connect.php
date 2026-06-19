@@ -1,5 +1,6 @@
 <?php
 // db_connect.php
+require_once __DIR__ . '/vendor/autoload.php';
 
 $host = 'localhost'; 
 $db   = 'mdo3_system'; // ★ここはお手元の設定のままにしてください

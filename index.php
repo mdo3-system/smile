@@ -105,12 +105,15 @@ $status_labels = [
     <?php endif; ?>
 
     <div class="grid">
-        <?php foreach ($projects as $project): ?>
-            <div class="card">
+        <?php foreach ($projects as $project): 
+            $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo);
+        ?>
+            <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
                 <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
                 <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
                 <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
-                <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn">詳細を開く</a>
+                <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
             </div>
         <?php endforeach; ?>
     </div>

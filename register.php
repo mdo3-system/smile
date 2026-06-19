@@ -8,6 +8,19 @@ if (session_status() === PHP_SESSION_NONE) {
 $message = '';
 $devel_link = '';
 
+$invite_parent_id = intval($_GET['invite_parent_id'] ?? $_POST['invite_parent_id'] ?? 0);
+$invite_project_id = intval($_GET['invite_project_id'] ?? $_POST['invite_project_id'] ?? 0);
+
+$prefilled_company = '';
+$prefilled_role = 'client';
+
+if ($invite_parent_id > 0) {
+    $stmtParent = $pdo->prepare("SELECT company_name FROM users WHERE id = :id AND role = 'subcontractor'");
+    $stmtParent->execute(['id' => $invite_parent_id]);
+    $prefilled_company = $stmtParent->fetchColumn() ?: '';
+    $prefilled_role = 'subcontractor';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $company_name = trim($_POST['company_name'] ?? '');
     $contact_name = trim($_POST['contact_name'] ?? '');
@@ -23,16 +36,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmtCheck->fetch()) {
             $message = "指定されたメールアドレスは既に登録されています。<a href='login.php' style='color:#6ee7b7; text-decoration:underline;'>ログイン画面</a>をご利用ください。";
         } else {
-            // 新規ユーザー登録（依頼主として）
+            // 新規ユーザー登録
             $stmtInsert = $pdo->prepare("
-                INSERT INTO users (company_name, contact_name, email, phone_number, role) 
-                VALUES (:company, :contact, :email, :phone, 'client')
+                INSERT INTO users (company_name, contact_name, email, phone_number, role, allowed_project_id, parent_id) 
+                VALUES (:company, :contact, :email, :phone, :role, :allowed_project_id, :parent_id)
             ");
             $stmtInsert->execute([
                 'company' => $company_name,
                 'contact' => $contact_name,
                 'email'   => $email,
-                'phone'   => $phone_number
+                'phone'   => $phone_number,
+                'role'    => $prefilled_role,
+                'allowed_project_id' => $invite_project_id > 0 ? $invite_project_id : null,
+                'parent_id' => $invite_parent_id > 0 ? $invite_parent_id : null
             ]);
             
             $new_user_id = $pdo->lastInsertId();
@@ -76,8 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $app_url = rtrim($app_url, '/');
             }
             
-            // 新規登録の依頼主は index.php へ
-            $login_url = "{$app_url}/index.php?token={$token}";
+            // リダイレクト先の判定
+            if ($invite_project_id > 0) {
+                $target_page = "project_detail.php?id=" . $invite_project_id;
+            } elseif ($invite_parent_id > 0) {
+                $target_page = "subcontractor_portal.php";
+            } else {
+                $target_page = "index.php";
+            }
+            $login_url = "{$app_url}/{$target_page}" . (strpos($target_page, '?') === false ? '?' : '&') . "token={$token}";
             
             $message = "ご登録ありがとうございます。以下のログインリンクからポータルへアクセスできます。";
             $devel_link = $login_url;
@@ -247,9 +270,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <?php if (empty($devel_link)): // 登録成功後はフォームを隠す ?>
             <form method="POST">
+                <input type="hidden" name="invite_project_id" value="<?= $invite_project_id ?>">
+                <input type="hidden" name="invite_parent_id" value="<?= $invite_parent_id ?>">
                 <div class="form-group">
                     <label for="company_name">会社名（必須）</label>
-                    <input type="text" id="company_name" name="company_name" placeholder="例: 株式会社○○工務店" required>
+                    <input type="text" id="company_name" name="company_name" placeholder="例: 株式会社○○工務店" value="<?= htmlspecialchars($prefilled_company, ENT_QUOTES) ?>" required>
                 </div>
                 <div class="form-group">
                     <label for="contact_name">担当者名（必須）</label>
