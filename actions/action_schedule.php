@@ -106,6 +106,20 @@ if ($action === 'update_schedule_actual') {
             $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
             $stmt->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
 
+            // 「申請図書一式UP」の実施日が設定された場合、案件ステータスを「申請中」(submitting) に自動遷移
+            if (!empty($actual_date)) {
+                $is_submitting_step = false;
+                if ($schedule_type === 'permit' && $step_idx == 7) $is_submitting_step = true;
+                if ($schedule_type === 'wall' && $step_idx == 4) $is_submitting_step = true;
+                if ($schedule_type === 'skin' && $step_idx == 4) $is_submitting_step = true;
+                if ($schedule_type === 'sky' && $step_idx == 3) $is_submitting_step = true;
+
+                if ($is_submitting_step) {
+                    $stmtStatusUpd = $pdo->prepare("UPDATE projects SET status = 'submitting' WHERE id = :pid");
+                    $stmtStatusUpd->execute(['pid' => $project_id]);
+                }
+            }
+
             // チャットへ自動通知メッセージを投稿 (実績日が空の場合は通知しない)
             if (!empty($actual_date)) {
                 $base_days = getScheduleBaseDays($project_info);
@@ -122,6 +136,17 @@ if ($action === 'update_schedule_actual') {
                 $step_name = $steps[$step_idx]['name'] ?? "工程 #{$step_idx}";
                 $action_desc = "「{$actual_date}」に設定";
                 $chat_msg = "【スケジュール実績更新】\n{$step_name} の実施日が{$action_desc}されました。";
+
+                // 「補正対応」の実施日が設定された場合、取引条件のチャット通知を追加
+                $is_correction_step = false;
+                if ($schedule_type === 'permit' && $step_idx == 9) $is_correction_step = true;
+                if ($schedule_type === 'wall' && $step_idx == 6) $is_correction_step = true;
+                if ($schedule_type === 'skin' && $step_idx == 6) $is_correction_step = true;
+                if ($schedule_type === 'sky' && $step_idx == 6) $is_correction_step = true;
+
+                if ($is_correction_step) {
+                    $chat_msg .= "\n審査完了しましたら、審査完了にしていただき、1週間以内の残金のご清算をお願いします。初回見積もり時に、一次回答時に本見積額の50％、審査完了から1週間以内の残金のご清算が、お取引条件となります。";
+                }
                 
                 $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
                 $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");

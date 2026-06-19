@@ -66,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'contracted' => '受注済', 
                     'structural_dwg' => '構造図作成中', 
                     'submission' => '提出済・確認中', 
+                    'submitting' => '申請中',
                     'correction' => '補正対応中', 
                     'completed' => '完了'
                 ];
@@ -277,6 +278,7 @@ $status_labels = [
     'primary_prep'   => '一次回答中',
     'structural_dwg' => '構造図作成中',
     'submission'     => '提出済・確認中',
+    'submitting'     => '申請中',
     'correction'     => '補正対応中',
     'completed'      => '完了'
 ];

@@ -400,6 +400,27 @@ class UploadService
                 }
             }
 
+            // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
+            if ($fileCategory === 'correction_notice') {
+                $stmtCheckStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :id");
+                $stmtCheckStatus->execute(['id' => $projectId]);
+                $currentStatus = $stmtCheckStatus->fetchColumn();
+                if ($currentStatus === 'submitting') {
+                    $stmtUpdateStatus = $this->pdo->prepare("UPDATE projects SET status = 'correction' WHERE id = :id");
+                    $stmtUpdateStatus->execute(['id' => $projectId]);
+
+                    // チャット通知 (自動)
+                    $msgSubmittingCorrection = "【自動通知】補正通知書がアップロードされました。案件ステータスを「申請中」から「補正対応中」に変更しました。";
+                    $stmtMsgCorrection = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                    $stmtMsgCorrection->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $msgSubmittingCorrection
+                    ]);
+                }
+            }
+
             $this->pdo->commit();
             return true;
         } catch (Exception $e) {
@@ -508,6 +529,27 @@ class UploadService
 
                 $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)")
                     ->execute(['pid' => $projectId, 'sid' => $userId, 'thread' => $threadType, 'msg' => $chatMsg]);
+            }
+
+            // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
+            if ($fileCategory === 'correction_notice') {
+                $stmtCheckStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :id");
+                $stmtCheckStatus->execute(['id' => $projectId]);
+                $currentStatus = $stmtCheckStatus->fetchColumn();
+                if ($currentStatus === 'submitting') {
+                    $stmtUpdateStatus = $this->pdo->prepare("UPDATE projects SET status = 'correction' WHERE id = :id");
+                    $stmtUpdateStatus->execute(['id' => $projectId]);
+
+                    // チャット通知 (自動)
+                    $msgSubmittingCorrection = "【自動通知】補正通知書がアップロードされました。案件ステータスを「申請中」から「補正対応中」に変更しました。";
+                    $stmtMsgCorrection = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                    $stmtMsgCorrection->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $msgSubmittingCorrection
+                    ]);
+                }
             }
 
             $this->pdo->commit();
@@ -691,6 +733,27 @@ class UploadService
                 'thread' => $threadType,
                 'msg' => $chatMsg
             ]);
+
+            // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
+            if ($fileCategory === 'correction_notice') {
+                $stmtCheckStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :id");
+                $stmtCheckStatus->execute(['id' => $projectId]);
+                $currentStatus = $stmtCheckStatus->fetchColumn();
+                if ($currentStatus === 'submitting') {
+                    $stmtUpdateStatus = $this->pdo->prepare("UPDATE projects SET status = 'correction' WHERE id = :id");
+                    $stmtUpdateStatus->execute(['id' => $projectId]);
+
+                    // チャット通知 (自動)
+                    $msgSubmittingCorrection = "【自動通知】補正通知書がアップロードされました。案件ステータスを「申請中」から「補正対応中」に変更しました。";
+                    $stmtMsgCorrection = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                    $stmtMsgCorrection->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $msgSubmittingCorrection
+                    ]);
+                }
+            }
 
             $this->pdo->commit();
             return true;

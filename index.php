@@ -26,14 +26,15 @@ if ($_SESSION['role'] === 'client') {
 
 // ステータスを日本語表示に変換する用の配列
 $status_labels = [
-    'quote_req'      => '見積依頼',
-    'contracted'     => '受注済',
-    'primary_prep'   => '一次回答準備中',
-    'structural_dwg' => '構造図作成中',
-    'submission'     => '提出済・確認中',
-    'correction'     => '補正対応中',
-    'completed'      => '完了'
-];
+                'quote_req'      => '見積依頼',
+                'contracted'     => '受注済',
+                'primary_prep'   => '一次回答準備中',
+                'structural_dwg' => '構造図作成中',
+                'submission'     => '提出済・確認中',
+                'submitting'     => '申請中',
+                'correction'     => '補正対応中',
+                'completed'      => '完了'
+            ];
 ?>
 
 <!DOCTYPE html>
@@ -106,7 +107,7 @@ $status_labels = [
 
     <div class="grid">
         <?php foreach ($projects as $project): 
-            $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo);
+            $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo, $_SESSION['role'] ?? null);
         ?>
             <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
                 <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>

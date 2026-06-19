@@ -235,7 +235,7 @@ $chat_messages = $stmtMsgs->fetchAll();
     <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap: 10px;">
             <?php 
-            $ball = \App\Helpers\StatusHelper::getBallStatus($project_info, $pdo);
+            $ball = \App\Helpers\StatusHelper::getBallStatus($project_info, $pdo, $_SESSION['role'] ?? null);
             ?>
             <span style="font-size: 18px; font-weight: bold; color: #0056b3;"><?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?></span>
             <span style="background-color: <?= $ball['color'] ?>; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block;">
@@ -304,7 +304,7 @@ $chat_messages = $stmtMsgs->fetchAll();
 【業務の流れ】
 1. 一次回答は構造計算プログラムからの出力による、柱配置・耐力壁配置・梁成・梁伏・水平構面・金物等一式をUP致します。
 2. ご確認いただき、意匠図の変更を伴わない変更は無償対応いたします。梁成による階高の変更は無償対応いたします。構造図作図以降の変更は @6,000円/時間+税 となります。
-3. 一次回答を1か月以内にご確認いただきます。お見積額の50%入金をお願い致します。ご入金確認後4営業日以内に構造図をUP致します。
+3. 一次回答を1か月以内にご確認いただきます。一次回答時に本見積額の50％、審査完了から1週間以内の残金のご清算が、お取引条件となります。ご入金確認後4営業日以内に構造図をUP致します。
 4. 構造図をご確認いただき、意匠図との整合含めOKとなりましたら、安全証明書・計算書・構造図・構造標準図をUP致します。
 5. 補正通知が来ましたらUPいただき、概ね4営業日を目安に補正回答いたします。
 6. 構造補正・審査完了後、1週間以内に残金のご精算をお願いいたします。

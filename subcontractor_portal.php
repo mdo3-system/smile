@@ -147,10 +147,13 @@ if ($has_parent && $sub_view_mode === 'personal') {
         SELECT o.*, p.project_name 
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        WHERE o.subcontractor_id = :sub_id OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id)
+        WHERE o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)
         ORDER BY o.created_at DESC
     ");
-    $stmtTasks->execute(['sub_id' => $target_sub_id]);
+    $stmtTasks->execute([
+        'sub_id_1' => $target_sub_id,
+        'sub_id_2' => $target_sub_id
+    ]);
 }
 $tasks = $stmtTasks->fetchAll();
 
