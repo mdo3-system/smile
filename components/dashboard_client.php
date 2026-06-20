@@ -31,8 +31,12 @@
                             'completed'      => '完了'
                         ];
                         $status_ja = $status_labels[$project_info['status']] ?? $project_info['status'];
+                        $status_bg = '#007bff';
+                        if ($project_info['status'] === 'submitting') {
+                            $status_bg = '#64748b';
+                        }
                     ?>
-                    <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span>
+                    <strong>ステータス:</strong> <span class="badge" style="background:<?= $status_bg ?>;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span>
                     <?php if ($project_info['status'] === 'submission'): ?>
                         <div style="margin-top: 12px;">
                             <form method="POST" style="margin: 0;" onsubmit="return confirm('確認機関の審査が完了（合格）したことを登録し、設計業務を完了にしてよろしいですか？');">

@@ -245,7 +245,7 @@ $chat_messages = $stmtMsgs->fetchAll();
             padding: 12px;
             position: absolute;
             z-index: 100;
-            bottom: 125%;
+            top: 125%;
             left: 50%;
             margin-left: -160px;
             opacity: 0;
@@ -259,12 +259,12 @@ $chat_messages = $stmtMsgs->fetchAll();
         .tooltip-btn-container .tooltip-text::after {
             content: "";
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 50%;
             margin-left: -5px;
             border-width: 5px;
             border-style: solid;
-            border-color: #1e293b transparent transparent transparent;
+            border-color: transparent transparent #1e293b transparent;
         }
         .tooltip-btn-container:hover .tooltip-text {
             visibility: visible;

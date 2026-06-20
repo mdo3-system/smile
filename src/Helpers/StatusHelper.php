@@ -94,8 +94,8 @@ class StatusHelper
                 elseif ($status === 'submitting') {
                     $res = [
                         'ball_owner' => 'shared_waiting',
-                        'label' => '申請中 (共通待ち)',
-                        'color' => '#f59e0b'
+                        'label' => '申請中',
+                        'color' => '#64748b'
                     ];
                 }
                 elseif ($status === 'primary_prep' || $status === 'structural_dwg' || $status === 'correction') {

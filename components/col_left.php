@@ -36,9 +36,13 @@
                     if ($project_info['req_sky'] == 1) $req_types[] = '天空率';
                     if ($project_info['req_opt_kisohari'] == 1) $req_types[] = '基礎・横架材許容応力度';
                     $req_str = empty($req_types) ? '未指定' : implode(' / ', $req_types);
+                    $status_bg = '#007bff';
+                    if ($project_info['status'] === 'submitting') {
+                        $status_bg = '#64748b';
+                    }
                     ?>
                     <strong>依頼内容:</strong> <span style="color:#d97706; font-weight:bold;"><?= htmlspecialchars($req_str, ENT_QUOTES) ?></span><br>
-                    <strong>ステータス:</strong> <span class="badge" style="background:#007bff;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span><?= $contract_badge ?>
+                    <strong>ステータス:</strong> <span class="badge" style="background:<?= $status_bg ?>;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span><?= $contract_badge ?>
                 </div>
             </div>
 

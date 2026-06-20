@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.4.7');
+define('SYSTEM_VERSION', 'v1.4.8');
 
 
 // ==========================================
@@ -14,6 +14,7 @@ $status_options = [
     'contracted' => '受注済', 
     'structural_dwg' => '構造図作成中', 
     'submission' => '提出済・確認中', 
+    'submitting' => '申請中',
     'correction' => '補正対応中', 
     'completed' => '完了'
 ];
