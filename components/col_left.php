@@ -143,7 +143,18 @@
                         <div style="font-size:10px; color:#666; text-align:center; padding:3px;">発注履歴はありません。</div>
                     <?php else: ?>
                         <div style="display:flex; flex-direction:column; gap:4px;">
-                            <?php foreach ($orders as $o): 
+                            <?php
+                            $active_orders = [];
+                            $cancelled_orders = [];
+                            foreach ($orders as $o) {
+                                if ($o['status'] === 'cancelled') {
+                                    $cancelled_orders[] = $o;
+                                } else {
+                                    $active_orders[] = $o;
+                                }
+                            }
+                            ?>
+                            <?php foreach ($active_orders as $o): 
                                 $status_lbl = '不明';
                                 $badge_bg = '#64748b';
                                 if ($o['status'] === 'requested') { $status_lbl = '承諾待ち'; $badge_bg = '#f59e0b'; }
@@ -151,13 +162,26 @@
                                 elseif ($o['status'] === 'rejected') { $status_lbl = '辞退済'; $badge_bg = '#ef4444'; }
                                 elseif ($o['status'] === 'delivered') { $status_lbl = '納品済(確認待ち)'; $badge_bg = '#10b981'; }
                                 elseif ($o['status'] === 'completed') { $status_lbl = '完了(承認済)'; $badge_bg = '#059669'; }
-                                elseif ($o['status'] === 'cancelled') { $status_lbl = 'キャンセル'; $badge_bg = '#94a3b8'; }
                             ?>
                                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; border-bottom:1px dashed #e2e8f0; padding-bottom:3px;">
                                     <span>👷 <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?>: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?></span>
                                     <span class="badge" style="background:<?= $badge_bg ?>; color:white; font-size:9px; padding:2px 5px; border-radius:4px; font-weight:bold;"><?= $status_lbl ?></span>
                                 </div>
                             <?php endforeach; ?>
+
+                            <?php if (!empty($cancelled_orders)): ?>
+                            <details style="margin-top: 5px; font-size: 10px;">
+                                <summary style="cursor:pointer; color:#64748b; font-weight:bold;">✕ キャンセル済みの発注履歴を表示 (<?= count($cancelled_orders) ?>件)</summary>
+                                <div style="display:flex; flex-direction:column; gap:4px; margin-top:5px; padding-left:5px; border-left: 2px solid #cbd5e1;">
+                                    <?php foreach ($cancelled_orders as $o): ?>
+                                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; border-bottom:1px dashed #e2e8f0; padding-bottom:3px; color:#94a3b8;">
+                                            <span>👷 <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?>: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?></span>
+                                            <span class="badge" style="background:#94a3b8; color:white; font-size:9px; padding:2px 5px; border-radius:4px; font-weight:bold;">キャンセル</span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </details>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>

@@ -18,19 +18,77 @@ function issuePrimaryInvoiceHelper($pdo, $project_id, $user_id) {
         throw new Exception("本見積額が確定していないため、一次請求書を発行できません。");
     }
 
-    // 2. Driveフォルダの確保とPDFの生成
-    $project_folder_id = get_or_create_project_drive_folder($pdo, $project_id);
+    // 2. PDFの生成
     $temp_pdf_path = generate_primary_invoice_pdf($project_id, $pdo);
     
     $proj_name = $proj_info['project_name'];
     $pdf_filename = '一次請求書_' . $proj_name . '.pdf';
     
-    // 3. Google Driveにアップロード
-    $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
-    
-    // 一時生成したローカルのPDFを削除
-    if (file_exists($temp_pdf_path)) {
-        unlink($temp_pdf_path);
+    $pdfDriveId = null;
+    try {
+        $project_folder_id = get_or_create_project_drive_folder($pdo, $project_id);
+        // 3. Google Driveにアップロード
+        $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
+        
+        // 一時生成したローカルのPDFを削除
+        if (file_exists($temp_pdf_path)) {
+            unlink($temp_pdf_path);
+        }
+    } catch (Exception $driveEx) {
+        error_log("Google Driveへの一次請求書保存に失敗しました。ローカル保存にフォールバックします: " . $driveEx->getMessage());
+        
+        $c_folder = '';
+        $p_folder = '';
+        $sub_dir = '';
+        
+        try {
+            // 案件情報と依頼主情報を取得
+            $stmt = $pdo->prepare("
+                SELECT p.project_name, u.id as client_id, u.company_name, u.contact_name
+                FROM projects p
+                JOIN users u ON p.client_id = u.id
+                WHERE p.id = :pid
+            ");
+            $stmt->execute(['pid' => $project_id]);
+            $data = $stmt->fetch();
+            
+            if ($data) {
+                $client_folder_name = !empty($data['company_name']) ? trim($data['company_name']) : trim($data['contact_name']);
+                if (empty($client_folder_name)) {
+                    $client_folder_name = "依頼主_ID_" . $data['client_id'];
+                }
+                $project_folder_name = !empty($data['project_name']) ? trim($data['project_name']) : "案件_ID_" . $project_id;
+                
+                $c_folder = sanitize_local_folder_name($client_folder_name);
+                $p_folder = sanitize_local_folder_name($project_folder_name);
+                
+                if ($c_folder !== '' && $p_folder !== '') {
+                    $sub_dir = '/' . $c_folder . '/' . $p_folder;
+                }
+            }
+        } catch (Exception $db_ex) {
+            error_log("Failed to fetch project info for primary invoice local fallback path: " . $db_ex->getMessage());
+        }
+
+        $upload_dir = __DIR__ . '/../uploads' . $sub_dir;
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        $unique_name = time() . '_' . uniqid() . '_' . $pdf_filename;
+        $dest_path = $upload_dir . '/' . $unique_name;
+        
+        $relative_path = 'uploads' . $sub_dir . '/' . $unique_name;
+        
+        if (copy($temp_pdf_path, $dest_path)) {
+            $pdfDriveId = $relative_path;
+        } else {
+            throw new Exception("Google Drive保存に失敗し、さらにローカルフォールバック保存にも失敗しました: " . $driveEx->getMessage());
+        }
+        
+        if (file_exists($temp_pdf_path)) {
+            unlink($temp_pdf_path);
+        }
     }
 
     $is_local_transaction = false;
@@ -111,19 +169,77 @@ function issueFinalInvoiceHelper($pdo, $project_id, $user_id) {
         throw new Exception("本見積額が確定していないため、請求書を発行できません。");
     }
 
-    // 2. Driveフォルダの確保とPDFの生成
-    $project_folder_id = get_or_create_project_drive_folder($pdo, $project_id);
+    // 2. PDFの生成
     $temp_pdf_path = generate_final_invoice_pdf($project_id, $pdo);
     
     $proj_name = $proj_info['project_name'];
     $pdf_filename = '最終請求書_' . $proj_name . '.pdf';
     
-    // 3. Google Driveにアップロード
-    $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
-    
-    // 一時生成したローカルのPDFを削除
-    if (file_exists($temp_pdf_path)) {
-        unlink($temp_pdf_path);
+    $pdfDriveId = null;
+    try {
+        $project_folder_id = get_or_create_project_drive_folder($pdo, $project_id);
+        // 3. Google Driveにアップロード
+        $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
+        
+        // 一時生成したローカルのPDFを削除
+        if (file_exists($temp_pdf_path)) {
+            unlink($temp_pdf_path);
+        }
+    } catch (Exception $driveEx) {
+        error_log("Google Driveへの最終請求書保存に失敗しました。ローカル保存にフォールバックします: " . $driveEx->getMessage());
+        
+        $c_folder = '';
+        $p_folder = '';
+        $sub_dir = '';
+        
+        try {
+            // 案件情報と依頼主情報を取得
+            $stmt = $pdo->prepare("
+                SELECT p.project_name, u.id as client_id, u.company_name, u.contact_name
+                FROM projects p
+                JOIN users u ON p.client_id = u.id
+                WHERE p.id = :pid
+            ");
+            $stmt->execute(['pid' => $project_id]);
+            $data = $stmt->fetch();
+            
+            if ($data) {
+                $client_folder_name = !empty($data['company_name']) ? trim($data['company_name']) : trim($data['contact_name']);
+                if (empty($client_folder_name)) {
+                    $client_folder_name = "依頼主_ID_" . $data['client_id'];
+                }
+                $project_folder_name = !empty($data['project_name']) ? trim($data['project_name']) : "案件_ID_" . $project_id;
+                
+                $c_folder = sanitize_local_folder_name($client_folder_name);
+                $p_folder = sanitize_local_folder_name($project_folder_name);
+                
+                if ($c_folder !== '' && $p_folder !== '') {
+                    $sub_dir = '/' . $c_folder . '/' . $p_folder;
+                }
+            }
+        } catch (Exception $db_ex) {
+            error_log("Failed to fetch project info for final invoice local fallback path: " . $db_ex->getMessage());
+        }
+
+        $upload_dir = __DIR__ . '/../uploads' . $sub_dir;
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        $unique_name = time() . '_' . uniqid() . '_' . $pdf_filename;
+        $dest_path = $upload_dir . '/' . $unique_name;
+        
+        $relative_path = 'uploads' . $sub_dir . '/' . $unique_name;
+        
+        if (copy($temp_pdf_path, $dest_path)) {
+            $pdfDriveId = $relative_path;
+        } else {
+            throw new Exception("Google Drive保存に失敗し、さらにローカルフォールバック保存にも失敗しました: " . $driveEx->getMessage());
+        }
+        
+        if (file_exists($temp_pdf_path)) {
+            unlink($temp_pdf_path);
+        }
     }
 
     $is_local_transaction = false;

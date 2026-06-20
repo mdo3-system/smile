@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.4.10');
+define('SYSTEM_VERSION', 'v1.4.11');
 
 
 // ==========================================
@@ -12,7 +12,7 @@ $status_options = [
     'doc_submitted' => '図書提出済 / 確認中', 
     'primary_prep' => '一次回答準備中', 
     'contracted' => '受注済', 
-    'structural_dwg' => '構造図作成中', 
+    'structural_dwg' => '申請図書作成中', 
     'submission' => '提出済・確認中', 
     'submitting' => '申請中',
     'correction' => '補正対応中', 

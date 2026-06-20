@@ -216,7 +216,7 @@ if (!$is_admin) {
             FROM project_files 
             WHERE file_category = 'sub_architrend_struct' AND is_latest = 1
         ) f3 ON (f3.subcontractor_order_id = o.id OR (f3.subcontractor_order_id IS NULL AND f3.project_id = o.project_id AND o.order_type = 'struct'))
-        WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid AND o.status != 'cancelled'
+        WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid
         ORDER BY o.created_at DESC
     ");
     $stmt->execute(['sub_id' => $user_id, 'pid' => $project_id]);
@@ -271,7 +271,7 @@ if (!$is_admin) {
             FROM project_files 
             WHERE file_category = 'sub_architrend_struct' AND is_latest = 1
         ) f3 ON (f3.subcontractor_order_id = o.id OR (f3.subcontractor_order_id IS NULL AND f3.project_id = o.project_id AND o.order_type = 'struct'))
-        WHERE o.project_id = :pid AND o.status != 'cancelled' 
+        WHERE o.project_id = :pid
         ORDER BY o.created_at DESC
     ");
     $stmtOrd->execute(['pid' => $project_id]);
@@ -618,7 +618,7 @@ if (!$is_admin) {
                     $admin_msgs = $stmtChatAdmin->fetchAll();
                 ?>
                 <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">💬 協力業者連絡チャット</h2>
-                <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:400px;">
+                <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:calc(100vh - 220px); min-height:450px;">
                     <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $project_id ?>">
                         <?php foreach ($admin_msgs as $msg): 
                             $isMe = ($msg['sender_id'] == $_SESSION['user_id'] || $msg['sender_id'] == 1);
@@ -752,7 +752,18 @@ if (!$is_admin) {
 
                         <!-- 各発注タスクの処理 -->
                         <?php foreach ($proj['tasks'] as $task): ?>
-                            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:6px; display:flex; flex-direction:column; gap:10px;">
+                            <?php if ($task['status'] === 'cancelled'): ?>
+                                <details style="background:#f1f5f9; border:1px solid #cbd5e1; padding:10px; border-radius:6px; margin-bottom:10px;">
+                                    <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#64748b;">
+                                        ❌ キャンセル済みの依頼: <?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?> (発注額: <?= number_format($task['order_amount']) ?>円)
+                                    </summary>
+                                    <div style="font-size:12px; color:#555; margin-top:5px; padding-left:10px;">
+                                        <span>希望納期: <?= !empty($task['due_date']) ? date('Y/m/d', strtotime($task['due_date'])) : '未設定' ?></span>
+                                        <span style="margin-left:15px;">ステータス: <span class="badge" style="background:#dc3545; color:white; padding:2px 6px; border-radius:3px; font-size:9px;">キャンセル済</span></span>
+                                    </div>
+                                </details>
+                            <?php else: ?>
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:6px; display:flex; flex-direction:column; gap:10px; margin-bottom:10px;">
                                 <div style="border-bottom: 1px solid #eee; padding-bottom: 8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                                     <span style="font-size:14px; font-weight:bold; color:#333;">📋 依頼内容: <?= htmlspecialchars($task['task_title'], ENT_QUOTES) ?></span>
                                     <span style="font-size:13px;">
@@ -999,6 +1010,7 @@ if (!$is_admin) {
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
+                            <?php endif; ?>
                         <?php endforeach; ?>
 
                         <!-- プロジェクト全体の納品履歴 -->
@@ -1040,7 +1052,7 @@ if (!$is_admin) {
                     <!-- 右カラム：この案件の連絡・質疑チャット（width: 45%） -->
                     <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; border-left:1px solid #eee; padding-left:20px;">
                         <h4 style="margin:0 0 10px 0; color:#d97706; font-size:14px; display:flex; align-items:center; gap:5px;">💬 この案件の連絡・質疑チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#c0392b;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h4>
-                        <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:380px;">
+                        <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:calc(100vh - 220px); min-height:450px;">
                             <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $project_id ?>">
                                 <?php foreach ($sub_msgs as $msg): 
                                     $isMe = ($msg['sender_id'] == $_SESSION['user_id']);

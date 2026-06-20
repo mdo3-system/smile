@@ -24,7 +24,7 @@
                             'quote_req'      => '見積依頼',
                             'contracted'     => '受注済',
                             'primary_prep'   => '一次回答準備中',
-                            'structural_dwg' => '構造図作成中',
+                            'structural_dwg' => '申請図書作成中',
                             'submission'     => '提出済・確認中',
                             'submitting'     => '申請中',
                             'correction'     => '補正対応中',
@@ -56,7 +56,7 @@
             <div class="box">
                 <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #ccc; padding-bottom:5px;">📋 ご依頼内容</h3>
                 <div style="font-size:13px; line-height:1.6;">
-                    <?php if ($project_info['req_permit'] ?? 0): ?><div>・確認申請書作成</div><?php endif; ?>
+                    <?php if ($project_info['req_permit'] ?? 0): ?><div>・許容応力度計算</div><?php endif; ?>
                     <?php if ($project_info['req_wall'] ?? 0): ?><div>・壁量計算書作成</div><?php endif; ?>
                     <?php if ($project_info['req_skin'] ?? 0): ?><div>・外皮計算書作成</div><?php endif; ?>
                     <?php if ($project_info['req_sky'] ?? 0): ?><div>・天空率計算書作成</div><?php endif; ?>

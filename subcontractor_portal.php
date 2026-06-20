@@ -157,12 +157,9 @@ if ($has_parent && $sub_view_mode === 'personal') {
 }
 $tasks = $stmtTasks->fetchAll();
 
-// 案件（物件）ごとのグルーピングおよびキャンセル除外処理
+// 案件（物件）ごとのグルーピング
 $project_tasks = [];
 foreach ($tasks as $t) {
-    if ($t['status'] === 'cancelled') {
-        continue;
-    }
     $pid = $t['project_id'];
     if (!isset($project_tasks[$pid])) {
         $project_tasks[$pid] = [
@@ -335,41 +332,54 @@ $global_messages = $stmtChat->fetchAll();
                         
                         <div style="display:flex; flex-direction:column; gap:10px;">
                             <?php foreach ($proj['items'] as $t): ?>
-                                <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:4px; display:flex; flex-direction:column; gap:6px;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-                                        <span style="font-size:13px; font-weight:bold; color:#334155;">📋 依頼内容: <?= htmlspecialchars($t['task_title']) ?></span>
-                                        <?php 
-                                            if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b;">承諾待ち</span>';
-                                            elseif ($t['status'] === 'accepted' || $t['status'] === 'in_progress') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';
-                                            elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#10b981;">納品済</span>';
-                                            elseif ($t['status'] === 'completed') echo '<span class="badge" style="background:#059669;">完了</span>';
-                                            elseif ($t['status'] === 'rejected') echo '<span class="badge" style="background:#ef4444;">辞退済</span>';
-                                        ?>
-                                    </div>
-                                    <div style="font-size:12px; color:#555; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-                                        <span>発注額: <strong style="color:#d97706;"><?= number_format($t['order_amount']) ?>円</strong></span>
-                                        <span>希望納期: <strong><?= !empty($t['due_date']) ? date('Y/m/d', strtotime($t['due_date'])) : '未設定' ?></strong></span>
-                                        <?php if ($t['status'] === 'completed' && !empty($t['completed_at'])): ?>
-                                            <span style="color: #059669;">(完了日: <?= date('Y/m/d', strtotime($t['completed_at'])) ?>)</span>
+                                <?php if ($t['status'] === 'cancelled'): ?>
+                                    <details style="background:#f1f5f9; border:1px dashed #cbd5e1; padding:10px; border-radius:4px; margin-bottom:5px;">
+                                        <summary style="cursor:pointer; font-size:12px; font-weight:bold; color:#64748b; display:flex; justify-content:space-between; align-items:center;">
+                                            <span>❌ キャンセル済みの依頼: <?= htmlspecialchars($t['task_title']) ?></span>
+                                            <span class="badge" style="background:#dc3545;">キャンセル済</span>
+                                        </summary>
+                                        <div style="margin-top:8px; font-size:12px; color:#64748b; padding-left:10px;">
+                                            <span>発注額: <strong><?= number_format($t['order_amount']) ?>円</strong></span>
+                                            <span style="margin-left: 15px;">希望納期: <strong><?= !empty($t['due_date']) ? date('Y/m/d', strtotime($t['due_date'])) : '未設定' ?></strong></span>
+                                        </div>
+                                    </details>
+                                <?php else: ?>
+                                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:4px; display:flex; flex-direction:column; gap:6px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
+                                            <span style="font-size:13px; font-weight:bold; color:#334155;">📋 依頼内容: <?= htmlspecialchars($t['task_title']) ?></span>
+                                            <?php 
+                                                if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b;">承諾待ち</span>';
+                                                elseif ($t['status'] === 'accepted' || $t['status'] === 'in_progress') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';
+                                                elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#10b981;">納品済</span>';
+                                                elseif ($t['status'] === 'completed') echo '<span class="badge" style="background:#059669;">完了</span>';
+                                                elseif ($t['status'] === 'rejected') echo '<span class="badge" style="background:#ef4444;">辞退済</span>';
+                                            ?>
+                                        </div>
+                                        <div style="font-size:12px; color:#555; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
+                                            <span>発注額: <strong style="color:#d97706;"><?= number_format($t['order_amount']) ?>円</strong></span>
+                                            <span>希望納期: <strong><?= !empty($t['due_date']) ? date('Y/m/d', strtotime($t['due_date'])) : '未設定' ?></strong></span>
+                                            <?php if ($t['status'] === 'completed' && !empty($t['completed_at'])): ?>
+                                                <span style="color: #059669;">(完了日: <?= date('Y/m/d', strtotime($t['completed_at'])) ?>)</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <?php if ($t['status'] === 'requested' && !$is_admin): ?>
+                                            <div style="margin-top:5px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                                <form method="POST" action="project_subcontractor.php" style="background:#fff3cd; padding:8px; border-radius:4px; border:1px solid #ffeeba; display:flex; gap:10px; align-items:center; margin:0; flex-wrap:wrap;">
+                                                    <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
+                                                    <span style="font-size:11px; font-weight:bold; color:#856404;">完了納期予定:</span>
+                                                    <input type="date" name="expected_delivery_date" required style="padding:4px; font-size:11px;">
+                                                    <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 10px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold;">承諾する</button>
+                                                </form>
+                                                <form method="POST" action="project_subcontractor.php" onsubmit="return confirm('この発注を辞退しますか？')" style="margin:0;">
+                                                    <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
+                                                    <input type="hidden" name="action" value="reject_order">
+                                                    <button type="submit" style="background:#dc3545; color:white; border:none; padding:7px 10px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold;">辞退する</button>
+                                                </form>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
-                                    
-                                    <?php if ($t['status'] === 'requested' && !$is_admin): ?>
-                                        <div style="margin-top:5px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                                            <form method="POST" action="project_subcontractor.php" style="background:#fff3cd; padding:8px; border-radius:4px; border:1px solid #ffeeba; display:flex; gap:10px; align-items:center; margin:0; flex-wrap:wrap;">
-                                                <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
-                                                <span style="font-size:11px; font-weight:bold; color:#856404;">完了納期予定:</span>
-                                                <input type="date" name="expected_delivery_date" required style="padding:4px; font-size:11px;">
-                                                <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 10px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold;">承諾する</button>
-                                            </form>
-                                            <form method="POST" action="project_subcontractor.php" onsubmit="return confirm('この発注を辞退しますか？')" style="margin:0;">
-                                                <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
-                                                <input type="hidden" name="action" value="reject_order">
-                                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:7px 10px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold;">辞退する</button>
-                                            </form>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -382,7 +392,7 @@ $global_messages = $stmtChat->fetchAll();
         <!-- 右カラム：グローバルチャット & 月次請求 -->
         <div class="col-side">
             <!-- 💬 グローバルチャット -->
-            <div class="box" style="display:flex; flex-direction:column; height:450px;">
+            <div class="box" style="display:flex; flex-direction:column; height:calc(100vh - 220px); min-height:450px;">
                 <h3>💬 業務連絡チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#c0392b;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h3>
                 <p style="font-size:12px; color:#666; margin-top:0;">案件に紐付かない、一般的な業務連絡や支払いに関するやり取りを行います。</p>
                 

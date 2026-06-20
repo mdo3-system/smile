@@ -20,6 +20,7 @@ if (!empty($all_estimates)) {
             <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #28a745; padding:4px 10px; border-radius:5px; font-size:11px;">
                 <strong>📂 Drive連携:</strong>
                 <?php 
+                require_once __DIR__ . '/../google_drive_client.php';
                 $is_service_account = false;
                 $cred_path = __DIR__ . '/../credentials.json';
                 if (file_exists($cred_path)) {
@@ -28,13 +29,18 @@ if (!empty($all_estimates)) {
                         $is_service_account = true;
                     }
                 }
+                
+                $drive_connected = false;
+                if (!$is_service_account) {
+                    $drive_connected = check_google_drive_connection();
+                }
                 ?>
                 <?php if ($is_service_account): ?>
                     <span style="color:#28a745; font-weight:bold;">🟢 サービスアカウント</span>
-                <?php elseif (file_exists(__DIR__ . '/../token.json')): ?>
+                <?php elseif ($drive_connected): ?>
                     <span style="color:#28a745; font-weight:bold;">🟢 完了 (OAuth)</span>
                 <?php else: ?>
-                    <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
+                    <span style="color:#dc3545; font-weight:bold;">🔴 連携エラー (再ログインが必要)</span>
                 <?php endif; ?>
             </div>
         </div>

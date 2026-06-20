@@ -4,6 +4,21 @@ require_once 'auth.php';
 require_once 'functions.php';
 check_auth(['admin', 'client', 'accountant']);
 
+// ==========================================
+// Google Drive 接続チェック＆自動同期 (管理者のみ)
+// ==========================================
+$drive_connection_error = false;
+if ($_SESSION['role'] === 'admin') {
+    require_once __DIR__ . '/google_drive_client.php';
+    if (check_google_drive_connection()) {
+        // 連携が正常な場合、ローカル保存されている未同期ファイルを Drive へ自動転送（データ移動）
+        sync_local_files_to_google_drive($pdo);
+    } else {
+        // 連携切れを検知した場合、警告モーダル表示用のフラグを立てる
+        $drive_connection_error = true;
+    }
+}
+
 // 1. ログインユーザーの情報を取得
 $current_user_id = $_SESSION['user_id'];
 require_once 'Repositories/UserRepository.php';
@@ -29,7 +44,7 @@ $status_labels = [
                 'quote_req'      => '見積依頼',
                 'contracted'     => '受注済',
                 'primary_prep'   => '一次回答準備中',
-                'structural_dwg' => '構造図作成中',
+                'structural_dwg' => '申請図書作成中',
                 'submission'     => '提出済・確認中',
                 'submitting'     => '申請中',
                 'correction'     => '補正対応中',
@@ -118,6 +133,29 @@ $status_labels = [
             </div>
         <?php endforeach; ?>
     </div>
+
+    <!-- Google Drive 連携切れ警告モーダル (管理者のみ) -->
+    <?php if ($_SESSION['role'] === 'admin' && !empty($drive_connection_error)): ?>
+    <div id="driveErrorModal" style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#fff; border-radius:16px; padding:32px; max-width:500px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.4); border-top: 6px solid #ef4444;">
+            <div style="font-size:48px; margin-bottom:16px;">⚠️</div>
+            <h2 style="font-size:20px; margin-bottom:12px; color:#b91c1c; font-weight:bold;">Google Drive の連携が切れています</h2>
+            <p style="font-size:14px; color:#475569; line-height:1.8; margin-bottom:20px; text-align:left; background:#fef2f2; padding:15px; border-radius:8px;">
+                Google Drive との OAuth2 認証の有効期限が切れているか、連携が解除されています。<br>
+                このままでは見積書や請求書の発行、またはファイルの自動保存が正常に行われません。<br><br>
+                連携を回復するには、下の「再連携する」ボタンをクリックして再ログイン認証を行ってください。
+            </p>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <a href="google_auth.php" style="display:inline-block; padding:12px 30px; background:#ef4444; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer; text-decoration:none; box-shadow:0 4px 6px rgba(239,68,68,0.2);">
+                    🔄 再連携する (Googleログイン)
+                </a>
+                <button onclick="document.getElementById('driveErrorModal').style.display='none';" style="padding:12px 20px; background:#94a3b8; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer;">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
 </body>
 </html>

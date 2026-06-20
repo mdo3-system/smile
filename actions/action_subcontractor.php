@@ -37,7 +37,7 @@ if ($action === 'order_subcontractor') {
                 $formula = "(50円×{$area}㎡)";
             }
         } else {
-            // 構造図作図依頼の場合は「構造図作成中」
+            // 構造図作図依頼の場合は「申請図書作成中」
             $projectRepo->updateStatus($project_id, 'structural_dwg');
             
             $area = (float)($_POST['floor_area'] ?? 0);

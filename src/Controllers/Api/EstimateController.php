@@ -48,7 +48,6 @@ class EstimateController
             }
 
             // 2. Driveフォルダの確保とPDFの生成 (生成処理内部で最新の見積もりレコードを参照する)
-            $project_folder_id = get_or_create_project_drive_folder($pdo, $projectId);
             $temp_pdf_path = generate_estimate_pdf($projectId, $pdo);
             
             // 案件名を取得してファイル名を設定
@@ -58,13 +57,90 @@ class EstimateController
             $proj_name = $proj_info ? $proj_info['project_name'] : $projectId;
             $pdf_filename = '御見積書_' . $proj_name . '.pdf';
             
-            // 3. Google Driveにアップロード
-            $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
-            
-            // 一時生成したローカルのPDFを削除
-            if (file_exists($temp_pdf_path)) {
-                unlink($temp_pdf_path);
+            $pdfDriveId = null;
+            try {
+                $project_folder_id = get_or_create_project_drive_folder($pdo, $projectId);
+                // 3. Google Driveにアップロード
+                $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
+                
+                // 一時生成したローカルのPDFを削除
+                if (file_exists($temp_pdf_path)) {
+                    unlink($temp_pdf_path);
+                }
+            } catch (\Exception $driveEx) {
+                error_log("Google Driveへの見積書保存に失敗しました。ローカル保存にフォールバックします: " . $driveEx->getMessage());
+                
+                $c_folder = '';
+                $p_folder = '';
+                $sub_dir = '';
+                
+                try {
+                    // 案件情報と依頼主情報を取得
+                    $stmt = $pdo->prepare("
+                        SELECT p.project_name, u.id as client_id, u.company_name, u.contact_name
+                        FROM projects p
+                        JOIN users u ON p.client_id = u.id
+                        WHERE p.id = :pid
+                    ");
+                    $stmt->execute(['pid' => $projectId]);
+                    $data = $stmt->fetch();
+                    
+                    if ($data) {
+                        $client_folder_name = !empty($data['company_name']) ? trim($data['company_name']) : trim($data['contact_name']);
+                        if (empty($client_folder_name)) {
+                            $client_folder_name = "依頼主_ID_" . $data['client_id'];
+                        }
+                        $project_folder_name = !empty($data['project_name']) ? trim($data['project_name']) : "案件_ID_" . $projectId;
+                        
+                        $c_folder = sanitize_local_folder_name($client_folder_name);
+                        $p_folder = sanitize_local_folder_name($project_folder_name);
+                        
+                        if ($c_folder !== '' && $p_folder !== '') {
+                            $sub_dir = '/' . $c_folder . '/' . $p_folder;
+                        }
+                    }
+                } catch (\Exception $db_ex) {
+                    error_log("Failed to fetch project info for estimate local fallback path: " . $db_ex->getMessage());
+                }
+
+                $upload_dir = __DIR__ . '/../../../uploads' . $sub_dir;
+                if (!file_exists($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+                
+                $unique_name = time() . '_' . uniqid() . '_' . $pdf_filename;
+                $dest_path = $upload_dir . '/' . $unique_name;
+                
+                $relative_path = 'uploads' . $sub_dir . '/' . $unique_name;
+                
+                if (copy($temp_pdf_path, $dest_path)) {
+                    $pdfDriveId = $relative_path;
+                    // 保存したファイルを project_files テーブルにもローカルパスでインサートして、
+                    // 依頼主詳細画面等で「見積時の受領図面」の枠などでリンク可能にする
+                    // ※ estimates.pdf_drive_file_id に登録すれば印刷用リンクが機能するが、
+                    // project_files にも登録しておくことで、後から自動同期機能が uploads/% のパターンで Drive へ吸い上げる対象になります。
+                    try {
+                        $stmtFile = $pdo->prepare("
+                            INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                            VALUES (:pid, 'pdf_estimate', :name, :drive_id, 1, 1)
+                        ");
+                        $stmtFile->execute([
+                            'pid'      => $projectId,
+                            'name'     => $pdf_filename,
+                            'drive_id' => $pdfDriveId
+                        ]);
+                    } catch (\Exception $fe) {
+                        error_log("Failed to insert local estimate file metadata: " . $fe->getMessage());
+                    }
+                } else {
+                    throw new \Exception("Google Drive保存に失敗し、さらにローカルフォールバック保存にも失敗しました: " . $driveEx->getMessage());
+                }
+                
+                if (file_exists($temp_pdf_path)) {
+                    unlink($temp_pdf_path);
+                }
             }
+
 
             // 4. 保存した最新の見積もりレコードにDrive IDを追記
             $stmtUpdate = $pdo->prepare("UPDATE estimates SET pdf_drive_file_id = :did WHERE project_id = :pid ORDER BY id DESC LIMIT 1");

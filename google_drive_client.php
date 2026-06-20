@@ -345,8 +345,43 @@ function upload_to_google_drive($local_file_path, $file_name, $mime_type, $proje
     } catch (Exception $e) {
         error_log("Google Drive upload completely failed: " . $e->getMessage() . ". Falling back to local storage.");
         
+        $c_folder = '';
+        $p_folder = '';
+        $sub_dir = '';
+        
+        if ($project_id && $pdo) {
+            try {
+                // 案件情報と依頼主情報をDBから取得
+                $stmt = $pdo->prepare("
+                    SELECT p.project_name, u.id as client_id, u.company_name, u.contact_name
+                    FROM projects p
+                    JOIN users u ON p.client_id = u.id
+                    WHERE p.id = :pid
+                ");
+                $stmt->execute(['pid' => $project_id]);
+                $data = $stmt->fetch();
+                
+                if ($data) {
+                    $client_folder_name = !empty($data['company_name']) ? trim($data['company_name']) : trim($data['contact_name']);
+                    if (empty($client_folder_name)) {
+                        $client_folder_name = "依頼主_ID_" . $data['client_id'];
+                    }
+                    $project_folder_name = !empty($data['project_name']) ? trim($data['project_name']) : "案件_ID_" . $project_id;
+                    
+                    $c_folder = sanitize_local_folder_name($client_folder_name);
+                    $p_folder = sanitize_local_folder_name($project_folder_name);
+                    
+                    if ($c_folder !== '' && $p_folder !== '') {
+                        $sub_dir = '/' . $c_folder . '/' . $p_folder;
+                    }
+                }
+            } catch (Exception $db_ex) {
+                error_log("Failed to fetch project info for local fallback path: " . $db_ex->getMessage());
+            }
+        }
+        
         // ローカル保存へのフォールバック
-        $upload_dir = __DIR__ . '/uploads';
+        $upload_dir = __DIR__ . '/uploads' . $sub_dir;
         if (!file_exists($upload_dir)) {
             mkdir($upload_dir, 0777, true);
         }
@@ -355,18 +390,132 @@ function upload_to_google_drive($local_file_path, $file_name, $mime_type, $proje
         $unique_name = time() . '_' . uniqid() . '_' . $file_name;
         $dest_path = $upload_dir . '/' . $unique_name;
         
+        // 相対パスの決定
+        $relative_path = 'uploads' . $sub_dir . '/' . $unique_name;
+        
         // move_uploaded_file か copy かで保存
         if (is_uploaded_file($local_file_path)) {
             if (move_uploaded_file($local_file_path, $dest_path)) {
-                return 'uploads/' . $unique_name;
+                return $relative_path;
             }
         } else {
             if (copy($local_file_path, $dest_path)) {
-                return 'uploads/' . $unique_name;
+                return $relative_path;
             }
         }
         
         throw new Exception("Google Driveアップロードに失敗し、ローカルフォールバック保存にも失敗しました: " . $e->getMessage());
     }
 }
+
+/**
+ * Google Driveとの接続状態を実際にテストする
+ * @return bool 接続成功ならtrue
+ */
+function check_google_drive_connection() {
+    try {
+        $service = get_google_drive_service();
+        // 疎通確認としてルートフォルダの情報を一件取得してみる
+        $root_folder_id = getenv('GOOGLE_DRIVE_FOLDER_ID');
+        if (!empty($root_folder_id)) {
+            $service->files->get($root_folder_id, ['fields' => 'id', 'supportsAllDrives' => true]);
+        }
+        return true;
+    } catch (Exception $e) {
+        error_log("Google Drive connection test failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * uploads/ に保存されている未転送ファイルをGoogle Driveへ自動同期し、DBと物理ファイルをクリーンアップする
+ * @param PDO $pdo
+ * @param int|null $project_id 指定案件のみ同期。高度な自動同期のために利用
+ */
+function sync_local_files_to_google_drive($pdo, $project_id = null) {
+    if (!check_google_drive_connection()) {
+        return; // 連携切れなら何もしない
+    }
+
+    try {
+        if ($project_id) {
+            $stmt = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND drive_file_id LIKE 'uploads/%'");
+            $stmt->execute(['pid' => $project_id]);
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM project_files WHERE drive_file_id LIKE 'uploads/%'");
+            $stmt->execute();
+        }
+        $local_files = $stmt->fetchAll();
+
+        foreach ($local_files as $file) {
+            $file_id = $file['id'];
+            $pid = $file['project_id'];
+            $local_path = $file['drive_file_id']; // 'uploads/...'
+            $full_local_path = __DIR__ . '/' . $local_path;
+
+            if (!file_exists($full_local_path)) {
+                error_log("Local file to sync not found: " . $full_local_path);
+                continue;
+            }
+
+            // Google Drive上にフォルダを確保
+            $folder_id = get_or_create_project_drive_folder($pdo, $pid);
+
+            // MimeTypeの推測
+            $mime_type = 'application/octet-stream';
+            $ext = strtolower(pathinfo($file['file_name'], PATHINFO_EXTENSION));
+            if ($ext === 'pdf') $mime_type = 'application/pdf';
+            elseif ($ext === 'png') $mime_type = 'image/png';
+            elseif ($ext === 'jpg' || $ext === 'jpeg') $mime_type = 'image/jpeg';
+            elseif ($ext === 'zip') $mime_type = 'application/zip';
+
+            // Google Driveへアップロード
+            $drive_file_id = upload_to_google_drive_folder($full_local_path, $file['file_name'], $mime_type, $folder_id);
+
+            if (!empty($drive_file_id)) {
+                // DBのレコードを更新
+                $stmtUpdate = $pdo->prepare("UPDATE project_files SET drive_file_id = :did WHERE id = :id");
+                $stmtUpdate->execute(['did' => $drive_file_id, 'id' => $file_id]);
+
+                // ローカルの物理ファイルを削除
+                if (file_exists($full_local_path)) {
+                    unlink($full_local_path);
+                }
+
+                // 空になったディレクトリのクリーンアップ
+                $parent_dir = dirname($full_local_path);
+                if ($parent_dir !== __DIR__ . '/uploads' && is_dir($parent_dir)) {
+                    // 案件フォルダが空なら削除
+                    $files = array_diff(scandir($parent_dir), ['.', '..']);
+                    if (empty($files)) {
+                        rmdir($parent_dir);
+
+                        // 顧客フォルダが空なら削除
+                        $grandparent_dir = dirname($parent_dir);
+                        if ($grandparent_dir !== __DIR__ . '/uploads' && is_dir($grandparent_dir)) {
+                            $gp_files = array_diff(scandir($grandparent_dir), ['.', '..']);
+                            if (empty($gp_files)) {
+                                rmdir($grandparent_dir);
+                            }
+                        }
+                    }
+                }
+                error_log("Successfully synced local file to Google Drive: {$file['file_name']} (Project ID: {$pid})");
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error during sync_local_files_to_google_drive: " . $e->getMessage());
+    }
+}
+
+/**
+ * ローカルフォルダ名として使えない禁止文字を安全な文字にサニタイズする
+ * @param string $name フォルダ名
+ * @return string サニタイズ後のフォルダ名
+ */
+function sanitize_local_folder_name($name) {
+    $name = preg_replace('/[\\\\\\/:*?"<>|]/', '_', $name);
+    return trim($name);
+}
+
 

@@ -46,6 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $new_project_id = $pdo->lastInsertId();
 
+            // 古い同一IDの残骸データが万が一残っていたら事前にクリーンアップ (データ不整合防止)
+            $pdo->prepare("DELETE FROM estimates WHERE project_id = :pid")->execute(['pid' => $new_project_id]);
+            $pdo->prepare("DELETE FROM project_files WHERE project_id = :pid")->execute(['pid' => $new_project_id]);
+            $pdo->prepare("DELETE FROM project_specs WHERE project_id = :pid")->execute(['pid' => $new_project_id]);
+            $pdo->prepare("DELETE FROM subcontractor_orders WHERE project_id = :pid")->execute(['pid' => $new_project_id]);
+            $pdo->prepare("DELETE FROM messages WHERE project_id = :pid")->execute(['pid' => $new_project_id]);
+
+
             // 電話番号が入力されていればユーザー情報を更新
             $phone = trim($_POST['phone_number'] ?? '');
             if (!empty($phone)) {
