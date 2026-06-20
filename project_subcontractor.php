@@ -201,10 +201,22 @@ if (!$is_admin) {
                f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        LEFT JOIN (SELECT subcontractor_order_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_structural_pdf' AND is_latest = 1 GROUP BY subcontractor_order_id) f1 ON o.id = f1.subcontractor_order_id
-        LEFT JOIN (SELECT subcontractor_order_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_architrend_design' AND is_latest = 1 GROUP BY subcontractor_order_id) f2 ON o.id = f2.subcontractor_order_id
-        LEFT JOIN (SELECT subcontractor_order_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_architrend_struct' AND is_latest = 1 GROUP BY subcontractor_order_id) f3 ON o.id = f3.subcontractor_order_id
-        WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid
+        LEFT JOIN (
+            SELECT subcontractor_order_id, project_id, drive_file_id, file_name, version 
+            FROM project_files 
+            WHERE file_category = 'sub_structural_pdf' AND is_latest = 1
+        ) f1 ON (f1.subcontractor_order_id = o.id OR (f1.subcontractor_order_id IS NULL AND f1.project_id = o.project_id AND o.order_type = 'struct'))
+        LEFT JOIN (
+            SELECT subcontractor_order_id, project_id, drive_file_id, file_name, version 
+            FROM project_files 
+            WHERE file_category = 'sub_architrend_design' AND is_latest = 1
+        ) f2 ON (f2.subcontractor_order_id = o.id OR (f2.subcontractor_order_id IS NULL AND f2.project_id = o.project_id AND o.order_type = 'design'))
+        LEFT JOIN (
+            SELECT subcontractor_order_id, project_id, drive_file_id, file_name, version 
+            FROM project_files 
+            WHERE file_category = 'sub_architrend_struct' AND is_latest = 1
+        ) f3 ON (f3.subcontractor_order_id = o.id OR (f3.subcontractor_order_id IS NULL AND f3.project_id = o.project_id AND o.order_type = 'struct'))
+        WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid AND o.status != 'cancelled'
         ORDER BY o.created_at DESC
     ");
     $stmt->execute(['sub_id' => $user_id, 'pid' => $project_id]);
@@ -244,10 +256,22 @@ if (!$is_admin) {
                f3.drive_file_id AS arc_s_id, f3.file_name AS arc_s_name, f3.version AS arc_s_ver
         FROM subcontractor_orders o 
         JOIN users u ON o.subcontractor_id = u.id 
-        LEFT JOIN (SELECT subcontractor_order_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_structural_pdf' AND is_latest = 1 GROUP BY subcontractor_order_id) f1 ON o.id = f1.subcontractor_order_id
-        LEFT JOIN (SELECT subcontractor_order_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_architrend_design' AND is_latest = 1 GROUP BY subcontractor_order_id) f2 ON o.id = f2.subcontractor_order_id
-        LEFT JOIN (SELECT subcontractor_order_id, drive_file_id, file_name, version FROM project_files WHERE file_category = 'sub_architrend_struct' AND is_latest = 1 GROUP BY subcontractor_order_id) f3 ON o.id = f3.subcontractor_order_id
-        WHERE o.project_id = :pid 
+        LEFT JOIN (
+            SELECT subcontractor_order_id, project_id, drive_file_id, file_name, version 
+            FROM project_files 
+            WHERE file_category = 'sub_structural_pdf' AND is_latest = 1
+        ) f1 ON (f1.subcontractor_order_id = o.id OR (f1.subcontractor_order_id IS NULL AND f1.project_id = o.project_id AND o.order_type = 'struct'))
+        LEFT JOIN (
+            SELECT subcontractor_order_id, project_id, drive_file_id, file_name, version 
+            FROM project_files 
+            WHERE file_category = 'sub_architrend_design' AND is_latest = 1
+        ) f2 ON (f2.subcontractor_order_id = o.id OR (f2.subcontractor_order_id IS NULL AND f2.project_id = o.project_id AND o.order_type = 'design'))
+        LEFT JOIN (
+            SELECT subcontractor_order_id, project_id, drive_file_id, file_name, version 
+            FROM project_files 
+            WHERE file_category = 'sub_architrend_struct' AND is_latest = 1
+        ) f3 ON (f3.subcontractor_order_id = o.id OR (f3.subcontractor_order_id IS NULL AND f3.project_id = o.project_id AND o.order_type = 'struct'))
+        WHERE o.project_id = :pid AND o.status != 'cancelled' 
         ORDER BY o.created_at DESC
     ");
     $stmtOrd->execute(['pid' => $project_id]);
@@ -643,252 +667,7 @@ if (!$is_admin) {
                 </div>
         </div>
 
-            <!-- 発注履歴 -->
-            <div class="task-card">
-                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">📋 発注依頼履歴・ステータス</h2>
-                <?php if (empty($admin_orders)): ?>
-                    <p style="color:#666;">まだ発注依頼履歴はありません。</p>
-                <?php else: ?>
-                    <?php foreach($admin_orders as $o): 
-                        $badge_bg = '#6c757d'; 
-                        $status_label = $o['status'];
-                        if ($o['status'] === 'requested') {
-                            $badge_bg = '#ffc107'; $status_label = '依頼済 (未承諾)';
-                        } elseif ($o['status'] === 'accepted') {
-                            $badge_bg = '#007bff'; $status_label = '作業中 (承諾済)';
-                        } elseif ($o['status'] === 'delivered') {
-                            $badge_bg = '#fd7e14'; $status_label = '納品済 (確認待ち)';
-                        } elseif ($o['status'] === 'completed') {
-                            $badge_bg = '#28a745'; $status_label = '完了 (確認済)';
-                        } elseif ($o['status'] === 'cancelled') {
-                            $badge_bg = '#dc3545'; $status_label = 'キャンセル済';
-                        }
-                    ?>
-                        <div style="padding:10px 0; border-bottom:1px solid #eee;">
-                            <div style="font-weight:bold; margin-bottom:5px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-                                <div>
-                                    <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?> 様宛
-                                    <span class="badge" style="background:<?= $badge_bg ?>; color:white; padding:3px 6px; border-radius:3px; font-size:12px; margin-left:10px;"><?= htmlspecialchars($status_label, ENT_QUOTES) ?></span>
-                                </div>
-                                <?php if ($is_admin && in_array($o['status'], ['requested', 'accepted'])): ?>
-                                    <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" onsubmit="return confirm('この発注をキャンセルしますか？\n（業者チャットへ自動通知されます）')" style="margin:0;">
-                                        <input type="hidden" name="action" value="cancel_order">
-                                        <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                        <input type="hidden" name="project_id" value="<?= $project_id ?>">
-                                        <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:11px; font-weight:bold; cursor:pointer;">発注キャンセル</button>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
-                            <div style="font-size:13px; color:#444; line-height:1.6;">
-                                依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
-                                依頼額: <?= number_format($o['order_amount']) ?>円<?php if ($o['status'] === 'completed' && !empty($o['completed_at'])): ?> <span style="color:#059669; font-weight:bold; font-size:12px;">(納品日: <?= date('Y/m/d', strtotime($o['completed_at'])) ?>)</span><?php endif; ?><br>
-                                依頼日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
-                                希望納品日: <?= !empty($o['due_date']) ? date('Y年m月d日', strtotime($o['due_date'])) : '未設定' ?><br>
-                                完了予定日 (業者回答): <?= !empty($o['expected_delivery_date']) ? '<strong style="color:#e67e22;">'.date('Y年m月d日', strtotime($o['expected_delivery_date'])).'</strong>' : '<span style="color:#999;">未定</span>' ?>
-                                
-                                <?php if (!empty($o['pdf_id']) || !empty($o['arc_d_id']) || !empty($o['arc_s_id'])): ?>
-                                    <div style="margin-top:8px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px;">
-                                        <strong style="color:#334155; font-size:12px;">📤 納品ファイル一覧:</strong>
-                                        <ul style="margin:4px 0 0 0; padding-left:20px; font-size:12px;">
-                                            <?php if (!empty($o['arc_d_id'])): 
-                                                $d_url = (strpos($o['arc_d_id'], 'uploads/') === 0) ? $o['arc_d_id'] : 'https://drive.google.com/file/d/' . $o['arc_d_id'] . '/view?usp=drivesdk';
-                                            ?>
-                                                <li>意匠用アーキ: <a href="<?= htmlspecialchars($d_url, ENT_QUOTES) ?>" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;"><?= htmlspecialchars($o['arc_d_name'], ENT_QUOTES) ?> (V<?= $o['arc_d_ver'] ?>)</a></li>
-                                            <?php endif; ?>
-                                            <?php if (!empty($o['arc_s_id'])): 
-                                                $s_url = (strpos($o['arc_s_id'], 'uploads/') === 0) ? $o['arc_s_id'] : 'https://drive.google.com/file/d/' . $o['arc_s_id'] . '/view?usp=drivesdk';
-                                            ?>
-                                                <li>構造用アーキ: <a href="<?= htmlspecialchars($s_url, ENT_QUOTES) ?>" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;"><?= htmlspecialchars($o['arc_s_name'], ENT_QUOTES) ?> (V<?= $o['arc_s_ver'] ?>)</a></li>
-                                            <?php endif; ?>
-                                            <?php if (!empty($o['pdf_id'])): 
-                                                $pdf_url = (strpos($o['pdf_id'], 'uploads/') === 0) ? $o['pdf_id'] : 'https://drive.google.com/file/d/' . $o['pdf_id'] . '/view?usp=drivesdk';
-                                                $is_published = ($o['status'] === 'completed');
-                                            ?>
-                                                <li>
-                                                    構造図PDF: <a href="<?= htmlspecialchars($pdf_url, ENT_QUOTES) ?>" target="_blank" style="color:#3b82f6; text-decoration:none; font-weight:bold;"><?= htmlspecialchars($o['pdf_name'], ENT_QUOTES) ?> (V<?= $o['pdf_ver'] ?>)</a>
-                                                    <?php if ($is_published): ?>
-                                                        <span class="badge" style="background:#28a745; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">公開中</span>
-                                                    <?php else: ?>
-                                                        <span class="badge" style="background:#dc3545; color:white; font-size:10px; padding:2px 5px; border-radius:3px; margin-left:5px;">未公開</span>
-                                                    <?php endif; ?>
-                                                </li>
-                                            <?php endif; ?>
-                                        </ul>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php if ($o['status'] === 'delivered'): ?>
-                                    <div style="margin-top:8px; padding:8px; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px;">
-                                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:6px;">
-                                            <input type="hidden" name="action" value="approve_delivery">
-                                            <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                            <div style="display:flex; align-items:center; gap:5px;">
-                                                <label style="font-size:11px; color:#555;">完了日を指定:</label>
-                                                <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
-                                            </div>
-                                            <div style="display:flex; gap:5px;">
-                                                <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品タスクを完了（承認）しますか？')">納品完了</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-
-            <!-- 共通図書・CADデータの公開設定 -->
-            <div class="task-card" style="border-left-color: #3b82f6;">
-                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px; color:#1e3a8a;">📂 共通図書・CADデータの業者公開設定</h2>
-                <div style="font-size:12px; color:#555; margin-bottom:15px;">
-                    依頼主から提出されたCADデータや共通図書を、協力業者ポータルに公開・非表示にする設定を行えます。<br>
-                    <strong>初期状態はすべて非表示です。</strong>
-                </div>
-                <?php
-                // 最新の共通図書・CADデータを取得
-                $stmtClientFiles = $pdo->prepare("
-                    SELECT * FROM project_files 
-                    WHERE project_id = :pid 
-                      AND file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
-                      AND is_latest = 1
-                    ORDER BY id ASC
-                ");
-                $stmtClientFiles->execute(['pid' => $project_id]);
-                $client_files = $stmtClientFiles->fetchAll();
-
-                // カテゴリの日本語名マッピング
-                $cat_names = [
-                    'cad_layout'    => '配置図 (CAD)',
-                    'cad_plan_1f'   => '1F平面図 (CAD)',
-                    'cad_plan_2f'   => '2F平面図 (CAD)',
-                    'cad_plan_3f'   => '3F平面図 (CAD)',
-                    'cad_plan_ph'   => 'PH平面図 (CAD)',
-                    'cad_plan_rf'   => 'RF平面図 (CAD)',
-                    'cad_elevation' => '立面図 (CAD)',
-                    'cad_section'   => '矩計図 (CAD)',
-                    'app_doc'       => '確認申請書',
-                    'soil_report'   => '地盤調査報告書',
-                    'soil_impr'     => '地盤改良設計書',
-                    'pdf_precut'    => 'プレカット図等',
-                ];
-
-                if (empty($client_files)):
-                ?>
-                    <p style="color:#666; font-size:13px;">アップロードされた共通図書・CADデータはありません。</p>
-                <?php else: ?>
-                    <table style="width:100%; border-collapse:collapse; font-size:13px; line-height:1.5;">
-                        <thead>
-                            <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
-                                <th style="padding:6px; text-align:left;">図書類カテゴリ</th>
-                                <th style="padding:6px; text-align:left;">ファイル名</th>
-                                <th style="padding:6px; text-align:center; width:80px;">状態</th>
-                                <th style="padding:6px; text-align:center; width:120px;">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($client_files as $idx => $f): 
-                                $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
-                                $cat_label = $cat_names[$f['file_category']] ?? $f['file_category'];
-                                $is_pub = (int)($f['is_published_to_sub'] ?? 0);
-                            ?>
-                                <tr style="background:<?= $bg_color ?>; border-bottom:1px solid #e2e8f0;">
-                                    <td style="padding:8px 6px; font-weight:bold; color:#334155;"><?= htmlspecialchars($cat_label, ENT_QUOTES) ?></td>
-                                    <td style="padding:8px 6px; font-size:11px; word-break:break-all;"><?= htmlspecialchars($f['file_name'], ENT_QUOTES) ?></td>
-                                    <td style="padding:8px 6px; text-align:center;">
-                                        <?php if ($is_pub === 1): ?>
-                                            <span class="badge" style="background:#28a745; font-size:10px; padding:2px 6px; border-radius:3px;">公開中</span>
-                                        <?php else: ?>
-                                            <span class="badge" style="background:#6c757d; font-size:10px; padding:2px 6px; border-radius:3px;">非表示</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="padding:8px 6px; text-align:center;">
-                                        <div style="display:inline-flex; gap:5px;">
-                                            <!-- 公開ボタン -->
-                                            <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
-                                                <input type="hidden" name="action" value="toggle_publish_sub">
-                                                <input type="hidden" name="project_id" value="<?= $project_id ?>">
-                                                <input type="hidden" name="file_id" value="<?= $f['id'] ?>">
-                                                <input type="hidden" name="publish_val" value="1">
-                                                <button type="submit" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold; <?= $is_pub === 1 ? 'opacity:0.4; cursor:not-allowed;' : '' ?>" <?= $is_pub === 1 ? 'disabled' : '' ?>>公開</button>
-                                            </form>
-                                            <!-- 非表示ボタン -->
-                                            <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
-                                                <input type="hidden" name="action" value="toggle_publish_sub">
-                                                <input type="hidden" name="project_id" value="<?= $project_id ?>">
-                                                <input type="hidden" name="file_id" value="<?= $f['id'] ?>">
-                                                <input type="hidden" name="publish_val" value="0">
-                                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold; <?= $is_pub === 0 ? 'opacity:0.4; cursor:not-allowed;' : '' ?>" <?= $is_pub === 0 ? 'disabled' : '' ?>>非表示</button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
-
-            <!-- 管理者用 案件別チャットUI -->
-            <div class="task-card">
-                <?php
-                    // このプロジェクトのチャット履歴を取得
-                    $stmtChatAdmin = $pdo->prepare("SELECT * FROM messages WHERE project_id = :pid AND thread_type = 'sub_admin' ORDER BY id ASC");
-                    $stmtChatAdmin->execute(['pid' => $project_id]);
-                    $admin_msgs = $stmtChatAdmin->fetchAll();
-                ?>
-                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px;">💬 協力業者連絡チャット</h2>
-                <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:400px;">
-                    <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $project_id ?>">
-                        <?php foreach ($admin_msgs as $msg): 
-                            $isMe = ($msg['sender_id'] == $_SESSION['user_id'] || $msg['sender_id'] == 1);
-                            $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
-                            $align = $isMe ? 'flex-end' : 'flex-start';
-                            
-                            $senderName = $isMe ? 'あなた (管理者)' : '協力業者';
-                        ?>
-                            <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
-                                <span style="font-size:10px; color:#666; margin-bottom:2px;">
-                                    <?= $senderName ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)
-                                    <?php if ($isMe || $is_admin): ?>
-                                        <span style="cursor:pointer; color:#ef4444; font-size:9px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
-                                    <?php endif; ?>
-                                </span>
-                                <?php if (!empty($msg['message_text'])): ?>
-                                    <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:80%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
-                                <?php endif; ?>
-                                <?php if (!empty($msg['file_path'])): 
-                                    $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
-                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
-                                        : htmlspecialchars($msg['file_path'], ENT_QUOTES);
-                                ?>
-                                    <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
-                                        <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
-                                            <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo "🖼 画像を見る"; else echo "📄 添付ファイルを見る"; ?>
-                                        </a>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if(empty($admin_msgs)): ?>
-                            <div style="text-align:center; color:#aaa; font-size:12px; margin-top:20px;">まだメッセージはありません。</div>
-                        <?php endif; ?>
-                    </div>
-                    <!-- 添付ファイルの強力な視認化機能インジケーター -->
-                    <div id="filePreview_<?= $project_id ?>" style="padding:5px 10px; background:#fff; border-top:1px solid #eee; font-size:11px;"></div>
-                    <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px; display:flex; gap:10px; align-items:center;">
-                        <input type="file" id="chatFile_<?= $project_id ?>" accept="image/*,.pdf" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
-                        <label for="chatFile_<?= $project_id ?>" id="fileLabel_<?= $project_id ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
-                        
-                        <textarea id="chatText_<?= $project_id ?>" style="flex:1; border:1px solid #ccc; border-radius:20px; padding:8px 12px; font-size:13px; resize:none;" rows="1" placeholder="メッセージを入力..."></textarea>
-                        
-                        <button onclick="sendProjMessage(<?= $project_id ?>)" style="background:#3b82f6; color:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:16px;">➤</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    <?php else: ?>
+            <?php else: ?>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:10px; margin-bottom:20px;">
             <div style="display:flex; align-items:center; gap:15px;">
                 <h1 style="margin:0; font-size:24px;">👷 協力業者専用ダッシュボード</h1>
