@@ -292,7 +292,7 @@ if (!$is_admin) {
                             <input type="radio" name="order_type" value="design" checked onchange="calcSubcontractorEstimate()"> 構造用・外皮用意匠図作図
                         </label><br>
                         <label style="font-size:14px;">
-                            <input type="radio" name="order_type" value="structure" onchange="calcSubcontractorEstimate()"> 構造図作図
+                            <input type="radio" name="order_type" value="struct" onchange="calcSubcontractorEstimate()"> 構造図作図
                         </label>
                     </div>
 
@@ -373,7 +373,7 @@ if (!$is_admin) {
                             else if (area > 100) formulaText = `(60円×100㎡ + 50円×${area - 100}㎡)`;
                             else formulaText = `(60円×${area}㎡)`;
                         }
-                        if (type === 'structure') {
+                        if (type === 'struct') {
                             let optAmount = 0;
                             if (document.getElementById('opt_kiso').checked) optAmount += 1000;
                             if (document.getElementById('opt_yuka').checked) optAmount += 1000;
@@ -794,7 +794,7 @@ if (!$is_admin) {
                                     <?php if ($task['status'] !== 'cancelled'): ?>
                                         <?php 
                                         $show_struct_delivery = ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1);
-                                        $task_type = $task['order_type'] ?: 'design';
+                                        $task_type = ($task['order_type'] === 'structure' || $task['order_type'] === 'struct') ? 'struct' : 'design';
                                         ?>
                                         <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px; display:flex; flex-direction:column; gap:20px; margin-top: 10px;">
                                             <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>

@@ -222,6 +222,47 @@ $global_messages = $stmtChat->fetchAll();
         h2, h3 { margin-top: 0; }
         .task-card { border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; margin-bottom: 10px; }
         .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
+        
+        /* 招待リンク用ツールチップ */
+        .tooltip-btn-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-btn-container .tooltip-text {
+            visibility: hidden;
+            width: 320px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 12px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -160px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 11px;
+            line-height: 1.4;
+            font-weight: normal;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            pointer-events: none;
+        }
+        .tooltip-btn-container .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+        }
+        .tooltip-btn-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -237,9 +278,15 @@ $global_messages = $stmtChat->fetchAll();
                 $script_dir = rtrim($script_dir, '/');
                 $invite_url_sub = "{$protocol}://{$host}{$script_dir}/register.php?invite_parent_id=" . $target_sub_id;
                 ?>
-                <button onclick="navigator.clipboard.writeText('<?= $invite_url_sub ?>'); alert('スタッフ招待リンクをコピーしました！\nこのリンクから登録したスタッフは、貴社宛の全案件へ自動的に権限が付与されます。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
-                    👥 スタッフを招待する
-                </button>
+                <div class="tooltip-btn-container">
+                    <button onclick="navigator.clipboard.writeText('<?= $invite_url_sub ?>'); alert('スタッフ招待リンクをコピーしました！\nこのリンクから登録したスタッフは、貴社宛の全案件へ自動的に権限が付与されます。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
+                        👥 スタッフを招待する
+                    </button>
+                    <span class="tooltip-text">
+                        このボタンを押すとこのダッシュボードへの招待リンクをコピーします。<br>
+                        招待者へメールを作成し、本文に招待リンクを貼り付けてアクセスしてもらってください。
+                    </span>
+                </div>
             <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
             <?php if ($is_admin): ?>

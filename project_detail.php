@@ -229,6 +229,47 @@ $chat_messages = $stmtMsgs->fetchAll();
         .nav-tabs a:not(.active):hover {
             background: #cbd5e1;
         }
+        
+        /* 招待リンク用ツールチップ */
+        .tooltip-btn-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-btn-container .tooltip-text {
+            visibility: hidden;
+            width: 320px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 12px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -160px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 11px;
+            line-height: 1.4;
+            font-weight: normal;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            pointer-events: none;
+        }
+        .tooltip-btn-container .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+        }
+        .tooltip-btn-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -251,9 +292,15 @@ $chat_messages = $stmtMsgs->fetchAll();
             $script_dir = rtrim($script_dir, '/');
             $invite_url = "{$protocol}://{$host}{$script_dir}/register.php?invite_project_id=" . $project_id;
             ?>
-            <button onclick="navigator.clipboard.writeText('<?= $invite_url ?>'); alert('この案件専用の招待リンクをクリップボードにコピーしました！\nこのリンクから登録したユーザーは、本案件のみ表示可能です。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
-                🔗 施工業者・設計者を招待
-            </button>
+            <div class="tooltip-btn-container">
+                <button onclick="navigator.clipboard.writeText('<?= $invite_url ?>'); alert('この案件専用の招待リンクをクリップボードにコピーしました！\nこのリンクから登録したユーザーは、本案件のみ表示可能です。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
+                    🔗 施工業者・設計者を招待
+                </button>
+                <span class="tooltip-text">
+                    このボタンを押すとこのダッシュボードへの招待リンクをコピーします。<br>
+                    招待者へメールを作成し、本文に招待リンクを貼り付けてアクセスしてもらってください。
+                </span>
+            </div>
             <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold; margin-right: 10px;">➔ 案件一覧に戻る</a>
             <?php if ($has_finance_access): ?>
                 <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
