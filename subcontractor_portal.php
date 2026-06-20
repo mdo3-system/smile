@@ -371,7 +371,6 @@ $global_messages = $stmtChat->fetchAll();
                                     <?php endif; ?>
                                 </div>
                             <?php endforeach; ?>
-                            <?php endforeach; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
