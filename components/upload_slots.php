@@ -132,6 +132,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
             <button type="button" onclick="addDynamicSoilSlot()" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">➕ 別の地盤関連図書スロットを追加</button>
         </div>
     </div>
+    <?php endif; ?>
     <?php if ($is_permit || $is_wall || $is_kisohari): ?>
     <!-- ============================================
          【後出し可】プレカット図等
