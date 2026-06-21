@@ -140,8 +140,8 @@ class StatusHelper
                             // 審査待機など
                             $res = [
                                 'ball_owner' => 'shared_waiting',
-                                'label' => $name . ' (共通)',
-                                'color' => '#f59e0b'
+                                'label' => '審査・待機',
+                                'color' => '#64748b'
                             ];
                         }
                     }
@@ -152,14 +152,14 @@ class StatusHelper
                     if ($status === 'submission') {
                         $res = [
                             'ball_owner' => 'shared_waiting',
-                            'label' => '審査待ち (共通)',
-                            'color' => '#f59e0b' // Amber
+                            'label' => '審査・待機',
+                            'color' => '#64748b'
                         ];
                     }
                     elseif ($status === 'submitting') {
                         $res = [
                             'ball_owner' => 'shared_waiting',
-                            'label' => '申請中',
+                            'label' => '審査・待機',
                             'color' => '#64748b'
                         ];
                     }
@@ -188,13 +188,15 @@ class StatusHelper
             }
         }
 
-        // 依頼主(client)には協力業者の存在を見せないため、協力業者ボールは管理者ボールとして返す
-        if ($res['ball_owner'] === 'subcontractor' && $user_role === 'client') {
-            return [
-                'ball_owner' => 'admin',
-                'label' => '図書作成中 (管理者ボール)',
-                'color' => '#3b82f6'
-            ];
+        // 依頼主(client)には協力業者の存在を見せないため、協力業者ボールおよび外注納品関連ステータスは管理者ボールとして返す
+        if ($user_role === 'client') {
+            if ($res['ball_owner'] === 'subcontractor' || $res['label'] === '納品検収中 (管理者ボール)') {
+                return [
+                    'ball_owner' => 'admin',
+                    'label' => '図書作成中 (管理者ボール)',
+                    'color' => '#3b82f6'
+                ];
+            }
         }
 
         return $res;

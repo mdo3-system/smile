@@ -6,12 +6,12 @@
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
                     <?php if ($is_admin): ?>
-                    <strong>依頼主:</strong> <?= htmlspecialchars($project_info['company_name'] . ' ' . $project_info['client_name'], ENT_QUOTES) ?><br>
+                    <strong>担当者:</strong> <?= htmlspecialchars($project_info['client_name'], ENT_QUOTES) ?><br>
                     <?php endif; ?>
-                    <?php if ($is_admin && !empty($project_info['client_phone'])): ?>
-                    <strong>📱 電話番号:</strong> <a href="tel:<?= htmlspecialchars($project_info['client_phone'], ENT_QUOTES) ?>" style="color:#0056b3; font-weight:bold;"><?= htmlspecialchars($project_info['client_phone'], ENT_QUOTES) ?></a><br>
+                    <?php if ($is_admin && !empty($project_info['mobile_number'])): ?>
+                    <strong>📱 携帯番号:</strong> <a href="tel:<?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?>" style="color:#0056b3; font-weight:bold;"><?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?></a><br>
                     <?php elseif ($is_admin): ?>
-                    <strong>📱 電話番号:</strong> <span style="color:#e53e3e; font-size:11px;">未登録（依頼主に入力を依頼してください）</span><br>
+                    <strong>📱 携帯番号:</strong> <span style="color:#e53e3e; font-size:11px;">未登録（依頼主に入力を依頼してください）</span><br>
                     <?php endif; ?>
                     <strong>地盤調査:</strong> <?= htmlspecialchars($project_info['soil_status'] ?? '未定', ENT_QUOTES) ?><br>
                     <?php
@@ -39,7 +39,7 @@
                     if ($project_info['req_opt_kisohari'] == 1) $req_types[] = '基礎・横架材許容応力度';
                     $req_str = empty($req_types) ? '未指定' : implode(' / ', $req_types);
                     $status_bg = '#007bff';
-                    if ($project_info['status'] === 'submitting') {
+                    if ($project_info['status'] === 'submitting' || $project_info['status'] === 'submission') {
                         $status_bg = '#64748b';
                     }
                     ?>
