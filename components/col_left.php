@@ -586,18 +586,18 @@
             <?php endif; ?>
             <?php endif; ?>
 
-            <?php if ($is_admin && $project_info['status'] === 'primary_prep'): ?>
+            <?php if ($is_admin && $project_info['status'] !== 'completed'): ?>
             <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px;">
                 <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">
-                    🎯 一次回答期日の設定
+                    🎯 一次回答期日の設定・修正
                 </h3>
                 <div style="font-size:12px; color:#666; margin-bottom:10px;">
-                    依頼主から必要図書が提出されました。一次回答の期日を設定して設計スケジュールを確定させてください。
+                    一次回答の期日を設定・変更して設計スケジュールを確定/更新してください。
                 </div>
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
                     <input type="hidden" name="action" value="set_primary_due_date">
                     <input type="date" name="primary_due_date" value="<?= $project_info['primary_due_date'] ?? '' ?>" required style="padding:6px; font-size:13px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; width:100%; box-sizing:border-box;">
-                    <button type="submit" style="width:100%; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">期日を設定してスケジュールを確定</button>
+                    <button type="submit" style="width:100%; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">期日を設定/変更して更新</button>
                 </form>
             </div>
             <?php endif; ?>

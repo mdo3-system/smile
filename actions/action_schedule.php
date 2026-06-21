@@ -76,6 +76,49 @@ if ($action === 'set_primary_due_date') {
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
+// スケジュール予定日の個別上書き
+if ($action === 'update_schedule_override') {
+    if ($is_admin) {
+        $step_idx = $_POST['step_idx'] ?? '';
+        $override_date = $_POST['override_date'] ?? '';
+        $schedule_type = $_POST['schedule_type'] ?? 'permit';
+        
+        $col_map = [
+            'permit' => 'schedule_overrides',
+            'wall' => 'schedule_overrides_wall',
+            'skin' => 'schedule_overrides_skin',
+            'sky' => 'schedule_overrides_sky',
+        ];
+        $db_col = $col_map[$schedule_type] ?? 'schedule_overrides';
+
+        if ($step_idx !== '') {
+            $stmtCol = $pdo->prepare("SELECT {$db_col} FROM projects WHERE id = :id");
+            $stmtCol->execute(['id' => $project_id]);
+            $current_overrides_json = $stmtCol->fetchColumn();
+            
+            $overrides = json_decode($current_overrides_json ?? '{}', true) ?: [];
+            
+            if (empty($override_date)) {
+                unset($overrides[$step_idx]);
+            } else {
+                $overrides[$step_idx] = $override_date;
+            }
+            $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
+            $stmt->execute(['act' => json_encode($overrides), 'pid' => $project_id]);
+            
+            // もし一次回答予定日 (idx=1) が上書きされた場合は、primary_due_date カラムも同期する
+            if ($step_idx == 1 && !empty($override_date)) {
+                $projectRepo->updatePrimaryDueDate($project_id, $override_date);
+            }
+        }
+    }
+    try {
+        $calendarService = new \App\Services\GoogleCalendarService($pdo);
+        $calendarService->syncProjectEvents($project_id);
+    } catch (Exception $cal_err) {}
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;
+}
+
 // スケジュール実施日（実績）の更新
 if ($action === 'update_schedule_actual') {
     if ($is_admin) {

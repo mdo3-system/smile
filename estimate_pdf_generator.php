@@ -12,7 +12,7 @@ function generate_estimate_pdf($project_id, $pdo) {
     // 案件情報と見積もり情報を取得
     // 案件情報を取得
     $stmt = $pdo->prepare("
-        SELECT p.project_name, p.billing_company_name, u.company_name, u.contact_name 
+        SELECT p.project_name, p.billing_company_name, p.req_permit, p.req_opt_kisohari, u.company_name, u.contact_name 
         FROM projects p 
         JOIN users u ON p.client_id = u.id 
         WHERE p.id = :pid
@@ -189,7 +189,7 @@ function generate_estimate_pdf($project_id, $pdo) {
             ・本見積もりは意匠図を元に算出した概算です。詳細なモデル作成後に仕様変更等があった場合は変動する場合があります。<br>
             ・<span style="text-decoration: underline;">一次回答は必要図書がすべて揃ってから7～15営業日</span>、以降の質疑・修正対応は4営業日後となります。具体的な日程は図書受領後に決定いたします。<br>
             ・意匠図の大幅な変更等に伴う追加計算は、別途費用が発生する場合がございます。<br>
-            ・業務の流れとして、一次回答時に本見積額の50％、審査完了から1週間以内の残金のご清算がお取引条件となります。ご入金確認後4営業日以内に構造図をUP致します。<br>
+            ・業務の流れとして、一次回答時に本見積額の50％、審査完了から1週間以内の残金のご清算がお取引条件となります。ご入金確認後' . ((($data['req_permit'] ?? 0) == 1 || ($data['req_opt_kisohari'] ?? 0) == 1) ? 7 : 4) . '営業日以内に構造図をUP致します。<br>
             ・<span style="font-weight: bold; color: #d32f2f;">私は設計者にはなりません。</span>
         </div>
     </div>

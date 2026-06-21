@@ -162,7 +162,7 @@
                                     </a>
                                 <?php endif; ?>
                                 
-                                <?php if ($is_admin && strpos($cat, 'cad_') === 0): ?>
+                                <?php if ($is_admin && (strpos($cat, 'cad_') === 0 || strpos($cat, 'custom_') === 0)): ?>
                                     <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
                                         <input type="hidden" name="action" value="toggle_cad_publish">
                                         <input type="hidden" name="file_id" value="<?= $latest['id'] ?>">

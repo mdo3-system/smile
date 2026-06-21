@@ -47,6 +47,8 @@
 
     foreach ($schedulesToRender as $scheduleItem):
         $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
+        $override_col = str_replace('actuals', 'overrides', $scheduleItem['actuals_col']);
+        $schedule_overrides = json_decode($project_info[$override_col] ?? '{}', true) ?: [];
     ?>
     <!-- ▼▼▼ 進捗スケジュール可視化 ▼▼▼ -->
     <div class="box" style="background:#fff; border-color:#cbd5e1; margin-top:0;">
@@ -85,23 +87,47 @@
                         if ($idx == 0) {
                             $date_str = '<span style="color:#64748b;">-</span>';
                         } elseif ($idx == 1) {
-                            $calc_date = $primary_due_date;
-                            $date_str = '<strong>' . date('m/d', strtotime($primary_due_date)) . '</strong>';
+                            $calc_date = $schedule_overrides[$idx] ?? $primary_due_date;
+                            $date_str = '<strong>' . date('m/d', strtotime($calc_date)) . '</strong>';
                         } else {
                             if ($step['type'] == 'biz') {
                                 $calc_date = addBusinessDays($calc_date, $step['days']);
                             } elseif ($step['type'] == 'cal') {
                                 $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
                             }
-                            $date_str = date('m/d', strtotime($calc_date));
+                            
+                            // この工程に予定日の上書きがあるかチェック
+                            if (!empty($schedule_overrides[$idx])) {
+                                $calc_date = $schedule_overrides[$idx];
+                                $date_str = '<span style="color:#2563eb; font-weight:bold;">' . date('m/d', strtotime($calc_date)) . ' (変)</span>';
+                            } else {
+                                $date_str = date('m/d', strtotime($calc_date));
+                            }
                         }
                     }
+
+                    // 予定日の値を取得しておく（編集フォームの初期値用）
+                    $planned_date = ($primary_due_date && $idx > 0) ? $calc_date : '';
 
                     // 実施日があればそれを起算日に上書きする
                     $actual_date = $schedule_actuals[$idx] ?? '';
                     if ($actual_date) {
                         $calc_date = $actual_date;
                         $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
+                    }
+
+                    // 予定日の表示と編集フォーム
+                    $plan_display = $date_str;
+                    if ($is_admin && $primary_due_date && $idx > 0 && !$actual_date) {
+                        $override_val = $schedule_overrides[$idx] ?? '';
+                        $plan_display = '
+                        <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:3px; align-items:center;">
+                            <input type="hidden" name="action" value="update_schedule_override">
+                            <input type="hidden" name="schedule_type" value="'.htmlspecialchars($scheduleItem['type'], ENT_QUOTES).'">
+                            <input type="hidden" name="step_idx" value="'.$idx.'">
+                            <input type="date" name="override_date" value="'.htmlspecialchars($override_val ?: $planned_date, ENT_QUOTES).'" style="font-size:10px; padding:2px; width:100px;">
+                            <button type="submit" style="font-size:9px; padding:2px 4px; background:#eff6ff; border:1px solid #bfdbfe; color:#2563eb; border-radius:3px; cursor:pointer;">変更</button>
+                        </form>';
                     }
 
                     // 実施日表示または入力フォーム
@@ -122,7 +148,7 @@
                     echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
                     echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                     echo "<td style='padding:6px;'>{$badge}</td>";
-                    echo "<td style='padding:6px;'>{$date_str}</td>";
+                    echo "<td style='padding:6px;'>{$plan_display}</td>";
                     echo "<td style='padding:6px;'>{$actual_display}</td>";
                     echo "</tr>";
                 }

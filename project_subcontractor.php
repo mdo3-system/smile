@@ -686,7 +686,8 @@ if (!$is_admin) {
             $stmtFiles = $pdo->prepare("
                 SELECT * FROM project_files 
                 WHERE project_id = :project_id 
-                  AND file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
+                  AND (file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
+                    OR file_category LIKE 'custom_%')
                   AND is_latest = 1 
                   AND is_published_to_sub = 1
             ");
@@ -734,7 +735,20 @@ if (!$is_admin) {
                                         if (strpos($file['drive_file_id'], 'uploads/') !== 0 && !empty($file['drive_file_id'])) {
                                             $download_url = 'https://drive.google.com/file/d/' . htmlspecialchars($file['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk';
                                         }
-                                        $lbl = $sub_cat_names[$file['file_category']] ?? $file['file_category'];
+                                        $lbl = $sub_cat_names[$file['file_category']] ?? null;
+                                        if (!$lbl) {
+                                            if (strpos($file['file_category'], 'custom_wall_') === 0) {
+                                                $lbl = substr($file['file_category'], 12) . ' (カスタム)';
+                                            } elseif (strpos($file['file_category'], 'custom_skin_') === 0) {
+                                                $lbl = substr($file['file_category'], 12) . ' (カスタム)';
+                                            } elseif (strpos($file['file_category'], 'custom_sky_') === 0) {
+                                                $lbl = substr($file['file_category'], 11) . ' (カスタム)';
+                                            } elseif (strpos($file['file_category'], 'custom_') === 0) {
+                                                $lbl = substr($file['file_category'], 7) . ' (カスタム)';
+                                            } else {
+                                                $lbl = $file['file_category'];
+                                            }
+                                        }
                                     ?>
                                         <li style="margin-bottom:5px;">
                                             <span style="font-weight:bold; color:#1e40af; margin-right:5px;">[<?= htmlspecialchars($lbl, ENT_QUOTES) ?>]</span>
