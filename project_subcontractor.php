@@ -428,11 +428,13 @@ if (!$is_admin) {
                     <strong>初期状態はすべて非表示です。</strong>
                 </div>
                 <?php
-                // 最新の共通図書・CADデータを取得
                 $stmtClientFiles = $pdo->prepare("
                     SELECT * FROM project_files 
                     WHERE project_id = :pid 
-                      AND file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
+                      AND (
+                          file_category IN ('cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf', 'cad_elevation', 'cad_section', 'app_doc', 'soil_report', 'soil_impr', 'pdf_precut')
+                          OR file_category LIKE 'custom_%'
+                      )
                       AND is_latest = 1
                     ORDER BY id ASC
                 ");
@@ -472,6 +474,17 @@ if (!$is_admin) {
                             <?php foreach ($client_files as $idx => $f): 
                                 $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
                                 $cat_label = $cat_names[$f['file_category']] ?? $f['file_category'];
+                                if (strpos($f['file_category'], 'custom_') === 0) {
+                                    $parts = explode('_', $f['file_category']);
+                                    $cat_label = end($parts);
+                                    if (strpos($f['file_category'], 'custom_soil_') === 0) {
+                                        $cat_label = "地盤関連: " . $cat_label;
+                                    } elseif (strpos($f['file_category'], 'custom_precut_') === 0) {
+                                        $cat_label = "プレカット関連: " . $cat_label;
+                                    } else {
+                                        $cat_label = $cat_label . " (カスタム)";
+                                    }
+                                }
                                 $is_pub = (int)($f['is_published_to_sub'] ?? 0);
                             ?>
                                 <tr style="background:<?= $bg_color ?>; border-bottom:1px solid #e2e8f0;">
@@ -737,18 +750,20 @@ if (!$is_admin) {
                                         }
                                         $lbl = $sub_cat_names[$file['file_category']] ?? null;
                                         if (!$lbl) {
-                                            if (strpos($file['file_category'], 'custom_wall_') === 0) {
-                                                $lbl = substr($file['file_category'], 12) . ' (カスタム)';
-                                            } elseif (strpos($file['file_category'], 'custom_skin_') === 0) {
-                                                $lbl = substr($file['file_category'], 12) . ' (カスタム)';
-                                            } elseif (strpos($file['file_category'], 'custom_sky_') === 0) {
-                                                $lbl = substr($file['file_category'], 11) . ' (カスタム)';
-                                            } elseif (strpos($file['file_category'], 'custom_') === 0) {
-                                                $lbl = substr($file['file_category'], 7) . ' (カスタム)';
-                                            } else {
-                                                $lbl = $file['file_category'];
-                                            }
-                                        }
+                                             if (strpos($file['file_category'], 'custom_') === 0) {
+                                                 $parts = explode('_', $file['file_category']);
+                                                 $lbl = end($parts);
+                                                 if (strpos($file['file_category'], 'custom_soil_') === 0) {
+                                                     $lbl = "地盤関連: " . $lbl;
+                                                 } elseif (strpos($file['file_category'], 'custom_precut_') === 0) {
+                                                     $lbl = "プレカット関連: " . $lbl;
+                                                 } else {
+                                                     $lbl = $lbl . " (カスタム)";
+                                                 }
+                                             } else {
+                                                 $lbl = $file['file_category'];
+                                             }
+                                         }
                                     ?>
                                         <li style="margin-bottom:5px;">
                                             <span style="font-weight:bold; color:#1e40af; margin-right:5px;">[<?= htmlspecialchars($lbl, ENT_QUOTES) ?>]</span>

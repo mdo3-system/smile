@@ -44,7 +44,7 @@
     }
     // 最後に確認申請書を追加
     $common_docs['app_doc'] = '確認申請書（2〜5面）🟡後出し可';
-    $upload_sections['共通図書'] = $common_docs;
+    $upload_sections['共通図書・CAD'] = $common_docs;
 
     // 2. 専門図書
     $specialized_docs = [];
