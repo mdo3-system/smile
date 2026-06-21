@@ -350,8 +350,9 @@ $global_messages = $stmtChat->fetchAll();
                                             <?php 
                                                 if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b;">承諾待ち</span>';
                                                 elseif ($t['status'] === 'accepted' || $t['status'] === 'in_progress') echo '<span class="badge" style="background:#3b82f6;">作業中</span>';
-                                                elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#10b981;">納品済</span>';
-                                                elseif ($t['status'] === 'completed') echo '<span class="badge" style="background:#059669;">完了</span>';
+                                                elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#fd7e14;">一次納品</span>';
+                                                elseif ($t['status'] === 'cb_requested') echo '<span class="badge" style="background:#ef4444;">修正依頼</span>';
+                                                elseif ($t['status'] === 'completed') echo '<span class="badge" style="background:#059669;">納品完了</span>';
                                                 elseif ($t['status'] === 'rejected') echo '<span class="badge" style="background:#ef4444;">辞退済</span>';
                                             ?>
                                         </div>

@@ -6,7 +6,7 @@
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
                     <?php if ($is_admin): ?>
-                    <strong>担当者:</strong> <?= htmlspecialchars($project_info['client_name'], ENT_QUOTES) ?><br>
+                    <strong>担当者:</strong> <?= htmlspecialchars($project_info['client_name'], ENT_QUOTES) ?> 様<br>
                     <?php endif; ?>
                     <?php if ($is_admin && !empty($project_info['mobile_number'])): ?>
                     <strong>📱 携帯番号:</strong> <a href="tel:<?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?>" style="color:#0056b3; font-weight:bold;"><?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?></a><br>
@@ -162,8 +162,9 @@
                                 if ($o['status'] === 'requested') { $status_lbl = '承諾待ち'; $badge_bg = '#f59e0b'; }
                                 elseif ($o['status'] === 'accepted') { $status_lbl = '作業中'; $badge_bg = '#3b82f6'; }
                                 elseif ($o['status'] === 'rejected') { $status_lbl = '辞退済'; $badge_bg = '#ef4444'; }
-                                elseif ($o['status'] === 'delivered') { $status_lbl = '納品済(確認待ち)'; $badge_bg = '#10b981'; }
-                                elseif ($o['status'] === 'completed') { $status_lbl = '完了(承認済)'; $badge_bg = '#059669'; }
+                                elseif ($o['status'] === 'delivered') { $status_lbl = '一次納品(確認待ち)'; $badge_bg = '#fd7e14'; }
+                                elseif ($o['status'] === 'cb_requested') { $status_lbl = '修正依頼中'; $badge_bg = '#dc3545'; }
+                                elseif ($o['status'] === 'completed') { $status_lbl = '納品完了(承認済)'; $badge_bg = '#059669'; }
                             ?>
                                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; border-bottom:1px dashed #e2e8f0; padding-bottom:3px;">
                                     <span>👷 <?= htmlspecialchars($o['contact_name'], ENT_QUOTES) ?>: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?></span>

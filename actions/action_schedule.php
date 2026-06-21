@@ -302,8 +302,8 @@ if ($action === 'submit_primary_response') {
                 $file_category = 'sky_calc_doc';
             }
             
-            // C. ステータスを submission（提出済・確認中）に更新
-            $projectRepo->updateStatus($project_id, 'submission');
+            // C. ステータス更新処理を削除（一次回答時点では contracted 状態を維持）
+
 
             // D. スケジュール実績 JSON の更新（インデックス 2: 構造計算・図面 初回提示 に今日の日付を設定）
             $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");

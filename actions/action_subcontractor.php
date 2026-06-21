@@ -211,3 +211,44 @@ if ($action === 'approve_delivery') {
     }
     header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time()); exit;
 }
+
+// チェックバック（修正指示）の保存・更新、および修正依頼ステータスへの変更
+if ($action === 'submit_checkback') {
+    if ($is_admin) {
+        $order_id = intval($_POST['order_id']);
+        $checkback_text = trim($_POST['checkback_text'] ?? '');
+
+        $pdo->beginTransaction();
+        try {
+            // ステータスを 'cb_requested'（修正依頼）に更新し、チェックバックを保存
+            $stmt = $pdo->prepare("
+                UPDATE subcontractor_orders 
+                SET status = 'cb_requested', 
+                    checkback_text = :text, 
+                    checkback_updated_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = :id
+            ");
+            $stmt->execute([
+                'text' => $checkback_text,
+                'id' => $order_id
+            ]);
+
+            // チャットへ修正依頼（チェックバック）を自動投稿 (sub_admin)
+            $msg = "【修正依頼（チェックバック修正指示）】\n" . $checkback_text . "\n\n指示内容をご確認の上、修正データの再アップロードをお願いいたします。";
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'],
+                'msg' => $msg
+            ]);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("チェックバックの保存に失敗しました: " . $e->getMessage());
+        }
+        header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time()); exit;
+    }
+}
+

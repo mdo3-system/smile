@@ -536,13 +536,15 @@ if (!$is_admin) {
                         $badge_bg = '#6c757d'; 
                         $status_label = $o['status'];
                         if ($o['status'] === 'requested') {
-                            $badge_bg = '#ffc107'; $status_label = '依頼済 (未承諾)';
+                            $badge_bg = '#ffc107'; $status_label = '承諾待ち';
                         } elseif ($o['status'] === 'accepted') {
-                            $badge_bg = '#007bff'; $status_label = '作業中 (承諾済)';
+                            $badge_bg = '#007bff'; $status_label = '作業中';
                         } elseif ($o['status'] === 'delivered') {
-                            $badge_bg = '#fd7e14'; $status_label = '納品済 (確認待ち)';
+                            $badge_bg = '#fd7e14'; $status_label = '一次納品';
+                        } elseif ($o['status'] === 'cb_requested') {
+                            $badge_bg = '#dc3545'; $status_label = '修正依頼中';
                         } elseif ($o['status'] === 'completed') {
-                            $badge_bg = '#28a745'; $status_label = '完了 (確認済)';
+                            $badge_bg = '#28a745'; $status_label = '納品完了';
                         } elseif ($o['status'] === 'cancelled') {
                             $badge_bg = '#dc3545'; $status_label = 'キャンセル済';
                         }
@@ -600,18 +602,33 @@ if (!$is_admin) {
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if ($o['status'] === 'delivered'): ?>
-                                    <div style="margin-top:8px; padding:8px; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px;">
+                                <?php if ($o['status'] === 'delivered' || $o['status'] === 'cb_requested'): ?>
+                                    <!-- チェックバック枠 (更新あり) -->
+                                    <div style="margin-top:10px; padding:10px; background:#fff5f5; border:1px solid #feb2b2; border-radius:6px; margin-bottom:10px;">
+                                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                            <input type="hidden" name="action" value="submit_checkback">
+                                            <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                            <label style="display:block; font-size:12px; font-weight:bold; color:#c53030; margin-bottom:5px;">📝 チェックバック（修正指示）入力・更新枠:</label>
+                                            <textarea name="checkback_text" style="width:100%; min-height:80px; padding:6px; box-sizing:border-box; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; margin-bottom:5px;" placeholder="修正指示を入力してください..."><?= htmlspecialchars($o['checkback_text'] ?? '', ENT_QUOTES) ?></textarea>
+                                            <div style="text-align: right;">
+                                                <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:11px; font-weight:bold; cursor:pointer;" onclick="return confirm('チェックバック指示を保存して修正依頼を送信しますか？\n（業者チャットへ自動通知されます）')">チェックバックを保存・修正依頼送信</button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <!-- 納品完了ボタン -->
+                                    <div style="margin-top: 8px; padding: 8px; background: #e6fffa; border: 1px solid #b2f5ea; border-radius: 6px;">
                                         <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0; display:flex; flex-direction:column; gap:6px;">
                                             <input type="hidden" name="action" value="approve_delivery">
                                             <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                            <div style="display:flex; align-items:center; gap:5px;">
-                                                <label style="font-size:11px; color:#555;">完了日を指定:</label>
-                                                <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <span style="font-size:11px; color:#234e52; font-weight:bold;">この成果物で完了（承認）とする:</span>
+                                                <div style="display:flex; align-items:center; gap:5px;">
+                                                    <label style="font-size:11px; color:#555;">完了日を指定:</label>
+                                                    <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:12px; border:1px solid #ccc; border-radius:4px;" required>
+                                                </div>
                                             </div>
-                                            <div style="display:flex; gap:5px;">
-                                                <button type="submit" style="background:#28a745; color:white; border:none; padding:5px 12px; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; flex:1;" onclick="return confirm('納品タスクを完了（承認）しますか？')">納品完了</button>
-                                            </div>
+                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:6px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer;" onclick="return confirm('納品タスクを完了（承認）しますか？\n（成果物がクライアントへ公開されます）')">納品完了</button>
                                         </form>
                                     </div>
                                 <?php endif; ?>
@@ -823,7 +840,10 @@ if (!$is_admin) {
                                             $status_label = '作業中 (承諾済)';
                                         } elseif ($task['status'] === 'delivered') {
                                             $badge_bg = '#fd7e14'; 
-                                            $status_label = '納品済 (確認待ち)';
+                                            $status_label = '一次納品済 (確認待ち)';
+                                        } elseif ($task['status'] === 'cb_requested') {
+                                            $badge_bg = '#dc3545';
+                                            $status_label = '修正依頼';
                                         } elseif ($task['status'] === 'completed') {
                                             $badge_bg = '#28a745'; 
                                             $status_label = '完了 (確認済)';
@@ -837,8 +857,16 @@ if (!$is_admin) {
                                         <div style="font-size:13px; color:#555;">完了納期予定日: <strong><?= !empty($task['expected_delivery_date']) ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></div>
                                     </div>
 
+                                    <?php if (!empty($task['checkback_text'])): ?>
+                                        <div style="margin-top:10px; padding:10px; background:#fff5f5; border:1px solid #feb2b2; border-radius:6px; font-size:12px; color:#2d3748; text-align:left;">
+                                            <strong style="color:#c53030; display:block; margin-bottom:5px;">📝 管理者からの修正指示 (チェックバック):</strong>
+                                            <div style="white-space:pre-wrap; line-height:1.5; background:white; padding:8px; border-radius:4px; border:1px solid #fed7aa;"><?= htmlspecialchars($task['checkback_text'], ENT_QUOTES) ?></div>
+                                            <div style="font-size:10px; color:#718096; margin-top:5px; text-align:right;">最終更新: <?= htmlspecialchars($task['checkback_updated_at'], ENT_QUOTES) ?></div>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <?php if (!empty($task['pdf_id']) || !empty($task['arc_d_id']) || !empty($task['arc_s_id'])): ?>
-                                        <div style="margin-top:8px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px;">
+                                        <div style="margin-top:8px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; text-align:left;">
                                             <strong style="color:#334155; font-size:12px;">📤 納品ファイル一覧:</strong>
                                             <ul style="margin:4px 0 0 0; padding-left:20px; font-size:12px;">
                                                 <?php if (!empty($task['arc_d_id'])): 
@@ -860,12 +888,12 @@ if (!$is_admin) {
                                         </div>
                                     <?php endif; ?>
 
-                                    <?php if ($task['status'] !== 'cancelled'): ?>
+                                    <?php if ($task['status'] !== 'cancelled' && $task['status'] !== 'completed'): ?>
                                         <?php 
                                         $show_struct_delivery = ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1);
                                         $task_type = ($task['order_type'] === 'structure' || $task['order_type'] === 'struct') ? 'struct' : 'design';
                                         ?>
-                                        <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px; display:flex; flex-direction:column; gap:20px; margin-top: 10px;">
+                                        <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px; display:flex; flex-direction:column; gap:20px; margin-top: 10px; text-align:left;">
                                             <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
                                             <p style="font-size:11px; color:#666; margin:-5px 0 5px 0;">※個別にアップロード可能です。差し替えた場合も履歴が残ります。</p>
                                             

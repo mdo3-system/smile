@@ -59,7 +59,7 @@ class StatusHelper
                 $has_sub_ball = false;
                 $has_delivered_task = false;
                 foreach ($tasks as $task) {
-                    if ($task['status'] === 'requested' || $task['status'] === 'accepted') {
+                    if ($task['status'] === 'requested' || $task['status'] === 'accepted' || $task['status'] === 'cb_requested') {
                         $has_sub_ball = true;
                     } elseif ($task['status'] === 'delivered') {
                         $has_delivered_task = true;

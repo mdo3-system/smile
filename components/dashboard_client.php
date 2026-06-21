@@ -16,8 +16,12 @@
                 </div>
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
-                    <strong>宛先名:</strong> <?= htmlspecialchars(!empty($project_info['billing_company_name']) ? $project_info['billing_company_name'] : $project_info['company_name'], ENT_QUOTES) ?> 様<br>
-                    <strong>お電話:</strong> <?= htmlspecialchars($project_info['client_phone'] ?: '未登録', ENT_QUOTES) ?><br>
+                    <strong>担当者:</strong> <?= htmlspecialchars($project_info['client_name'], ENT_QUOTES) ?> 様<br>
+                    <?php if (!empty($project_info['mobile_number'])): ?>
+                    <strong>📱 携帯番号:</strong> <a href="tel:<?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?>" style="color:#0056b3; font-weight:bold;"><?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?></a><br>
+                    <?php else: ?>
+                    <strong>📱 携帯番号:</strong> <span style="color:#e53e3e; font-size:11px;">未登録（「編集」ボタンからご登録ください）</span><br>
+                    <?php endif; ?>
                     <strong>地盤調査:</strong> <?= htmlspecialchars($project_info['soil_status'] ?? '未定', ENT_QUOTES) ?><br>
                     <?php
                         $status_labels = [
@@ -25,14 +29,14 @@
                             'contracted'     => '受注済',
                             'primary_prep'   => '一次回答準備中',
                             'structural_dwg' => '申請図書作成中',
-                            'submission'     => '提出済・確認中',
-                            'submitting'     => '申請中',
+                            'submission'     => '審査・待機',
+                            'submitting'     => '審査・待機',
                             'correction'     => '補正対応中',
                             'completed'      => '完了'
                         ];
                         $status_ja = $status_labels[$project_info['status']] ?? $project_info['status'];
                         $status_bg = '#007bff';
-                        if ($project_info['status'] === 'submitting') {
+                        if ($project_info['status'] === 'submitting' || $project_info['status'] === 'submission') {
                             $status_bg = '#64748b';
                         }
                     ?>
