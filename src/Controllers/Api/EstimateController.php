@@ -39,6 +39,42 @@ class EstimateController
                 $pdo->exec("ALTER TABLE estimates ADD COLUMN inputs_json TEXT NULL");
             } catch (\Exception $e) { /* ignore */ }
 
+            // 0. シミュレーターの入力値 (inputs_json) に基づき、案件の仕様フラグを同期
+            $inputs_json = $_POST['inputs_json'] ?? '{}';
+            $inputs = json_decode($inputs_json, true) ?: [];
+
+            $_POST['req_permit'] = !empty($inputs['est_active_permit']) ? 1 : 0;
+            $_POST['req_wall']   = !empty($inputs['est_active_wall']) ? 1 : 0;
+            $_POST['req_skin']   = !empty($inputs['est_active_skin']) ? 1 : 0;
+            $_POST['req_sky']    = !empty($inputs['est_active_sky']) ? 1 : 0;
+            
+            $req_opt_kisohari = 0;
+            if (!empty($inputs['est_active_permit'])) {
+                $req_opt_kisohari = 1;
+            } elseif (!empty($inputs['est_kisohari_wall'])) {
+                $req_opt_kisohari = 1;
+            }
+            $_POST['req_opt_kisohari'] = $req_opt_kisohari;
+
+            // projects テーブルの仕様フラグを更新
+            $stmtProjUpdate = $pdo->prepare("
+                UPDATE projects 
+                SET req_permit = :permit, 
+                    req_wall = :wall, 
+                    req_skin = :skin, 
+                    req_sky = :sky, 
+                    req_opt_kisohari = :kisohari 
+                WHERE id = :pid
+            ");
+            $stmtProjUpdate->execute([
+                'permit'   => $_POST['req_permit'],
+                'wall'     => $_POST['req_wall'],
+                'skin'     => $_POST['req_skin'],
+                'sky'      => $_POST['req_sky'],
+                'kisohari' => $_POST['req_opt_kisohari'],
+                'pid'      => $projectId
+            ]);
+
             // 1. まず見積もりデータをDBに保存（この時点ではDrive IDは無し）
             $service = $this->container->getEstimateCalculatorService();
             $success = $service->saveEstimate((int)$projectId, $_POST, null);

@@ -110,6 +110,32 @@ if ($action === 'update_schedule_override') {
             if ($step_idx == 1 && !empty($override_date)) {
                 $projectRepo->updatePrimaryDueDate($project_id, $override_date);
             }
+
+            // チャットへ自動通知メッセージを投稿
+            $base_days = getScheduleBaseDays($project_info);
+            if ($schedule_type === 'permit') {
+                $is_koyou_or_kisohari = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
+                $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+            } elseif ($schedule_type === 'wall') {
+                $steps = getScheduleStepsWall($base_days);
+            } elseif ($schedule_type === 'skin') {
+                $steps = getScheduleStepsSkin($base_days);
+            } else {
+                $steps = getScheduleStepsSky($base_days);
+            }
+            
+            $step_name = $steps[$step_idx]['name'] ?? "工程 #{$step_idx}";
+            $formatted_date = !empty($override_date) ? date('Y/m/d', strtotime($override_date)) : '未確定';
+            $chat_msg = "【スケジュール予定日更新】\n{$step_name} の予定日が「{$formatted_date}」に変更されました。";
+
+            $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'] ?? 1,
+                'thread' => $thread_type,
+                'msg' => $chat_msg
+            ]);
         }
     }
     try {

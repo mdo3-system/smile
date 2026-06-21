@@ -546,6 +546,53 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         }
     });
 
+    function renameDynamicSlot(divId, prefix, suffix = '') {
+        const div = document.getElementById(divId);
+        if (!div) return;
+        
+        const labelSpan = div.querySelector('.slot-label');
+        if (!labelSpan) return;
+        
+        let currentLabel = labelSpan.textContent;
+        if (suffix && currentLabel.endsWith(suffix)) {
+            currentLabel = currentLabel.substring(0, currentLabel.length - suffix.length).trim();
+        }
+        
+        const newLabel = prompt("追加図書スロット名を変更しますか？\n現在の名称: " + currentLabel, currentLabel);
+        if (newLabel === null) return;
+        const trimmed = newLabel.trim();
+        if (trimmed === "") {
+            alert("名称を入力してください。");
+            return;
+        }
+        if (trimmed === currentLabel) return;
+        
+        const newCatName = prefix + trimmed;
+        
+        if (document.getElementById("file_" + newCatName)) {
+            alert("その名称のスロットは既に存在します。");
+            return;
+        }
+        
+        labelSpan.textContent = trimmed + (suffix ? ' ' + suffix : '');
+        
+        const fileInput = div.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.name = `upload_files[${newCatName}][]`;
+            fileInput.id = `file_${newCatName}`;
+        }
+        
+        const checkbox = div.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.name = `included_in_other[${newCatName}]`;
+            checkbox.id = `chk_${newCatName}`;
+            checkbox.onchange = function() {
+                const targetInput = document.getElementById(`file_${newCatName}`);
+                if (targetInput) targetInput.required = !this.checked;
+            };
+        }
+    }
+
     function addDynamicCadSlot() {
         const label = prompt("追加する図面の名称を入力してください (例: 3F平面図, パースなど)");
         if (!label) return;
@@ -562,10 +609,16 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         const container = document.getElementById("dynamic_cad_slots_container");
         if (!container) return;
 
+        const divId = "dyn_slot_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         const div = document.createElement("div");
+        div.id = divId;
         div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
         div.innerHTML = `
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} (CAD) <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:bold; margin-bottom:5px;">
+                <span class="slot-label">${trimmedLabel} (CAD)</span>
+                <button type="button" onclick="renameDynamicSlot('${divId}', 'custom_', '(CAD)')" style="background:none; border:none; padding:0; cursor:pointer; font-size:11px;" title="名称変更">✏️</button>
+                <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
+            </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                 <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
@@ -592,10 +645,16 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         const container = document.getElementById("dynamic_soil_slots_container");
         if (!container) return;
 
+        const divId = "dyn_slot_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         const div = document.createElement("div");
+        div.id = divId;
         div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
         div.innerHTML = `
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:bold; margin-bottom:5px;">
+                <span class="slot-label">${trimmedLabel}</span>
+                <button type="button" onclick="renameDynamicSlot('${divId}', 'custom_soil_', '')" style="background:none; border:none; padding:0; cursor:pointer; font-size:11px;" title="名称変更">✏️</button>
+                <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
+            </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                 <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
@@ -622,10 +681,16 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         const container = document.getElementById("dynamic_precut_slots_container");
         if (!container) return;
 
+        const divId = "dyn_slot_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
         const div = document.createElement("div");
+        div.id = divId;
         div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
         div.innerHTML = `
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:bold; margin-bottom:5px;">
+                <span class="slot-label">${trimmedLabel}</span>
+                <button type="button" onclick="renameDynamicSlot('${divId}', 'custom_precut_', '')" style="background:none; border:none; padding:0; cursor:pointer; font-size:11px;" title="名称変更">✏️</button>
+                <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
+            </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                 <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">

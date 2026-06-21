@@ -172,18 +172,24 @@ class GoogleCalendarService
 
         foreach ($schedulesToRender as $sched) {
             $actuals = json_decode($project[$sched['actuals_col']] ?? '{}', true) ?: [];
+            $override_col = str_replace('actuals', 'overrides', $sched['actuals_col']);
+            $overrides = json_decode($project[$override_col] ?? '{}', true) ?: [];
             $calc_date = $primaryDueDate;
 
             foreach ($sched['steps'] as $idx => $step) {
                 if ($idx == 0) continue; // Skip initial doc reception (day 0)
 
                 if ($idx == 1) {
-                    $calc_date = $primaryDueDate;
+                    $calc_date = $overrides[$idx] ?? $primaryDueDate;
                 } else {
                     if ($step['type'] == 'biz') {
                         $calc_date = addBusinessDays($calc_date, $step['days']);
                     } elseif ($step['type'] == 'cal') {
                         $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
+                    }
+                    
+                    if (!empty($overrides[$idx])) {
+                        $calc_date = $overrides[$idx];
                     }
                 }
 

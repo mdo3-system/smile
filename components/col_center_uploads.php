@@ -159,9 +159,21 @@
             
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <?php foreach ($categories as $cat => $label): ?>
-                    <?php $history = $files_by_cat[$cat] ?? []; ?>
+                    <?php 
+                    $history = $files_by_cat[$cat] ?? []; 
+                    $clean_label = $label;
+                    if (strpos($cat, 'custom_') === 0) {
+                        $parts = explode('_', $cat);
+                        $clean_label = end($parts);
+                    }
+                    ?>
                     <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:8px;">
-                        <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px;"><?= $label ?></div>
+                        <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px; display:flex; align-items:center; gap:5px;">
+                            <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
+                            <?php if ($is_admin && strpos($cat, 'custom_') === 0): ?>
+                                <button type="button" onclick="renameCustomSlot('<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($clean_label, ENT_QUOTES) ?>', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>')" style="background:none; border:none; padding:0; cursor:pointer; font-size:11px;" title="名称変更">✏️</button>
+                            <?php endif; ?>
+                        </div>
                         
                         <?php 
                         $actual_history = [];
@@ -346,4 +358,40 @@
         endforeach; 
     ?>
 </div>
+
+<script>
+function renameCustomSlot(oldCategory, currentLabel, activeTab) {
+    const newLabel = prompt("図書スロット名を変更しますか？\n現在の名称: " + currentLabel, currentLabel);
+    if (newLabel === null) return; // キャンセル
+    const trimmed = newLabel.trim();
+    if (trimmed === "") {
+        alert("名称を入力してください。");
+        return;
+    }
+    if (trimmed === currentLabel) return; // 変更なし
+    
+    // フォームを動的生成して送信
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'project_detail.php?id=<?= $project_id ?>';
+    
+    const fields = {
+        'action': 'rename_custom_slot',
+        'old_category': oldCategory,
+        'new_label': trimmed,
+        'tab': activeTab
+    };
+    
+    for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    }
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
 

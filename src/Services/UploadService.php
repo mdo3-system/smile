@@ -760,4 +760,74 @@ class UploadService
             throw $e;
         }
     }
+
+    /**
+     * カスタム図書スロット名称変更 (管理者用)
+     */
+    public function renameCustomSlot(int $projectId, string $oldCategory, string $newLabel, string $tab, int $userId): bool
+    {
+        if (empty($newLabel) || strpos($oldCategory, 'custom_') !== 0) {
+            return false;
+        }
+
+        $prefix = 'custom_';
+        if (strpos($oldCategory, 'custom_permit_') === 0) {
+            $prefix = 'custom_permit_';
+        } elseif (strpos($oldCategory, 'custom_soil_') === 0) {
+            $prefix = 'custom_soil_';
+        } elseif (strpos($oldCategory, 'custom_precut_') === 0) {
+            $prefix = 'custom_precut_';
+        } elseif (strpos($oldCategory, 'custom_wall_') === 0) {
+            $prefix = 'custom_wall_';
+        } elseif (strpos($oldCategory, 'custom_skin_') === 0) {
+            $prefix = 'custom_skin_';
+        } elseif (strpos($oldCategory, 'custom_sky_') === 0) {
+            $prefix = 'custom_sky_';
+        }
+
+        $newCategory = $prefix . $newLabel;
+
+        // すでに存在するカテゴリ名かどうかチェック
+        $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtCheck->execute(['pid' => $projectId, 'cat' => $newCategory]);
+        if ($stmtCheck->fetchColumn() > 0) {
+            throw new Exception("既に同じ名称の図書スロットが存在します。");
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmtUpdate = $this->pdo->prepare("
+                UPDATE project_files 
+                SET file_category = :new_cat 
+                WHERE project_id = :pid AND file_category = :old_cat
+            ");
+            $stmtUpdate->execute([
+                'pid' => $projectId,
+                'old_cat' => $oldCategory,
+                'new_cat' => $newCategory
+            ]);
+
+            // チャットへ通知
+            $oldLabel = substr($oldCategory, strlen($prefix));
+            $uploaderRoleName = '設計担当';
+            $chatMsg = "【図書スロット名称変更】\n{$uploaderRoleName}が図書スロット「{$oldLabel}」の名称を「{$newLabel}」に変更しました。";
+            $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+
+            $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $projectId,
+                'sid' => $userId,
+                'thread' => $threadType,
+                'msg' => $chatMsg
+            ]);
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
 }

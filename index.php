@@ -128,7 +128,9 @@ $status_labels = [
                 <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
                 <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
                 <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
-                <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
+                <?php if (($_SESSION['role'] ?? '') !== 'client'): ?>
+                    <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
+                <?php endif; ?>
                 <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
             </div>
         <?php endforeach; ?>

@@ -391,6 +391,8 @@
 
             foreach ($schedulesToRender as $scheduleItem):
                 $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
+                $override_col = str_replace('actuals', 'overrides', $scheduleItem['actuals_col']);
+                $schedule_overrides = json_decode($project_info[$override_col] ?? '{}', true) ?: [];
             ?>
             <div class="box" style="background:#f0f8ff; border-color:#cce5ff;">
                 <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 <?= htmlspecialchars($scheduleItem['title']) ?> スケジュール</h3>
@@ -426,15 +428,22 @@
                             if ($idx == 0) {
                                 $date_str = '<span style="color:#64748b;">-</span>';
                             } elseif ($idx == 1) {
-                                $calc_date = $primary_due_date;
-                                $date_str = '<strong>' . date('m/d', strtotime($primary_due_date)) . '</strong>';
+                                $calc_date = $schedule_overrides[$idx] ?? $primary_due_date;
+                                $date_str = '<strong>' . date('m/d', strtotime($calc_date)) . '</strong>';
                             } else {
                                 if ($step['type'] == 'biz') {
                                     $calc_date = addBusinessDays($calc_date, $step['days']);
                                 } elseif ($step['type'] == 'cal') {
                                     $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
                                 }
-                                $date_str = date('m/d', strtotime($calc_date));
+                                
+                                // この工程に予定日の上書きがあるかチェック
+                                if (!empty($schedule_overrides[$idx])) {
+                                    $calc_date = $schedule_overrides[$idx];
+                                    $date_str = '<span style="color:#2563eb; font-weight:bold;">' . date('m/d', strtotime($calc_date)) . ' (変)</span>';
+                                } else {
+                                    $date_str = date('m/d', strtotime($calc_date));
+                                }
                             }
                         }
 
