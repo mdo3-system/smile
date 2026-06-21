@@ -351,10 +351,11 @@
 
             $schedulesToRender = [];
 
-            if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
+            $is_koyou_or_kisohari = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
+            if ($is_koyou_or_kisohari) {
                 $schedulesToRender[] = [
                     'title' => '許容応力度・基礎横架材計算',
-                    'steps' => getScheduleSteps($base_days),
+                    'steps' => getScheduleSteps($base_days, true),
                     'actuals_col' => 'schedule_actuals'
                 ];
             }
@@ -383,7 +384,7 @@
             if (empty($schedulesToRender)) {
                 $schedulesToRender[] = [
                     'title' => '構造計算・基本スケジュール',
-                    'steps' => getScheduleSteps($base_days),
+                    'steps' => getScheduleSteps($base_days, false),
                     'actuals_col' => 'schedule_actuals'
                 ];
             }

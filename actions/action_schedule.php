@@ -167,7 +167,8 @@ if ($action === 'update_schedule_actual') {
             if (!empty($actual_date)) {
                 $base_days = getScheduleBaseDays($project_info);
                 if ($schedule_type === 'permit') {
-                    $steps = getScheduleSteps($base_days);
+                    $is_koyou_or_kisohari = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
+                    $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
                 } elseif ($schedule_type === 'wall') {
                     $steps = getScheduleStepsWall($base_days);
                 } elseif ($schedule_type === 'skin') {

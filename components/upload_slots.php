@@ -125,6 +125,29 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         <?php if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり'): ?>
         <?= renderUploadSlot('地盤改良設計書', 'soil_impr', false, '地盤改良がある場合') ?>
         <?php endif; ?>
+        
+        <!-- 動的地盤スロット追加先 -->
+        <div id="dynamic_soil_slots_container"></div>
+        <div style="text-align: right; margin-top: 10px; margin-bottom: 10px;">
+            <button type="button" onclick="addDynamicSoilSlot()" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">➕ 別の地盤関連図書スロットを追加</button>
+        </div>
+    </div>
+    <?php if ($is_permit || $is_wall || $is_kisohari): ?>
+    <!-- ============================================
+         【後出し可】プレカット図等
+    ============================================ -->
+    <div style="margin-bottom:15px; border:1px solid #10b981; padding:12px; border-radius:6px; background:#e6f4ea;">
+        <strong style="display:block; margin-bottom:8px; color:#137333;">🟢 【後出し可】プレカット図等</strong>
+        <div style="font-size:11px; color:#6b7280; margin-bottom:10px;">
+            プレカット図面等の資料をアップロードしてください。
+        </div>
+        <?= renderUploadSlot('プレカット図等', 'pdf_precut', false) ?>
+        
+        <!-- 動的プレカットスロット追加先 -->
+        <div id="dynamic_precut_slots_container"></div>
+        <div style="text-align: right; margin-top: 10px;">
+            <button type="button" onclick="addDynamicPrecutSlot()" style="background:#10b981; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">➕ 別のプレカット関連図書スロットを追加</button>
+        </div>
     </div>
     <?php endif; ?>
 
@@ -348,6 +371,12 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
                 <label style="font-weight:bold; color:#374151;">耐力壁仕様</label>
                 <input type="text" name="spec_wall" value="<?= htmlspecialchars($wall_json['type'] ?? '', ENT_QUOTES) ?>" placeholder="例: 構造用合板 9mm+EXハイパー等" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:11px;">
             </div>
+            <div style="grid-column: 1 / -1; margin-top: 10px;">
+                <?= renderUploadSlot('大臣認定耐力壁の資料', 'spec_wall_doc', false, '大臣認定耐力壁を使用する場合の認定書など') ?>
+            </div>
+            <div style="grid-column: 1 / -1; margin-top: 10px;">
+                <?= renderUploadSlot('金物資料', 'spec_hw_doc', false, '専用金物や認定金物を使用する場合の資料') ?>
+            </div>
         </div>
     </div>
     
@@ -536,6 +565,66 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
         div.innerHTML = `
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} (CAD) <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
+                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
+                <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
+                    <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
+                </label>
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    function addDynamicSoilSlot() {
+        const label = prompt("追加する地盤関連図書の名称を入力してください (例: 地盤補強工事写真, 報告書その2など)");
+        if (!label) return;
+        const trimmedLabel = label.trim();
+        if (trimmedLabel === "") return;
+
+        const catName = "custom_soil_" + trimmedLabel;
+
+        if (document.getElementById("file_" + catName)) {
+            alert("その名称のスロットは既に存在します。");
+            return;
+        }
+
+        const container = document.getElementById("dynamic_soil_slots_container");
+        if (!container) return;
+
+        const div = document.createElement("div");
+        div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
+        div.innerHTML = `
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
+                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
+                <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
+                    <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
+                </label>
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    function addDynamicPrecutSlot() {
+        const label = prompt("追加するプレカット関連図書の名称を入力してください (例: プレカット計算書, 金物配置図など)");
+        if (!label) return;
+        const trimmedLabel = label.trim();
+        if (trimmedLabel === "") return;
+
+        const catName = "custom_precut_" + trimmedLabel;
+
+        if (document.getElementById("file_" + catName)) {
+            alert("その名称のスロットは既に存在します。");
+            return;
+        }
+
+        const container = document.getElementById("dynamic_precut_slots_container");
+        if (!container) return;
+
+        const div = document.createElement("div");
+        div.style.cssText = "margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;";
+        div.innerHTML = `
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">${trimmedLabel} <span style="color:#d97706; font-size:10px;">(後出し可)</span></label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                 <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">

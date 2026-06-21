@@ -12,7 +12,7 @@
         $schedulesToRender[] = [
             'title' => '許容応力度・基礎横架材計算',
             'type' => 'permit',
-            'steps' => getScheduleSteps($base_days),
+            'steps' => getScheduleSteps($base_days, true),
             'actuals_col' => 'schedule_actuals'
         ];
     }

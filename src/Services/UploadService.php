@@ -252,7 +252,6 @@ class UploadService
             throw new Exception("ファイルが選択されていないか、アップロードエラーです。");
         }
 
-        $this->pdo->beginTransaction();
         try {
             $fileName = '';
             $driveFileId = '';
@@ -266,6 +265,8 @@ class UploadService
                 require_once __DIR__ . '/../../google_drive_client.php';
                 $driveFileId = upload_to_google_drive($tmpName, $fileName, $mimeType, $projectId, $this->pdo);
             }
+
+            $this->pdo->beginTransaction();
 
             // 1. 既存の同カテゴリのファイルを最新フラグから外す
             $stmtDisable = $this->pdo->prepare("
@@ -454,8 +455,8 @@ class UploadService
         $uploadedCats = [];
         $hasReplace = false;
 
-        $this->pdo->beginTransaction();
         try {
+            $uploadData = [];
             foreach ($bulkFiles['name'] as $cat => $fname) {
                 $error  = $bulkFiles['error'][$cat] ?? UPLOAD_ERR_NO_FILE;
                 $isInc = isset($bulkIncluded[$cat]) && $bulkIncluded[$cat] == '1';
@@ -480,6 +481,22 @@ class UploadService
                     $mimeType = $bulkFiles['type'][$cat];
                     $driveId  = upload_to_google_drive($tmpName, $fileName, $mimeType, $projectId, $this->pdo);
                 }
+
+                $uploadData[$cat] = [
+                    'fileName' => $fileName,
+                    'driveId' => $driveId,
+                    'isReplace' => $isReplace,
+                    'maxVer' => $maxVer
+                ];
+            }
+
+            $this->pdo->beginTransaction();
+
+            foreach ($uploadData as $cat => $ud) {
+                $fileName = $ud['fileName'];
+                $driveId = $ud['driveId'];
+                $isReplace = $ud['isReplace'];
+                $maxVer = $ud['maxVer'];
 
                 // 既存を履歴へ
                 $this->pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat")
@@ -532,7 +549,7 @@ class UploadService
             }
 
             // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
-            if ($fileCategory === 'correction_notice') {
+            if (in_array('correction_notice', $uploadedCats)) {
                 $stmtCheckStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :id");
                 $stmtCheckStatus->execute(['id' => $projectId]);
                 $currentStatus = $stmtCheckStatus->fetchColumn();
@@ -580,7 +597,7 @@ class UploadService
         }
 
         $prefix = 'custom_';
-        if ($sectionType === '専門図書' && in_array($tab, ['wall', 'skin', 'sky'])) {
+        if ($sectionType === '専門図書' && in_array($tab, ['permit', 'wall', 'skin', 'sky'])) {
             $prefix = 'custom_' . $tab . '_';
         }
         $fileCategory = $prefix . $customLabel;

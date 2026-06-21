@@ -137,9 +137,10 @@ class GoogleCalendarService
         $base_days = getScheduleBaseDays($project);
 
         $schedulesToRender = [];
-        if (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1) {
+        $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
+        if ($is_koyou_or_kisohari) {
             $schedulesToRender[] = [
-                'steps' => getScheduleSteps($base_days),
+                'steps' => getScheduleSteps($base_days, true),
                 'actuals_col' => 'schedule_actuals'
             ];
         }
@@ -164,7 +165,7 @@ class GoogleCalendarService
 
         if (empty($schedulesToRender)) {
             $schedulesToRender[] = [
-                'steps' => getScheduleSteps($base_days),
+                'steps' => getScheduleSteps($base_days, false),
                 'actuals_col' => 'schedule_actuals'
             ];
         }

@@ -25,9 +25,18 @@
     if (isset($files_by_cat) && is_array($files_by_cat)) {
         foreach ($files_by_cat as $cat => $files) {
             if (strpos($cat, 'custom_') === 0) {
-                // custom_skin_, custom_sky_, custom_wall_ で始まるものは専門図書なので共通からは除外
-                if (strpos($cat, 'custom_skin_') !== 0 && strpos($cat, 'custom_sky_') !== 0 && strpos($cat, 'custom_wall_') !== 0) {
-                    $label = substr($cat, 7);
+                // 管理者（$is_admin）の場合はすべてのカスタムスロットを共通図書枠に表示（常時公開トグルを操作できるようにするため）。
+                // 依頼主の場合は、専門図書以外のカスタムスロットのみを表示。
+                if ($is_admin || (
+                    strpos($cat, 'custom_skin_') !== 0 && 
+                    strpos($cat, 'custom_sky_') !== 0 && 
+                    strpos($cat, 'custom_wall_') !== 0 &&
+                    strpos($cat, 'custom_permit_') !== 0 &&
+                    strpos($cat, 'custom_soil_') !== 0 &&
+                    strpos($cat, 'custom_precut_') !== 0
+                )) {
+                    $parts = explode('_', $cat);
+                    $label = end($parts);
                     $common_docs[$cat] = $label;
                 }
             }
@@ -47,6 +56,26 @@
         $specialized_docs['pdf_precut'] = 'プレカット図等';
         if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
             $specialized_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';
+        }
+        // 許容応力度・地盤・プレカット用のカスタム図書を抽出
+        if (isset($files_by_cat) && is_array($files_by_cat)) {
+            foreach ($files_by_cat as $cat => $files) {
+                if (strpos($cat, 'custom_permit_') === 0) {
+                    $parts = explode('_', $cat);
+                    $label = end($parts);
+                    $specialized_docs[$cat] = $label;
+                }
+                if (strpos($cat, 'custom_soil_') === 0) {
+                    $parts = explode('_', $cat);
+                    $label = end($parts);
+                    $specialized_docs[$cat] = "地盤関連: " . $label;
+                }
+                if (strpos($cat, 'custom_precut_') === 0) {
+                    $parts = explode('_', $cat);
+                    $label = end($parts);
+                    $specialized_docs[$cat] = "ﾌﾟﾚｶｯﾄ関連: " . $label;
+                }
+            }
         }
     } elseif ($active_tab === 'wall') {
         $specialized_docs['pdf_precut'] = 'プレカット図等';
@@ -229,7 +258,7 @@
                 if (!$is_admin) {
                     if ($section_title === '共通図書') {
                         $show_add_slot = true;
-                    } elseif ($section_title === '専門図書' && in_array($active_tab, ['wall', 'skin', 'sky'])) {
+                    } elseif ($section_title === '専門図書' && in_array($active_tab, ['permit', 'wall', 'skin', 'sky'])) {
                         $show_add_slot = true;
                     }
                 }

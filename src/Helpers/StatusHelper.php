@@ -83,41 +83,107 @@ class StatusHelper
             }
 
             if (!$res) {
-                // If no active subcontractor tasks are in progress, let's look at project status
-                if ($status === 'submission') {
-                    $res = [
-                        'ball_owner' => 'shared_waiting',
-                        'label' => '審査待ち (共通)',
-                        'color' => '#f59e0b' // Amber
-                    ];
+                // 設計進行中（かつ協力業者ボールでも納品検収中でもない）の場合、スケジュール工程を走査して判定する
+                if ($status !== 'quote_req' && $status !== 'completed') {
+                    // スケジュール実績と定義を取得して未完了の最初のステップを特定
+                    require_once __DIR__ . '/../../functions.php';
+                    $base_days = getScheduleBaseDays($project);
+                    
+                    $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
+                    $req_wall = (int)($project['req_wall'] ?? 0);
+                    $req_skin = (int)($project['req_skin'] ?? 0);
+                    $req_sky = (int)($project['req_sky'] ?? 0);
+                    
+                    $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+                    $actuals_col = 'schedule_actuals';
+                    
+                    if ($req_wall) {
+                        $steps = getScheduleStepsWall($base_days);
+                        $actuals_col = 'schedule_actuals_wall';
+                    } elseif ($req_skin) {
+                        $steps = getScheduleStepsSkin($base_days);
+                        $actuals_col = 'schedule_actuals_skin';
+                    } elseif ($req_sky) {
+                        $steps = getScheduleStepsSky($base_days);
+                        $actuals_col = 'schedule_actuals_sky';
+                    }
+                    
+                    $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
+                    $first_uncompleted_idx = null;
+                    
+                    foreach ($steps as $idx => $step) {
+                        if ($idx == 0) continue; // 「設計図書の受領」は飛ばす
+                        if (empty($actuals[$idx])) {
+                            $first_uncompleted_idx = $idx;
+                            break;
+                        }
+                    }
+                    
+                    if ($first_uncompleted_idx !== null) {
+                        $step = $steps[$first_uncompleted_idx];
+                        $actor = $step['actor'];
+                        $name = $step['name'];
+                        
+                        if ($actor === 'designer') {
+                            $res = [
+                                'ball_owner' => 'admin',
+                                'label' => $name . ' (管理者ボール)',
+                                'color' => '#3b82f6'
+                            ];
+                        } elseif ($actor === 'client') {
+                            $res = [
+                                'ball_owner' => 'client',
+                                'label' => $name . ' (依頼主ボール)',
+                                'color' => '#e67e22'
+                            ];
+                        } else {
+                            // 審査待機など
+                            $res = [
+                                'ball_owner' => 'shared_waiting',
+                                'label' => $name . ' (共通)',
+                                'color' => '#f59e0b'
+                            ];
+                        }
+                    }
                 }
-                elseif ($status === 'submitting') {
-                    $res = [
-                        'ball_owner' => 'shared_waiting',
-                        'label' => '申請中',
-                        'color' => '#64748b'
-                    ];
-                }
-                elseif ($status === 'primary_prep' || $status === 'structural_dwg' || $status === 'correction') {
-                    $res = [
-                        'ball_owner' => 'admin',
-                        'label' => '図書作成中 (管理者ボール)',
-                        'color' => '#3b82f6' // Blue
-                    ];
-                }
-                elseif ($status === 'contracted') {
-                    $res = [
-                        'ball_owner' => 'admin',
-                        'label' => '図書作成中 (管理者ボール)',
-                        'color' => '#3b82f6'
-                    ];
-                }
-                else {
-                    $res = [
-                        'ball_owner' => 'admin',
-                        'label' => '図書作成中 (管理者ボール)',
-                        'color' => '#3b82f6'
-                    ];
+                
+                // フォールバック
+                if (!$res) {
+                    if ($status === 'submission') {
+                        $res = [
+                            'ball_owner' => 'shared_waiting',
+                            'label' => '審査待ち (共通)',
+                            'color' => '#f59e0b' // Amber
+                        ];
+                    }
+                    elseif ($status === 'submitting') {
+                        $res = [
+                            'ball_owner' => 'shared_waiting',
+                            'label' => '申請中',
+                            'color' => '#64748b'
+                        ];
+                    }
+                    elseif ($status === 'primary_prep' || $status === 'structural_dwg' || $status === 'correction') {
+                        $res = [
+                            'ball_owner' => 'admin',
+                            'label' => '図書作成中 (管理者ボール)',
+                            'color' => '#3b82f6' // Blue
+                        ];
+                    }
+                    elseif ($status === 'contracted') {
+                        $res = [
+                            'ball_owner' => 'admin',
+                            'label' => '図書作成中 (管理者ボール)',
+                            'color' => '#3b82f6'
+                        ];
+                    }
+                    else {
+                        $res = [
+                            'ball_owner' => 'admin',
+                            'label' => '図書作成中 (管理者ボール)',
+                            'color' => '#3b82f6'
+                        ];
+                    }
                 }
             }
         }

@@ -3,10 +3,7 @@
 
 // 仕様保存・一括ファイルアップロード処理
 if ($action === 'save_client_specs_draft' || $action === 'request_design_start' || $action === 'replace_documents' || $action === 'update_specs_detail') {
-    $pdo->beginTransaction();
     try {
-
-
         // Save JSON specs
         $buildSpecString = function($prefix) {
             $type = trim($_POST[$prefix . '_type'] ?? '');
@@ -56,6 +53,91 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             'type' => $_POST['spec_kanamono'] ?? ''
         ];
 
+        if ($action === 'update_specs_detail') {
+            $pdo->beginTransaction();
+            $stmtSpecs = $pdo->prepare("
+                UPDATE project_specs 
+                SET wood_details = :wood, wall_details = :wall, hardware_details = :hw, client_notes_extra = :notes, soil_status = :soil
+                WHERE project_id = :pid
+            ");
+            $stmtSpecs->execute([
+                'wood' => json_encode($wood_details, JSON_UNESCAPED_UNICODE),
+                'wall' => json_encode($wall_details, JSON_UNESCAPED_UNICODE),
+                'hw' => json_encode($hardware_details, JSON_UNESCAPED_UNICODE),
+                'notes' => trim($_POST['client_notes_extra'] ?? ''),
+                'soil' => $_POST['soil_status'] ?? null,
+                'pid' => $project_id
+            ]);
+            $pdo->commit();
+            header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+        }
+
+        // Process multi file uploads (トランザクションの前にアップロードを完了させる)
+        require_once 'google_drive_client.php';
+        $files_to_insert = [];
+
+        // 個別ファイルアップロード (配列対応)
+        if (!empty($_FILES['upload_files']['name'])) {
+            foreach ($_FILES['upload_files']['name'] as $cat => $file_names) {
+                if (is_array($file_names)) {
+                    foreach ($file_names as $idx => $file_name) {
+                        if ($_FILES['upload_files']['error'][$cat][$idx] === UPLOAD_ERR_OK && $file_name !== '') {
+                            $tmp_name = $_FILES['upload_files']['tmp_name'][$cat][$idx];
+                            $mime_type = $_FILES['upload_files']['type'][$cat][$idx];
+                            try {
+                                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
+                                $files_to_insert[] = [
+                                    'cat' => $cat,
+                                    'name' => $file_name,
+                                    'drive_id' => $drive_file_id,
+                                    'reason' => $_POST['update_reason'][$cat] ?? null
+                                ];
+                            } catch (Exception $e) {
+                                error_log("Multi upload error (Array): " . $e->getMessage());
+                                throw $e;
+                            }
+                        }
+                    }
+                } else {
+                    $file_name = $file_names;
+                    if ($_FILES['upload_files']['error'][$cat] === UPLOAD_ERR_OK && $file_name !== '') {
+                        $tmp_name = $_FILES['upload_files']['tmp_name'][$cat];
+                        $mime_type = $_FILES['upload_files']['type'][$cat];
+                        try {
+                            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
+                            $files_to_insert[] = [
+                                'cat' => $cat,
+                                'name' => $file_name,
+                                'drive_id' => $drive_file_id,
+                                'reason' => $_POST['update_reason'][$cat] ?? null
+                            ];
+                        } catch (Exception $e) {
+                            error_log("Multi upload error (Single): " . $e->getMessage());
+                            throw $e;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle "Included in another file" checkboxes
+        $included_to_insert = [];
+        if (!empty($_POST['included_in_other'])) {
+            foreach ($_POST['included_in_other'] as $cat => $val) {
+                if ($val == '1') {
+                    $included_to_insert[] = [
+                        'cat' => $cat,
+                        'name' => '【他ファイルに記載】',
+                        'drive_id' => null,
+                        'reason' => $_POST['update_reason'][$cat] ?? null
+                    ];
+                }
+            }
+        }
+
+        // --- ここからDB書き込みトランザクション開始 ---
+        $pdo->beginTransaction();
+
         $stmtSpecs = $pdo->prepare("
             UPDATE project_specs 
             SET wood_details = :wood, wall_details = :wall, hardware_details = :hw, client_notes_extra = :notes, soil_status = :soil
@@ -70,96 +152,35 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             'pid' => $project_id
         ]);
 
-        if ($action === 'update_specs_detail') {
-            $pdo->commit();
-            header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
-        }
-
-        // Process multi file uploads
-        require_once 'google_drive_client.php';
-        
-        // 既存アップロード済の同カテゴリを最新(is_latest=1)から外すためのユーティリティ
         $disableOldFiles = function($cat) use ($pdo, $project_id) {
             $stmt = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
             $stmt->execute(['pid' => $project_id, 'cat' => $cat]);
         };
 
-        // 個別ファイルアップロード (配列対応)
-        if (!empty($_FILES['upload_files']['name'])) {
-            foreach ($_FILES['upload_files']['name'] as $cat => $file_names) {
-                if (is_array($file_names)) {
-                    // 複数ファイル (配列)
-                    // アップロードがある場合のみ既存ファイルを非アクティブにする
-                    $has_upload = false;
-                    foreach ($file_names as $idx => $f_name) {
-                        if ($_FILES['upload_files']['error'][$cat][$idx] === UPLOAD_ERR_OK && $f_name !== '') {
-                            $has_upload = true;
-                            break;
-                        }
-                    }
-                    if ($has_upload) {
-                        $disableOldFiles($cat);
-                    }
-
-                    foreach ($file_names as $idx => $file_name) {
-                        if ($_FILES['upload_files']['error'][$cat][$idx] === UPLOAD_ERR_OK && $file_name !== '') {
-                            $tmp_name = $_FILES['upload_files']['tmp_name'][$cat][$idx];
-                            $mime_type = $_FILES['upload_files']['type'][$cat][$idx];
-                            try {
-                                $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
-                                
-                                // Get version
-                                $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-                                $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
-                                $max_version = (int)$stmtVersion->fetchColumn();
-                                
-                                $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)");
-                                $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1, 'reason' => $_POST['update_reason'][$cat] ?? null]);
-                            } catch (Exception $e) {
-                                error_log("Multi upload error (Array): " . $e->getMessage());
-                            }
-                        }
-                    }
-                } else {
-                    // 単一ファイル
-                    $file_name = $file_names;
-                    if ($_FILES['upload_files']['error'][$cat] === UPLOAD_ERR_OK && $file_name !== '') {
-                        $tmp_name = $_FILES['upload_files']['tmp_name'][$cat];
-                        $mime_type = $_FILES['upload_files']['type'][$cat];
-                        try {
-                            $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
-                            $disableOldFiles($cat);
-                            
-                            $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-                            $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
-                            $max_version = (int)$stmtVersion->fetchColumn();
-                            
-                            $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)");
-                            $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1, 'reason' => $_POST['update_reason'][$cat] ?? null]);
-                        } catch (Exception $e) {
-                            error_log("Multi upload error (Single): " . $e->getMessage());
-                        }
-                    }
-                }
+        $all_inserts = array_merge($files_to_insert, $included_to_insert);
+        $disabled_cats = [];
+        foreach ($all_inserts as $ins) {
+            $cat = $ins['cat'];
+            if (!in_array($cat, $disabled_cats)) {
+                $disableOldFiles($cat);
+                $disabled_cats[] = $cat;
             }
         }
 
-        // Handle "Included in another file" checkboxes
-        if (!empty($_POST['included_in_other'])) {
-            foreach ($_POST['included_in_other'] as $cat => $val) {
-                if ($val == '1') {
-                    $disableOldFiles($cat);
-                    $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-                    $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
-                    $max_version = (int)$stmtVersion->fetchColumn();
-                    
-                    $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, NULL, :ver, 1, :reason)");
-                    $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => '【他ファイルに記載】', 'ver' => $max_version + 1, 'reason' => $_POST['update_reason'][$cat] ?? null]);
-                }
-            }
+        foreach ($all_inserts as $ins) {
+            $cat = $ins['cat'];
+            $file_name = $ins['name'];
+            $drive_file_id = $ins['drive_id'];
+            $reason = $ins['reason'];
+
+            $stmtVersion = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+            $stmtVersion->execute(['pid' => $project_id, 'cat' => $cat]);
+            $max_version = (int)$stmtVersion->fetchColumn();
+
+            $stmtInsert = $pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)");
+            $stmtInsert->execute(['pid' => $project_id, 'cat' => $cat, 'name' => $file_name, 'drive_id' => $drive_file_id, 'ver' => $max_version + 1, 'reason' => $reason]);
         }
 
-        // Only execute validation and status change if action is request_design_start
         if ($action === 'replace_documents') {
             $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
             $stmtMsg->execute([
@@ -169,6 +190,8 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             ]);
         }
 
+        $all_docs_ready = false;
+        $missing_str = '';
         if ($action === 'request_design_start') {
             // Backend validation for drawing change report
             $drawing_changed = $_POST['drawing_changed'] ?? '';
@@ -275,24 +298,32 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                 'sid' => $_SESSION['user_id'],
                 'msg' => $notify_msg
             ]);
-
-            // 管理者へメール通知
-            $project_name = $project_info['project_name'] ?? '案件名未定';
-            $subject = "【設計依頼】案件「{$project_name}」の設計開始が依頼されました";
-            if ($all_docs_ready) {
-                $body = "案件「{$project_name}」にて、正式依頼が受理され、すべての必要図書が提出されました。\n\n";
-                $body .= "以下のURLよりダッシュボードにログインし、図書を確認して一次回答期日を設定してください。\n";
-            } else {
-                $body = "案件「{$project_name}」にて、正式依頼が受理されました（CADデータ確認済）。\n未提出図書があります：{$missing_str}\n\n";
-                $body .= "未提出図書がすべて揃った時点が一次回答の起算日となります。\n";
-            }
-            $body .= "https://system.thanks.work/project_detail.php?id={$project_id}\n";
-            sendSystemEmail('info@thanks.work', $subject, $body);
         }
 
         $pdo->commit();
+
+        // --- コミット完了後にメール通知を行う (Race Condition 防止) ---
+        if ($action === 'request_design_start') {
+            try {
+                $project_name = $project_info['project_name'] ?? '案件名未定';
+                $subject = "【設計依頼】案件「{$project_name}」の設計開始が依頼されました";
+                if ($all_docs_ready) {
+                    $body = "案件「{$project_name}」にて、正式依頼が受理され、すべての必要図書が提出されました。\n\n";
+                    $body .= "以下のURLよりダッシュボードにログインし、図書を確認して一次回答期日を設定してください。\n";
+                } else {
+                    $body = "案件「{$project_name}」にて、正式依頼が受理されました（CADデータ確認済）。\n未提出図書があります：{$missing_str}\n\n";
+                    $body .= "未提出図書がすべて揃った時点が一次回答の起算日となります。\n";
+                }
+                $body .= "https://system.thanks.work/project_detail.php?id={$project_id}\n";
+                sendSystemEmail('info@thanks.work', $subject, $body);
+            } catch (Exception $mailEx) {
+                error_log("Email send failed after commit: " . $mailEx->getMessage());
+            }
+        }
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         die("処理に失敗しました: " . $e->getMessage());
     }
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;

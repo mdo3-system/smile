@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.4.12');
+define('SYSTEM_VERSION', 'v1.4.13');
 
 
 // ==========================================
@@ -47,6 +47,9 @@ $file_categories_left_cad = [
     'app_doc' => '確認申請書（2〜5面）',
     'soil_report' => '地盤調査報告書',
     'soil_impr' => '地盤改良設計書',
+    'pdf_precut' => 'プレカット図等',
+    'spec_wall_doc' => '大臣認定耐力壁の資料',
+    'spec_hw_doc' => '金物資料',
     'road_data' => '道路の資料（天空率用）',
     'true_north' => '真北の資料（天空率用）',
     'spec_doc' => '仕様書（外皮用）',
@@ -105,15 +108,17 @@ function getScheduleBaseDays(array $project_info): int {
 /**
  * スケジュールステップ定義を返す（FIXED_LOGIC.md §5 準拠）
  * @param int $base_days 一次回答までの営業日数
+ * @param bool $is_koyou_or_kisohari 許容応力度設計または基礎・横架材計算であるか
  */
-function getScheduleSteps(int $base_days): array {
+function getScheduleSteps(int $base_days, bool $is_koyou_or_kisohari = false): array {
+    $dwg_days = $is_koyou_or_kisohari ? 7 : 4;
     return [
         ['name' => '設計図書の受領',                 'actor' => 'client',   'desc' => '開始時',                    'days' => 0,         'type' => 'base'],
         ['name' => '着手基準日 (一次回答)',           'actor' => 'designer', 'desc' => "{$base_days}営業日程度",    'days' => $base_days,'type' => 'biz'],
         ['name' => '一次回答（構造計算・図面初回提示）', 'actor' => 'designer', 'desc' => '着手から7〜10営業日',       'days' => 10,        'type' => 'biz'],
         ['name' => '一次回答CB',                     'actor' => 'client',   'desc' => '初回提示から4営業日',        'days' => 4,         'type' => 'biz'],
-        ['name' => '構造図UP',                       'actor' => 'designer', 'desc' => '一次回答CBから4営業日',      'days' => 4,         'type' => 'biz'],
-        ['name' => '構造図CB',                       'actor' => 'client',   'desc' => '構造図UPから4営業日',        'days' => 4,         'type' => 'biz'],
+        ['name' => '構造図UP',                       'actor' => 'designer', 'desc' => "一次回答CBから{$dwg_days}営業日",  'days' => $dwg_days, 'type' => 'biz'],
+        ['name' => '構造図CB',                       'actor' => 'client',   'desc' => "構造図UPから{$dwg_days}営業日",    'days' => $dwg_days, 'type' => 'biz'],
         ['name' => '修正図面UP',                      'actor' => 'designer', 'desc' => 'CB確認から3営業日',          'days' => 3,         'type' => 'biz'],
         ['name' => '申請図書一式UP',                  'actor' => 'designer', 'desc' => '修正UPから3営業日',          'days' => 3,         'type' => 'biz'],
         ['name' => '質疑・審査待機',                  'actor' => 'wait',     'desc' => '確認機関の審査',             'days' => 30,        'type' => 'cal'],
