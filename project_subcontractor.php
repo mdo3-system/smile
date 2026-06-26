@@ -605,11 +605,27 @@ if (!$is_admin) {
                                 <?php if ($o['status'] === 'delivered' || $o['status'] === 'cb_requested'): ?>
                                     <!-- チェックバック枠 (更新あり) -->
                                     <div style="margin-top:10px; padding:10px; background:#fff5f5; border:1px solid #feb2b2; border-radius:6px; margin-bottom:10px;">
-                                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
-                                            <input type="hidden" name="action" value="submit_checkback">
-                                            <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
-                                            <label style="display:block; font-size:12px; font-weight:bold; color:#c53030; margin-bottom:5px;">📝 チェックバック（修正指示）入力・更新枠:</label>
-                                            <textarea name="checkback_text" style="width:100%; min-height:80px; padding:6px; box-sizing:border-box; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; margin-bottom:5px;" placeholder="修正指示を入力してください..."><?= htmlspecialchars($o['checkback_text'] ?? '', ENT_QUOTES) ?></textarea>
+                                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin:0; display:flex; flex-direction:column; gap:8px;">
+                                             <input type="hidden" name="action" value="submit_checkback">
+                                             <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                             <label style="display:block; font-size:12px; font-weight:bold; color:#c53030;">📝 チェックバック（修正指示）入力・更新枠:</label>
+                                             <textarea name="checkback_text" style="width:100%; min-height:80px; padding:6px; box-sizing:border-box; font-size:12px; border:1px solid #cbd5e1; border-radius:4px;" placeholder="修正指示を入力してください..."><?= htmlspecialchars($o['checkback_text'] ?? '', ENT_QUOTES) ?></textarea>
+                                             
+                                             <!-- 既存チェックバックファイル表示 -->
+                                             <?php if (!empty($o['checkback_file_path'])): 
+                                                 $cb_url = (strpos($o['checkback_file_path'], 'uploads/') !== 0 && strlen($o['checkback_file_path']) > 15 && strpos($o['checkback_file_path'], '/') === false)
+                                                     ? 'https://drive.google.com/file/d/' . htmlspecialchars($o['checkback_file_path'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                                     : htmlspecialchars($o['checkback_file_path'], ENT_QUOTES);
+                                             ?>
+                                                 <div style="font-size:11px; color:#475569; background:#fff; padding:6px; border:1px solid #cbd5e1; border-radius:4px; display:flex; align-items:center; gap:5px;">
+                                                     📎 <a href="<?= $cb_url ?>" target="_blank" style="color:#0284c7; text-decoration:underline; font-weight:bold;">現在の修正指示ファイルを確認</a>
+                                                 </div>
+                                             <?php endif; ?>
+
+                                             <div style="display:flex; align-items:center; gap:10px; font-size:12px; flex-wrap:wrap;">
+                                                 <label style="font-weight:bold; color:#475569;">修正指示ファイルを添付:</label>
+                                                 <input type="file" name="checkback_file" style="font-size:11px;">
+                                             </div>
                                             <div style="text-align: right;">
                                                 <button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 10px; border-radius:3px; font-size:11px; font-weight:bold; cursor:pointer;" onclick="return confirm('チェックバック指示を保存して修正依頼を送信しますか？\n（業者チャットへ自動通知されます）')">チェックバックを保存・修正依頼送信</button>
                                             </div>
@@ -857,13 +873,24 @@ if (!$is_admin) {
                                         <div style="font-size:13px; color:#555;">完了納期予定日: <strong><?= !empty($task['expected_delivery_date']) ? date('Y年m月d日', strtotime($task['expected_delivery_date'])) : '未設定' ?></strong></div>
                                     </div>
 
-                                    <?php if (!empty($task['checkback_text'])): ?>
-                                        <div style="margin-top:10px; padding:10px; background:#fff5f5; border:1px solid #feb2b2; border-radius:6px; font-size:12px; color:#2d3748; text-align:left;">
-                                            <strong style="color:#c53030; display:block; margin-bottom:5px;">📝 管理者からの修正指示 (チェックバック):</strong>
-                                            <div style="white-space:pre-wrap; line-height:1.5; background:white; padding:8px; border-radius:4px; border:1px solid #fed7aa;"><?= htmlspecialchars($task['checkback_text'], ENT_QUOTES) ?></div>
-                                            <div style="font-size:10px; color:#718096; margin-top:5px; text-align:right;">最終更新: <?= htmlspecialchars($task['checkback_updated_at'], ENT_QUOTES) ?></div>
-                                        </div>
-                                    <?php endif; ?>
+                                    <?php if (!empty($task['checkback_text']) || !empty($task['checkback_file_path'])): ?>
+                                         <div style="margin-top:10px; padding:10px; background:#fff5f5; border:1px solid #feb2b2; border-radius:6px; font-size:12px; color:#2d3748; text-align:left;">
+                                             <strong style="color:#c53030; display:block; margin-bottom:5px;">📝 管理者からの修正指示 (チェックバック):</strong>
+                                             <?php if (!empty($task['checkback_text'])): ?>
+                                                 <div style="white-space:pre-wrap; line-height:1.5; background:white; padding:8px; border-radius:4px; border:1px solid #fed7aa; margin-bottom:5px;"><?= htmlspecialchars($task['checkback_text'], ENT_QUOTES) ?></div>
+                                             <?php endif; ?>
+                                             <?php if (!empty($task['checkback_file_path'])): 
+                                                 $cb_url = (strpos($task['checkback_file_path'], 'uploads/') !== 0 && strlen($task['checkback_file_path']) > 15 && strpos($task['checkback_file_path'], '/') === false)
+                                                     ? 'https://drive.google.com/file/d/' . htmlspecialchars($task['checkback_file_path'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                                     : htmlspecialchars($task['checkback_file_path'], ENT_QUOTES);
+                                             ?>
+                                                 <div style="background:white; padding:6px; border-radius:4px; border:1px solid #fed7aa; display:flex; align-items:center; gap:5px;">
+                                                     📎 修正指示ファイル: <a href="<?= $cb_url ?>" target="_blank" style="color:#0284c7; text-decoration:underline; font-weight:bold;">修正指示ファイルをダウンロード</a>
+                                                 </div>
+                                             <?php endif; ?>
+                                             <div style="font-size:10px; color:#718096; margin-top:5px; text-align:right;">最終更新: <?= htmlspecialchars($task['checkback_updated_at'], ENT_QUOTES) ?></div>
+                                         </div>
+                                     <?php endif; ?>
 
                                     <?php if (!empty($task['pdf_id']) || !empty($task['arc_d_id']) || !empty($task['arc_s_id'])): ?>
                                         <div style="margin-top:8px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; text-align:left;">
@@ -991,7 +1018,7 @@ if (!$is_admin) {
                                                         <input type="hidden" name="project_id" value="<?= $task['project_id'] ?>">
                                                         <input type="hidden" name="deliver_type" value="struct">
                                                         
-                                                        <!-- 構造図チェックリスト (12項目) -->
+                                                                                        <!-- 構造図チェックリスト (16項目) -->
                                                         <div style="margin-bottom: 12px; border: 1px solid #fed7aa; background: #fff7ed; padding: 12px; border-radius: 6px;">
                                                             <strong style="color: #c2410c; display: block; margin-bottom: 8px; font-size: 13px;">📝 構造図作図時チェック項目 (全項目確認必須):</strong>
                                                             <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 1.4;">
@@ -1042,6 +1069,22 @@ if (!$is_admin) {
                                                                 <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
                                                                     <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
                                                                     <span>12. 横架材接合部が凡例以外の時の記載を確認してください</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>13. 計算書と構造図で通り芯の整合を確認した。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>14. 基礎伏図には耐力壁は記載していない。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>15. 基礎伏図はS-5からとした。</span>
+                                                                </label>
+                                                                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                    <input type="checkbox" class="struct-deliver-check" style="margin-top: 2px;">
+                                                                    <span>16. スラブ配筋は計算書と整合していることを確認した。</span>
                                                                 </label>
                                                             </div>
                                                         </div>
@@ -1339,7 +1382,7 @@ if (!$is_admin) {
                     <strong style="color: #c2410c; display:block; margin-bottom:5px;">構造図作図基準チェック項目:</strong>
                     <ul style="margin:0; padding-left:20px; line-height:1.8;">
                         <li>1. 図枠は依頼者の図枠として下さい</li>
-                        <li>2. アーキのデータだけではなく、PDFの書き込みファイルを参照し、不整合あれば必ず通知してください</li>
+                        <li>2. アーキのデータだけではなく、PDF of 書き込みファイルを参照し、不整合あれば必ず通知してください</li>
                         <li>3. 基礎断面図には、設計GLと平均GLあるときは平均GLともに記載してください</li>
                         <li>4. 柱下には必ず通り芯が入っていることを確認してください</li>
                         <li>5. 通り芯間距離を明示してください</li>
@@ -1350,6 +1393,10 @@ if (!$is_admin) {
                         <li>10. 地盤調査未了時の令96条但し書き記載してください</li>
                         <li>11. 小屋筋違いについて記載してください</li>
                         <li>12. 横架材接合部が凡例以外の時の記載を確認してください</li>
+                        <li>13. 計算書と構造図で通り芯の整合を確認した。</li>
+                        <li>14. 基礎伏図には耐力壁は記載していない。</li>
+                        <li>15. 基礎伏図はS-5からとした。</li>
+                        <li>16. スラブ配筋は計算書と整合していることを確認した。</li>
                     </ul>
                 </div>
             </div>

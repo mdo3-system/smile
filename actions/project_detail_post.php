@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     // サブコントラクター関連
-    if (in_array($action, ['order_subcontractor', 'approve_delivery'])) {
+    if (in_array($action, ['order_subcontractor', 'approve_delivery', 'submit_checkback'])) {
         require __DIR__ . '/action_subcontractor.php';
     }
     

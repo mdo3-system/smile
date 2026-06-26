@@ -218,30 +218,82 @@ if ($action === 'submit_checkback') {
         $order_id = intval($_POST['order_id']);
         $checkback_text = trim($_POST['checkback_text'] ?? '');
 
+        // ファイルアップロード処理
+        $drive_file_id = null;
+        $file_uploaded = false;
+        if (isset($_FILES['checkback_file']) && $_FILES['checkback_file']['error'] === UPLOAD_ERR_OK) {
+            require_once __DIR__ . '/../google_drive_client.php';
+            $file_tmp = $_FILES['checkback_file']['tmp_name'];
+            $file_name = $_FILES['checkback_file']['name'];
+            $mime_type = $_FILES['checkback_file']['type'];
+            
+            // Google Drive にアップロード
+            $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type, $project_id, $pdo);
+            $file_uploaded = true;
+        }
+
         $pdo->beginTransaction();
         try {
             // ステータスを 'cb_requested'（修正依頼）に更新し、チェックバックを保存
-            $stmt = $pdo->prepare("
-                UPDATE subcontractor_orders 
-                SET status = 'cb_requested', 
-                    checkback_text = :text, 
-                    checkback_updated_at = NOW(),
-                    updated_at = NOW()
-                WHERE id = :id
-            ");
-            $stmt->execute([
-                'text' => $checkback_text,
-                'id' => $order_id
-            ]);
+            if ($file_uploaded) {
+                $stmt = $pdo->prepare("
+                    UPDATE subcontractor_orders 
+                    SET status = 'cb_requested', 
+                        checkback_text = :text, 
+                        checkback_file_path = :file_path,
+                        checkback_updated_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = :id
+                ");
+                $stmt->execute([
+                    'text' => $checkback_text,
+                    'file_path' => $drive_file_id,
+                    'id' => $order_id
+                ]);
+            } else {
+                $stmt = $pdo->prepare("
+                    UPDATE subcontractor_orders 
+                    SET status = 'cb_requested', 
+                        checkback_text = :text, 
+                        checkback_updated_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = :id
+                ");
+                $stmt->execute([
+                    'text' => $checkback_text,
+                    'id' => $order_id
+                ]);
+            }
 
             // チャットへ修正依頼（チェックバック）を自動投稿 (sub_admin)
-            $msg = "【修正依頼（チェックバック修正指示）】\n" . $checkback_text . "\n\n指示内容をご確認の上、修正データの再アップロードをお願いいたします。";
-            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'sub_admin', :msg)");
-            $stmtMsg->execute([
-                'pid' => $project_id,
-                'sid' => $_SESSION['user_id'],
-                'msg' => $msg
-            ]);
+            $msg = "【修正依頼（チェックバック修正指示）】\n" . $checkback_text;
+            if ($file_uploaded) {
+                $msg .= "\n\n指示ファイルがアップロードされました。";
+            }
+            $msg .= "\n\n指示内容をご確認の上、修正データの再アップロードをお願いいたします。";
+
+            if ($file_uploaded) {
+                $stmtMsg = $pdo->prepare("
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) 
+                    VALUES (:pid, :sid, 'sub_admin', :msg, :fpath, 'file')
+                ");
+                $stmtMsg->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => $msg,
+                    'fpath' => $drive_file_id
+                ]);
+            } else {
+                $stmtMsg = $pdo->prepare("
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                    VALUES (:pid, :sid, 'sub_admin', :msg)
+                ");
+                $stmtMsg->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => $msg
+                ]);
+            }
 
             $pdo->commit();
         } catch (Exception $e) {
