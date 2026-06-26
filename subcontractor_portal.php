@@ -450,11 +450,15 @@ $global_messages = $stmtChat->fetchAll();
 
                 <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;">
                     <input type="hidden" name="action" value="send_global_message">
-                    <div style="display:flex; align-items:center; gap:10px; background:#fff; padding:5px; border:1px solid #ccc; border-radius:4px;">
-                        <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
-                        <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
-                        <textarea name="message_text" rows="4" style="flex:1; border:none; resize:none; font-family:inherit; font-size:13px; outline:none;" placeholder="メッセージを入力..."></textarea>
-                        <button type="submit" style="background:#10b981; color:white; border:none; padding:10px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                    <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <textarea name="message_text" rows="4" style="width:100%; box-sizing:border-box; border:none; resize:vertical; font-family:inherit; font-size:13px; outline:none;" placeholder="メッセージを入力..."></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding-top:5px;">
+                            <div>
+                                <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
+                                <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
+                            </div>
+                            <button type="submit" style="background:#10b981; color:white; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                        </div>
                     </div>
                 </form>
             </div>

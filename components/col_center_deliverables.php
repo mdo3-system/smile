@@ -16,6 +16,14 @@
             // 各種目別の成果物定義
             $artifact_sections = [];
             
+            // 壁量計算は、タブにかかわらず案件でreq_wall == 1であれば常に成果物エリアのTOPに表示する
+            if ($req_wall == 1) {
+                $artifact_sections['壁量計算'] = [
+                    'wall_spreadsheet' => '表計算ツール',
+                    'wall_calc_doc' => '壁量計算書'
+                ];
+            }
+            
             if ($active_tab === 'permit') {
                 if ($req_permit == 1) {
                     $artifact_sections['許容応力度計算'] = [
@@ -38,12 +46,7 @@
                     $artifact_sections['＋OP（基礎・横架材計算書）'] = $op_deliverables;
                 }
             } elseif ($active_tab === 'wall') {
-                if ($req_wall == 1) {
-                    $artifact_sections['壁量計算'] = [
-                        'wall_spreadsheet' => '表計算ツール',
-                        'wall_calc_doc' => '壁量計算書'
-                    ];
-                }
+                // 壁量計算は既にTOPで定義されているため、ここでは何もしない
             } elseif ($active_tab === 'skin') {
                 if ($req_skin == 1) {
                     $artifact_sections['外皮計算'] = [

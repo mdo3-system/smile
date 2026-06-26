@@ -90,9 +90,9 @@ foreach($all_files as $f) {
 // 成果物の全履歴を取得 (成果物管理パネル用)
 $artifact_categories = [
     'structural_dwg', 'standard_dwg', 'calc_doc', 'safety_cert', 'inv_primary', 'inv_primary_rev',
-    'wall_calc_doc', 'wall_kiso_dwg', 'wall_perf_doc',
-    'skin_calc_doc', 'skin_energy_doc', 'skin_desc_doc',
-    'sky_calc_doc', 'sky_dwg', 'other_artifact'
+    'wall_calc_doc', 'wall_kiso_dwg', 'wall_perf_doc', 'wall_spreadsheet',
+    'skin_calc_doc', 'skin_energy_doc', 'skin_desc_doc', 'skin_web_prog', 'skin_doc',
+    'sky_calc_doc', 'sky_dwg', 'other_artifact', 'kiso_hari_calc_doc'
 ];
 $placeholders = implode(',', array_fill(0, count($artifact_categories), '?'));
 $stmtHistory = $pdo->prepare("SELECT * FROM project_files WHERE project_id = ? AND (file_category IN ($placeholders) OR file_category LIKE 'custom_deliverable_%') ORDER BY file_category, version DESC");
