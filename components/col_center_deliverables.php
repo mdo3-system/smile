@@ -26,11 +26,16 @@
                     ];
                 }
                 if ($req_opt_kisohari == 1) {
-                    $artifact_sections['＋OP（基礎・横架材計算書）'] = [
+                    $op_deliverables = [
                         'standard_dwg' => '構造標準図',
                         'structural_dwg' => '構造図',
                         'kiso_hari_calc_doc' => '基礎横架材計算書'
                     ];
+                    if ($req_permit == 1) {
+                        unset($op_deliverables['standard_dwg']);
+                        unset($op_deliverables['structural_dwg']);
+                    }
+                    $artifact_sections['＋OP（基礎・横架材計算書）'] = $op_deliverables;
                 }
             } elseif ($active_tab === 'wall') {
                 if ($req_wall == 1) {

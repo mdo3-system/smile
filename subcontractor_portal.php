@@ -337,6 +337,7 @@ $global_messages = $stmtChat->fetchAll();
                 <div class="grid">
                     <?php foreach ($project_tasks as $pid => $proj): 
                         $project_dummy = [
+                            'id' => $proj['project_id'],
                             'status' => $proj['project_status'],
                             'primary_due_date' => $proj['primary_due_date'],
                             'schedule_actuals' => $proj['schedule_actuals'],
@@ -452,7 +453,7 @@ $global_messages = $stmtChat->fetchAll();
                     <div style="display:flex; align-items:center; gap:10px; background:#fff; padding:5px; border:1px solid #ccc; border-radius:4px;">
                         <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
                         <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
-                        <textarea name="message_text" rows="2" style="flex:1; border:none; resize:none; font-family:inherit; font-size:13px; outline:none;" placeholder="メッセージを入力..."></textarea>
+                        <textarea name="message_text" rows="4" style="flex:1; border:none; resize:none; font-family:inherit; font-size:13px; outline:none;" placeholder="メッセージを入力..."></textarea>
                         <button type="submit" style="background:#10b981; color:white; border:none; padding:10px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
                     </div>
                 </form>
