@@ -14,7 +14,8 @@ class ProjectRepository {
             SELECT p.*, u.company_name 
             FROM projects p 
             JOIN users u ON p.client_id = u.id 
-            ORDER BY p.created_at DESC
+            WHERE p.status != 'completed'
+            ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
         ";
         return $this->pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -27,8 +28,8 @@ class ProjectRepository {
             SELECT p.*, u.company_name 
             FROM projects p 
             JOIN users u ON p.client_id = u.id 
-            WHERE p.client_id = :cid
-            ORDER BY p.created_at DESC
+            WHERE p.client_id = :cid AND p.status != 'completed'
+            ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
         ";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute(['cid' => $clientId]);

@@ -50,6 +50,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset(
     exit;
 }
 
+// 発注内容更新処理 (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_order_details' && $is_admin) {
+    $order_id = intval($_POST['order_id'] ?? 0);
+    $pid = intval($_POST['project_id'] ?? 0);
+    $task_title = trim($_POST['task_title'] ?? '');
+    $order_amount = intval($_POST['order_amount'] ?? 0);
+    $completed_at = !empty($_POST['completed_at']) ? $_POST['completed_at'] : null;
+
+    // 経理が支払い完了したかチェック
+    $stmtCheck = $pdo->prepare("SELECT payment_status FROM subcontractor_orders WHERE id = :id");
+    $stmtCheck->execute(['id' => $order_id]);
+    $payment_status = $stmtCheck->fetchColumn();
+
+    if ($payment_status !== 'paid') {
+        $stmtUpdate = $pdo->prepare("
+            UPDATE subcontractor_orders 
+            SET task_title = :title, 
+                order_amount = :amt, 
+                completed_at = :completed
+            WHERE id = :id
+        ");
+        $stmtUpdate->execute([
+            'title' => $task_title,
+            'amt' => $order_amount,
+            'completed' => $completed_at,
+            'id' => $order_id
+        ]);
+    }
+    header("Location: project_subcontractor.php?id=" . $pid . "&t=" . time());
+    exit;
+}
+
 // 公開・非表示の切り替え処理 (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_publish_sub' && $is_admin) {
     $file_id = intval($_POST['file_id'] ?? 0);
@@ -565,8 +597,33 @@ if (!$is_admin) {
                                 <?php endif; ?>
                             </div>
                             <div style="font-size:13px; color:#444; line-height:1.6;">
-                                依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
-                                依頼額: <?= number_format($o['order_amount']) ?>円<?php if ($o['status'] === 'completed' && !empty($o['completed_at'])): ?> <span style="color:#059669; font-weight:bold; font-size:12px;">(納品日: <?= date('Y/m/d', strtotime($o['completed_at'])) ?>)</span><?php endif; ?><br>
+                                <?php if ($is_admin && ($o['payment_status'] ?? '') !== 'paid'): ?>
+                                    <form action="project_subcontractor.php?id=<?= $project_id ?>" method="POST" style="margin:8px 0; background:#f8fafc; padding:10px; border:1px solid #cbd5e1; border-radius:6px; max-width:600px; display:flex; flex-direction:column; gap:8px;">
+                                        <input type="hidden" name="action" value="update_order_details">
+                                        <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                        <div>
+                                            <label style="font-weight:bold; font-size:11px; display:block; margin-bottom:3px; color:#475569;">依頼内容:</label>
+                                            <input type="text" name="task_title" value="<?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?>" style="width:100%; box-sizing:border-box; padding:4px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px;" required>
+                                        </div>
+                                        <div style="display:flex; gap:10px;">
+                                            <div style="flex:1;">
+                                                <label style="font-weight:bold; font-size:11px; display:block; margin-bottom:3px; color:#475569;">依頼額 (円):</label>
+                                                <input type="number" name="order_amount" value="<?= htmlspecialchars($o['order_amount']) ?>" style="width:100%; box-sizing:border-box; padding:4px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px;" required>
+                                            </div>
+                                            <div style="flex:1;">
+                                                <label style="font-weight:bold; font-size:11px; display:block; margin-bottom:3px; color:#475569;">納品完了日 (completed_at):</label>
+                                                <input type="date" name="completed_at" value="<?= htmlspecialchars($o['completed_at'] ?? '') ?>" style="width:100%; box-sizing:border-box; padding:4px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px;">
+                                            </div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <button type="submit" style="background:#10b981; color:white; border:none; padding:4px 12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">発注内容を保存</button>
+                                        </div>
+                                    </form>
+                                <?php else: ?>
+                                    依頼内容: <?= htmlspecialchars($o['task_title'], ENT_QUOTES) ?><br>
+                                    依頼額: <?= number_format($o['order_amount']) ?>円<?php if ($o['status'] === 'completed' && !empty($o['completed_at'])): ?> <span style="color:#059669; font-weight:bold; font-size:12px;">(納品日: <?= date('Y/m/d', strtotime($o['completed_at'])) ?>)</span><?php endif; ?><br>
+                                <?php endif; ?>
                                 依頼日: <?= date('Y-m-d H:i', strtotime($o['created_at'])) ?><br>
                                 希望納品日: <?= !empty($o['due_date']) ? date('Y年m月d日', strtotime($o['due_date'])) : '未設定' ?><br>
                                 完了予定日 (業者回答): <?= !empty($o['expected_delivery_date']) ? '<strong style="color:#e67e22;">'.date('Y年m月d日', strtotime($o['expected_delivery_date'])).'</strong>' : '<span style="color:#999;">未定</span>' ?>

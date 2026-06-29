@@ -239,7 +239,7 @@ if (!empty($all_estimates)) {
                         $m_price = intval($item['price']);
                         echo '
                         <div class="manual-est-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-                            <input type="text" placeholder="項目名" class="manual-est-name" value="' . $m_name . '" oninput="calcClientEstimate()" style="flex:1; padding:3px; font-size:11px; ime-mode: active;" inputmode="text" required>
+                            <input type="text" placeholder="項目名" class="manual-est-name" value="' . $m_name . '" oninput="calcClientEstimate()" onfocus="if(this.value===\'\') { this.value=\'　\'; this.setSelectionRange(0, 1); setTimeout(() => { if(this.value===\'　\') { this.value=\'\'; } }, 20); }" style="flex:1; padding:3px; font-size:11px; ime-mode: active;" inputmode="text" lang="ja" required>
                             <input type="number" placeholder="金額(税抜)" class="manual-est-price" value="' . $m_price . '" oninput="calcClientEstimate()" style="width:80px; padding:3px; font-size:11px; ime-mode: disabled;" inputmode="numeric" required>
                             <button type="button" onclick="this.parentElement.remove(); calcClientEstimate();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer; font-weight:bold;">✕</button>
                         </div>';
@@ -301,7 +301,7 @@ if (!empty($all_estimates)) {
                             $m_price = intval($item['price']);
                             echo '
                             <div class="manual-est-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
-                                <input type="text" placeholder="項目名" class="manual-est-name" value="' . $m_name . '" oninput="calcClientEstimate()" style="flex:1; padding:3px; font-size:11px; ime-mode: active;" inputmode="text" required>
+                                <input type="text" placeholder="項目名" class="manual-est-name" value="' . $m_name . '" oninput="calcClientEstimate()" onfocus="if(this.value===\'\') { this.value=\'　\'; this.setSelectionRange(0, 1); setTimeout(() => { if(this.value===\'　\') { this.value=\'\'; } }, 20); }" style="flex:1; padding:3px; font-size:11px; ime-mode: active;" inputmode="text" lang="ja" required>
                                 <input type="number" placeholder="金額(税抜)" class="manual-est-price" value="' . $m_price . '" oninput="calcClientEstimate()" style="width:80px; padding:3px; font-size:11px; ime-mode: disabled;" inputmode="numeric" required>
                                 <button type="button" onclick="this.parentElement.remove(); calcClientEstimate();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer; font-weight:bold;">✕</button>
                             </div>';

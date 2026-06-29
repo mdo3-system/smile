@@ -137,8 +137,8 @@ if ($has_parent && $sub_view_mode === 'personal') {
         SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari 
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        WHERE o.subcontractor_id = :user_id 
-        ORDER BY o.created_at DESC
+        WHERE o.subcontractor_id = :user_id AND o.payment_status != 'paid'
+        ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
     ");
     $stmtTasks->execute(['user_id' => $user_id]);
 } else {
@@ -147,8 +147,8 @@ if ($has_parent && $sub_view_mode === 'personal') {
         SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari 
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        WHERE o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)
-        ORDER BY o.created_at DESC
+        WHERE (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)) AND o.payment_status != 'paid'
+        ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
     ");
     $stmtTasks->execute([
         'sub_id_1' => $target_sub_id,
@@ -314,6 +314,7 @@ $global_messages = $stmtChat->fetchAll();
                 </div>
             <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
+            <a href="completed_sub_orders.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; margin-right:5px;">📂 支払済アーカイブDB</a>
             <?php if ($is_admin): ?>
                 <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
             <?php else: ?>

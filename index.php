@@ -81,6 +81,7 @@ $status_labels = [
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="subcontractors_list.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">👷 協力業者マスター</a>
             <?php endif; ?>
+            <a href="completed_projects.php" style="font-weight:bold; color:white; background:#10b981; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📂 完了案件DB</a>
             <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant'): ?>
                 <a href="admin_sales.php" style="font-weight:bold; color:white; background:#e67e22; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📊 経理・売上管理</a>
             <?php endif; ?>
@@ -127,6 +128,9 @@ $status_labels = [
             <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
                 <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
                 <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
+                <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
+                    📅 一次回答予定: <?= !empty($project['primary_due_date']) ? date('Y/m/d', strtotime($project['primary_due_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                </div>
                 <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
                 <?php if (($_SESSION['role'] ?? '') !== 'client'): ?>
                     <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>

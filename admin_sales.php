@@ -234,9 +234,9 @@ $stmtProjects = $pdo->prepare("
            (SELECT total_price FROM estimates e WHERE e.project_id = p.id ORDER BY e.id DESC LIMIT 1) as formal_estimate
     FROM projects p
     JOIN users u ON p.client_id = u.id
-    WHERE DATE_FORMAT(p.created_at, '%Y-%m') = :m 
-       OR (p.deposit_status != 'paid' AND p.status != 'completed')
-    ORDER BY p.created_at DESC
+    WHERE p.status != 'completed' 
+      AND (DATE_FORMAT(p.created_at, '%Y-%m') = :m OR p.deposit_status != 'paid')
+    ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
 ");
 $stmtProjects->execute(['m' => $current_month]);
 $projects = $stmtProjects->fetchAll();
@@ -405,6 +405,11 @@ $status_labels = [
             </div>
         </div>
 
+        <div style="margin-bottom: 20px; display:flex; gap:10px;">
+            <a href="completed_projects.php" style="background:#10b981; color:white; padding:8px 16px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:13px;">📂 完了案件DB (アーカイブ)</a>
+            <a href="completed_sub_orders.php" style="background:#3b82f6; color:white; padding:8px 16px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:13px;">📂 協力業者 支払済アーカイブDB</a>
+        </div>
+
         <!-- 1. 依頼主別 売上・入金・ステータス管理 -->
         <div class="card">
             <h2 class="card-title">💼 依頼主別 売上・入金・案件ステータス一覧</h2>
@@ -487,12 +492,12 @@ $status_labels = [
                 <thead>
                     <tr>
                         <th style="width: 15%;">協力業者</th>
-                        <th style="width: 40%;">対象タスク (案件名)</th>
+                        <th style="width: 30%;">対象タスク (案件名)</th>
                         <th style="width: 10%;" class="num">支払額 (税込)</th>
                         <th style="width: 12%;">支払予定日</th>
-                        <th style="width: 12%;">実際の支払日</th>
+                        <th style="width: 15%;">実際の支払日</th>
                         <th style="width: 10%;">支払状況</th>
-                        <th style="width: 5%;">操作</th>
+                        <th style="width: 8%;">操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -501,8 +506,8 @@ $status_labels = [
                             <td style="font-weight:bold; vertical-align:top; border-bottom:2px solid #cbd5e1; padding-top:15px;">
                                 👷 <?= htmlspecialchars($sub, ENT_QUOTES) ?> 様
                             </td>
-                            <td colspan="5" style="padding:0; border-bottom:2px solid #cbd5e1;">
-                                <table class="sub-tasks-table">
+                            <td colspan="6" style="padding:0; border-bottom:2px solid #cbd5e1;">
+                                <table class="sub-tasks-table" style="width:100%;">
                                     <?php foreach ($data['tasks'] as $t): 
                                         $pay_status = $t['payment_status'] ?: 'unpaid';
                                     ?>
@@ -511,27 +516,27 @@ $status_labels = [
                                                 <input type="hidden" name="action" value="update_payment">
                                                 <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
                                                 
-                                                <td style="width: 45%;">
+                                                <td style="width: 35%; padding: 5px;">
                                                     <span style="color:#475569; font-weight:600;">[<?= htmlspecialchars($t['project_name'], ENT_QUOTES) ?>]</span><br>
-                                                    <span style="font-size:11px; color:#64748b;"><?= htmlspecialchars($t['task_title'], ENT_QUOTES) ?></span> (完了: <?= date('m/d H:i', strtotime($t['completed_at'])) ?>)
+                                                    <span style="font-size:11px; color:#64748b;"><?= htmlspecialchars($t['task_title'], ENT_QUOTES) ?></span> <span style="font-size:10px; color:#94a3b8;">(完了: <?= date('m/d', strtotime($t['completed_at'])) ?>)</span>
                                                 </td>
-                                                <td style="width: 15%;" class="num">
+                                                <td style="width: 12%; padding: 5px; white-space: nowrap;" class="num">
                                                     <?= number_format($t['order_amount']) ?>円
                                                 </td>
-                                                <td style="width: 15%; color:#64748b;">
-                                                    <?= date('Y-m-d', strtotime($current_month . '-25 +1 month')) ?> (翌月25日)
+                                                <td style="width: 15%; padding: 5px; color:#64748b; white-space: nowrap;">
+                                                    <?= date('Y-m-d', strtotime($current_month . '-25 +1 month')) ?>
                                                 </td>
-                                                <td style="width: 15%;">
-                                                    <input type="date" name="payment_date" value="<?= htmlspecialchars($t['payment_date'] ?? '') ?>" class="form-control">
+                                                <td style="width: 18%; padding: 5px; white-space: nowrap;">
+                                                    <input type="date" name="payment_date" value="<?= htmlspecialchars($t['payment_date'] ?? '') ?>" class="form-control" style="width:115px; font-size:11px; padding:2px;">
                                                 </td>
-                                                <td style="width: 10%;">
-                                                    <select name="payment_status" class="form-control" style="font-weight:bold;">
+                                                <td style="width: 12%; padding: 5px; white-space: nowrap;">
+                                                    <select name="payment_status" class="form-control" style="font-weight:bold; font-size:11px; padding:2px;">
                                                         <option value="unpaid" <?= $pay_status === 'unpaid' ? 'selected' : '' ?>>未払</option>
                                                         <option value="paid" <?= $pay_status === 'paid' ? 'selected' : '' ?>>支払済</option>
                                                     </select>
                                                 </td>
-                                                <td style="width: 10%; text-align:center;">
-                                                    <button type="submit" class="btn-save">保存</button>
+                                                <td style="width: 8%; padding: 5px; text-align:center; white-space: nowrap;">
+                                                    <button type="submit" class="btn-save" style="font-size:11px; padding:3px 8px;">保存</button>
                                                 </td>
                                             </form>
                                         </tr>
