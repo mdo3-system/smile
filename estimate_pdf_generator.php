@@ -352,9 +352,9 @@ function generate_primary_invoice_pdf($project_id, $pdo) {
         
         <div style="margin-top: 30px; font-size: 10pt; color: #333333; line-height: 1.6;">
             <strong>【振込先口座のご案内】</strong><br>
-            武蔵野銀行　坂戸支店（店番 054）<br>
-            普通預金　１０７８７４７<br>
-            口座名義：株式会社住ま居る<br>
+            東和銀行　坂戸支店<br>
+            普通預金　３０４６２４８<br>
+            口座名義：株式会社 住ま居る　代表取締役菅原 功樹<br>
             <br>
             ※お振込手数料は貴社にてご負担いただきますようお願い申し上げます。<br>
             ※ご入金の確認ができ次第、詳細モデル作成および確認申請用の図書作成業務に着手いたします。
@@ -542,9 +542,9 @@ function generate_final_invoice_pdf($project_id, $pdo) {
         
         <div style="margin-top: 30px; font-size: 10pt; color: #333333; line-height: 1.6;">
             <strong>【振込先口座のご案内】</strong><br>
-            武蔵野銀行　坂戸支店（店番 054）<br>
-            普通預金　１０７８７４７<br>
-            口座名義：株式会社住ま居る<br>
+            東和銀行　坂戸支店<br>
+            普通預金　３０４６２４８<br>
+            口座名義：株式会社 住ま居る　代表取締役菅原 功樹<br>
             <br>
             ※お振込手数料は貴社にてご負担いただきますようお願い申し上げます。<br>
             ※構造補正・審査完了後、1週間以内に残金のご精算をお願いいたします。

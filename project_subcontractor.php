@@ -1183,6 +1183,7 @@ if (!$is_admin) {
                                                 </a>
                                             </div>
                                         <?php endif; ?>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                             <!-- 添付ファイルの強力な視認化機能インジケーター -->

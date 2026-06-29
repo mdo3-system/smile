@@ -19,11 +19,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $project_id = intval($_POST['project_id'] ?? 0);
         $deposit_amount = intval($_POST['deposit_amount'] ?? 0);
         $deposit_date = !empty($_POST['deposit_date']) ? $_POST['deposit_date'] : null;
-        $deposit_status = $_POST['deposit_status'] ?? 'unpaid';
         $status = $_POST['status'] ?? ''; // 案件自体のステータス変更も許可する
         
         try {
             $pdo->beginTransaction();
+            
+            // 請求総額(税込)を計算する
+            $stmtEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+            $stmtEst->execute(['pid' => $project_id]);
+            $est_price = $stmtEst->fetchColumn() ?: 0;
+            $est_price_tax = round($est_price * 1.1);
+            
+            $stmtProjAdd = $pdo->prepare("SELECT additional_amount FROM projects WHERE id = :pid");
+            $stmtProjAdd->execute(['pid' => $project_id]);
+            $additional_amount = intval($stmtProjAdd->fetchColumn() ?: 0);
+            
+            $req_total = $est_price_tax + $additional_amount;
+            
+            // 入金状況を自動決定
+            $deposit_status = 'unpaid';
+            if ($deposit_amount >= $req_total) {
+                $deposit_status = 'paid';
+            } elseif ($deposit_amount > 0) {
+                $deposit_status = 'partially_paid';
+            }
             
             // 変更前データの取得
             $stmtOld = $pdo->prepare("SELECT deposit_amount, deposit_date, deposit_status, status FROM projects WHERE id = :id");
@@ -228,7 +247,7 @@ $total_balance = 0;
 
 $sales_list = [];
 foreach ($projects as $p) {
-    $est = $p['formal_estimate'] ?? 0;
+    $est = ($p['formal_estimate'] !== null) ? round($p['formal_estimate'] * 1.1) : 0;
     $add = $p['additional_amount'] ?? 0;
     $dep = $p['deposit_amount'] ?? 0;
     $req = $est + $add;
@@ -402,7 +421,6 @@ $status_labels = [
                         <th style="width: 10%;" class="num">入金済額</th>
                         <th style="width: 10%;" class="num">残金(未収)</th>
                         <th style="width: 12%;">入金日</th>
-                        <th style="width: 10%;">入金状況</th>
                         <th style="width: 10%;">案件状況</th>
                         <th style="width: 5%;">操作</th>
                     </tr>
@@ -438,13 +456,6 @@ $status_labels = [
                                     <input type="date" name="deposit_date" value="<?= htmlspecialchars($data['deposit_date'] ?? '') ?>" class="form-control">
                                 </td>
                                 <td>
-                                    <select name="deposit_status" class="form-control" style="font-weight:bold;">
-                                        <option value="unpaid" <?= $deposit_status === 'unpaid' ? 'selected' : '' ?>>未入金</option>
-                                        <option value="partially_paid" <?= $deposit_status === 'partially_paid' ? 'selected' : '' ?>>一部入金</option>
-                                        <option value="paid" <?= $deposit_status === 'paid' ? 'selected' : '' ?>>完済</option>
-                                    </select>
-                                </td>
-                                <td>
                                     <select name="status" class="form-control">
                                         <?php foreach ($status_labels as $key => $lbl): ?>
                                             <option value="<?= $key ?>" <?= $data['status'] === $key ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
@@ -458,7 +469,7 @@ $status_labels = [
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($sales_list)): ?>
-                        <tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:30px 0;">対象の案件はありません。</td></tr>
+                        <tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:30px 0;">対象の案件はありません。</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
