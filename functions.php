@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.4.22');
+define('SYSTEM_VERSION', 'v1.4.23');
 
 
 // ==========================================
