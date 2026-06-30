@@ -190,6 +190,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             ]);
         }
 
+        $project_info = $project;
         $all_docs_ready = false;
         $missing_str = '';
         if ($action === 'request_design_start') {

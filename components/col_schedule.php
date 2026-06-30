@@ -109,12 +109,13 @@
                     }
 
                     // 予定日の値を取得しておく（編集フォームの初期値用）
-                    $planned_date = ($primary_due_date && $idx > 0) ? $calc_date : '';
+                    $planned_date = ($primary_due_date && $idx > 0) ? date('Y-m-d', strtotime($calc_date)) : '';
 
                     // 実施日があればそれを起算日に上書きする
                     $actual_date = $schedule_actuals[$idx] ?? '';
                     if ($actual_date) {
                         $calc_date = $actual_date;
+                        $actual_date = date('Y-m-d', strtotime($actual_date));
                         $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
                     }
 
@@ -122,6 +123,9 @@
                     $plan_display = $date_str;
                     if ($is_admin && $primary_due_date && $idx > 0 && !$actual_date) {
                         $override_val = $schedule_overrides[$idx] ?? '';
+                        if ($override_val) {
+                            $override_val = date('Y-m-d', strtotime($override_val));
+                        }
                         $plan_display = '
                         <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:3px; align-items:center;">
                             <input type="hidden" name="action" value="update_schedule_override">

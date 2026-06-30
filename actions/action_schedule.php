@@ -43,6 +43,9 @@ if ($action === 'set_primary_due_date') {
                 $colsToUpdate = ['schedule_actuals', 'schedule_actuals_wall', 'schedule_actuals_skin', 'schedule_actuals_sky'];
                 foreach ($colsToUpdate as $col) {
                     $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+                    if (empty($actuals[0])) {
+                        $actuals[0] = date('Y-m-d');
+                    }
                     $actuals[1] = $due_date;
                     $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
                     $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
