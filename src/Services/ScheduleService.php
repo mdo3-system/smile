@@ -209,16 +209,12 @@ class ScheduleService {
         ];
     }
 
-    /**
-     * 現在進行中の工程インデックスを算出するヘルパー
-     */
     public function getCurrentStepIndex(array $steps, array $actuals, ?string $primary_due_date): int {
         if (!$primary_due_date) {
             return 0;
         }
-        // primary_due_dateがある場合は設計図書の受領(0)は完了したものとみなし、
-        // インデックス1(着手基準日・一次回答)以降から未完了ステップを探す
-        for ($i = 1; $i < count($steps); $i++) {
+        // 実績が入っていない最初の未完了ステップを探す
+        for ($i = 0; $i < count($steps); $i++) {
             if (empty($actuals[$i])) {
                 return $i;
             }

@@ -77,8 +77,7 @@ class ScheduleServiceTest extends TestCase {
         // 2. 基準日設定済みで、実績が全て空のケース
         $project['primary_due_date'] = '2026-06-25'; // 木曜日
         $info2 = $this->service->getCurrentStepInfo($project);
-        // 実績がない場合の最初の未完了工程は「着手基準日 (一次回答)」
-        $this->assertEquals('着手基準日 (一次回答)', $info2['step_name']);
+        $this->assertEquals('設計図書の受領', $info2['step_name']);
         $this->assertEquals('2026-06-25', $info2['plan_date']);
 
         // 3. 実績が進行しているケース (ステップ0:受領完了, ステップ1:基準日完了, ステップ2:一次回答中)
