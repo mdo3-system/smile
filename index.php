@@ -32,8 +32,9 @@ require_once 'Repositories/ProjectRepository.php';
 $projectRepo = new ProjectRepository($pdo);
 
 if ($_SESSION['role'] === 'client') {
-    // クライアントの場合は、自身が依頼主の案件のみ取得
-    $projects = $projectRepo->findByClientIdWithClientInfo($current_user_id);
+    // クライアントの場合は、自身または親（企業代表）が依頼主の案件のみ取得
+    $client_id_to_fetch = $_SESSION['parent_id'] ?: $current_user_id;
+    $projects = $projectRepo->findByClientIdWithClientInfo($client_id_to_fetch);
 } else {
     // 管理者または経理の場合は全案件を取得
     $projects = $projectRepo->findAllWithClientInfo();
@@ -126,9 +127,41 @@ $status_labels = [
     </div>
 
 
-    <?php if ($_SESSION['role'] === 'client'): ?>
+    <?php 
+    // 招待リンク生成の準備
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'];
+    $script_dir = dirname($_SERVER['SCRIPT_NAME']);
+    $script_dir = str_replace('\\', '/', $script_dir);
+    $script_dir = rtrim($script_dir, '/');
+    ?>
+
+    <?php if ($_SESSION['role'] === 'admin'): ?>
+    <?php
+        $invite_url_client = "{$protocol}://{$host}{$script_dir}/register.php?invite_role=client";
+    ?>
     <div style="margin-bottom: 20px; text-align: right;">
-        <a href="new_request.php" class="btn" style="background:#28a745;">➕ 新規見積・計算依頼</a>
+        <button onclick="navigator.clipboard.writeText('<?= $invite_url_client ?>'); alert('新しい依頼主企業をこのシステムへ招待するための登録リンクをコピーしました！\nメールやチャットで依頼主にこのURLを送ってください。');" style="background:#8b5cf6; color:white; padding:8px 15px; border-radius:4px; border:none; font-size:14px; font-weight:bold; cursor:pointer;">
+            🏢 新しい依頼主企業を招待
+        </button>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($_SESSION['role'] === 'client'): ?>
+    <?php
+        // 親の依頼主（企業アカウント代表）のみスタッフ招待リンクを発行できる
+        $invite_url_staff = '';
+        if (empty($_SESSION['parent_id'])) {
+            $invite_url_staff = "{$protocol}://{$host}{$script_dir}/register.php?invite_parent_id=" . $_SESSION['user_id'];
+        }
+    ?>
+    <div style="margin-bottom: 20px; display:flex; justify-content:flex-end; gap:10px;">
+        <?php if (!empty($invite_url_staff)): ?>
+            <button onclick="navigator.clipboard.writeText('<?= $invite_url_staff ?>'); alert('社内スタッフ（同じ企業アカウントで全案件を共有）を招待するための登録リンクをコピーしました！\nメールやチャットでスタッフにこのURLを送ってください。');" style="background:#8b5cf6; color:white; padding:8px 15px; border-radius:4px; border:none; font-size:14px; font-weight:bold; cursor:pointer;">
+                👥 社内スタッフを招待
+            </button>
+        <?php endif; ?>
+        <a href="new_request.php" class="btn" style="background:#28a745; margin:0;">➕ 新規見積・計算依頼</a>
     </div>
     <?php endif; ?>
 

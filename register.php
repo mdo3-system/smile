@@ -10,14 +10,23 @@ $devel_link = '';
 
 $invite_parent_id = intval($_GET['invite_parent_id'] ?? $_POST['invite_parent_id'] ?? 0);
 $invite_project_id = intval($_GET['invite_project_id'] ?? $_POST['invite_project_id'] ?? 0);
+$invite_role = trim($_GET['invite_role'] ?? $_POST['invite_role'] ?? '');
 
 $prefilled_company = '';
 $prefilled_role = 'client';
 
 if ($invite_parent_id > 0) {
-    $stmtParent = $pdo->prepare("SELECT company_name FROM users WHERE id = :id AND role = 'subcontractor'");
+    // 親ユーザーの情報を取得して、同じroleを引き継ぎ、会社名をプリフィルする
+    $stmtParent = $pdo->prepare("SELECT company_name, role FROM users WHERE id = :id");
     $stmtParent->execute(['id' => $invite_parent_id]);
-    $prefilled_company = $stmtParent->fetchColumn() ?: '';
+    $parent = $stmtParent->fetch();
+    if ($parent) {
+        $prefilled_company = $parent['company_name'] ?: '';
+        $prefilled_role = $parent['role'] ?: 'client';
+    }
+} elseif ($invite_role === 'client') {
+    $prefilled_role = 'client';
+} elseif ($invite_role === 'subcontractor') {
     $prefilled_role = 'subcontractor';
 }
 

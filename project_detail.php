@@ -22,7 +22,8 @@ if (!$project) {
     die("指定された案件が見つかりません。");
 }
 
-if ($_SESSION['role'] === 'client' && $project['client_id'] !== $current_user_id) {
+$client_id_to_check = $_SESSION['parent_id'] ?: $current_user_id;
+if ($_SESSION['role'] === 'client' && $project['client_id'] !== $client_id_to_check) {
     header("HTTP/1.1 403 Forbidden");
     die("この案件へのアクセス権限がありません。<br><a href='index.php'>ダッシュボードへ戻る</a>");
 }
