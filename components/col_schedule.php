@@ -60,10 +60,10 @@
             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                 <thead>
                     <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; position:sticky; top:0;">
-                        <th style="padding:6px; text-align:left;">工程</th>
-                        <th style="padding:6px; text-align:left;">担当</th>
-                        <th style="padding:6px; text-align:left;">予定</th>
-                        <th style="padding:6px; text-align:left;">実施日</th>
+                        <th style="padding:6px; text-align:left; width:30%;">工程</th>
+                        <th style="padding:6px; text-align:left; width:20%; white-space:nowrap;">担当</th>
+                        <th style="padding:6px; text-align:left; width:25%;">予定</th>
+                        <th style="padding:6px; text-align:left; width:25%;">実施日</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -161,7 +161,7 @@
 
                     echo "<tr style='{$row_style}'>";
                     echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
-                    echo "<td style='padding:6px;'>{$badge}</td>";
+                    echo "<td style='padding:6px; white-space:nowrap;'>{$badge}</td>";
                     echo "<td style='padding:6px;'>{$plan_display}</td>";
                     echo "<td style='padding:6px;'>{$actual_display}</td>";
                     echo "</tr>";

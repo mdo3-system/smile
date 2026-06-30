@@ -550,10 +550,39 @@
                     }
                     // ===== 天空率 =====
                     if ($project_info['req_sky']) {
+                        // 最新の見積の内訳から道路斜線と北側斜線の有無を判定する
+                        $req_road = true;
+                        $req_north = true;
+                        
+                        $stmtEstNote = $pdo->prepare("SELECT note FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+                        $stmtEstNote->execute(['pid' => $project_id]);
+                        $est_note_json = $stmtEstNote->fetchColumn();
+                        if ($est_note_json) {
+                            $latest_note = json_decode($est_note_json, true) ?: [];
+                            $has_road = false;
+                            $has_north = false;
+                            foreach ($latest_note as $item) {
+                                if (isset($item['name'])) {
+                                    if (strpos($item['name'], '天空率 道路斜線') !== false) $has_road = true;
+                                    if (strpos($item['name'], '天空率 北側斜線') !== false) $has_north = true;
+                                }
+                            }
+                            if ($has_road || $has_north) {
+                                $req_road = $has_road;
+                                $req_north = $has_north;
+                            }
+                        }
+
                         echo '<div style="font-size:11px; font-weight:bold; color:#374151; margin-top:5px; margin-bottom:2px;">【天空率計算図書】</div>';
                         echo '<div style="font-size:11px; margin-left:10px;">';
-                        echo '・道路の資料: ' . (isset($files_by_cat['road_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>') . '<br>';
-                        echo '・真北の資料: ' . (isset($files_by_cat['true_north']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
+                        $sky_lines = [];
+                        if ($req_road) {
+                            $sky_lines[] = '・道路の資料: ' . (isset($files_by_cat['road_data']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
+                        }
+                        if ($req_north) {
+                            $sky_lines[] = '・真北の資料: ' . (isset($files_by_cat['true_north']) ? '<span style="color:green;">✅提出済</span>' : '<span style="color:red;">❌未提出</span>');
+                        }
+                        echo implode('<br>', $sky_lines);
                         echo '</div>';
                     }
                     // ===== 外皮計算 =====
