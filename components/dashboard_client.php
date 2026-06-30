@@ -412,7 +412,8 @@
                     echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日/実績日</th></tr></thead>';
                     echo '<tbody>';
                     
-                    $calc_date = $primary_due_date;
+                    $base_start_date = $primary_due_date ?: ($schedule_actuals[1] ?? $schedule_actuals[0] ?? '');
+                    $calc_date = $base_start_date;
                     $scheduleService = new \App\Services\ScheduleService($pdo);
                     $current_step_idx = $scheduleService->getCurrentStepIndex($scheduleItem['steps'], $schedule_actuals, $primary_due_date);
                     
@@ -430,11 +431,11 @@
 
                         $date_str = '<span style="color:#64748b;">未確定</span>';
                         
-                        if ($primary_due_date) {
+                        if ($base_start_date) {
                             if ($idx == 0) {
                                 $date_str = '<span style="color:#64748b;">-</span>';
                             } elseif ($idx == 1) {
-                                $calc_date = $schedule_overrides[$idx] ?? $primary_due_date;
+                                $calc_date = $schedule_overrides[$idx] ?? $base_start_date;
                                 $date_str = '<strong>' . date('m/d', strtotime($calc_date)) . '</strong>';
                             } else {
                                 if ($step['type'] == 'biz') {

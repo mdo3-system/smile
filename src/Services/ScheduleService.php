@@ -210,7 +210,8 @@ class ScheduleService {
     }
 
     public function getCurrentStepIndex(array $steps, array $actuals, ?string $primary_due_date): int {
-        if (!$primary_due_date) {
+        // 0(受領日) または 1(着手基準日) がすでに埋まっている場合、あるいは primary_due_date が設定されている場合は、設計開始しているとみなして判定を進める。
+        if (empty($actuals[0]) && empty($actuals[1]) && empty($primary_due_date)) {
             return 0;
         }
         // 実績が入っていない最初の未完了ステップを探す

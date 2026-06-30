@@ -68,7 +68,8 @@
                 </thead>
                 <tbody>
                 <?php
-                $calc_date = $primary_due_date; 
+                $base_start_date = $primary_due_date ?: ($schedule_actuals[1] ?? $schedule_actuals[0] ?? '');
+                $calc_date = $base_start_date; 
                 $scheduleService = new \App\Services\ScheduleService($pdo);
                 $current_step_idx = $scheduleService->getCurrentStepIndex($scheduleItem['steps'], $schedule_actuals, $primary_due_date);
                 foreach ($scheduleItem['steps'] as $idx => $step) {
@@ -85,11 +86,11 @@
 
                     $date_str = '<span style="color:#64748b;">未確定</span>';
                     
-                    if ($primary_due_date) {
+                    if ($base_start_date) {
                         if ($idx == 0) {
                             $date_str = '<span style="color:#64748b;">-</span>';
                         } elseif ($idx == 1) {
-                            $calc_date = $schedule_overrides[$idx] ?? $primary_due_date;
+                            $calc_date = $schedule_overrides[$idx] ?? $base_start_date;
                             $date_str = '<strong>' . date('m/d', strtotime($calc_date)) . '</strong>';
                         } else {
                             if ($step['type'] == 'biz') {
@@ -109,7 +110,7 @@
                     }
 
                     // 予定日の値を取得しておく（編集フォームの初期値用）
-                    $planned_date = ($primary_due_date && $idx > 0) ? date('Y-m-d', strtotime($calc_date)) : '';
+                    $planned_date = ($base_start_date && $idx > 0) ? date('Y-m-d', strtotime($calc_date)) : '';
 
                     // 実施日があればそれを起算日に上書きする
                     $actual_date = $schedule_actuals[$idx] ?? '';
