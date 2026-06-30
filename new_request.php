@@ -6,6 +6,7 @@ require_once 'google_drive_client.php';
 
 check_auth(['client']);
 $current_user_id = $_SESSION['user_id'];
+$client_company_id = $_SESSION['parent_id'] ?: $current_user_id;
 $message = '';
 
 // ログインユーザー情報から電話番号とメールアドレスを取得
@@ -17,7 +18,7 @@ $default_phone = $current_user_info['phone_number'] ?? '';
 
 // 過去案件から最新の宛先名称を取得
 $stmtLatestProj = $pdo->prepare("SELECT billing_company_name FROM projects WHERE client_id = :uid AND billing_company_name IS NOT NULL AND billing_company_name != '' ORDER BY id DESC LIMIT 1");
-$stmtLatestProj->execute(['uid' => $current_user_id]);
+$stmtLatestProj->execute(['uid' => $client_company_id]);
 $default_billing = $stmtLatestProj->fetchColumn() ?: '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -34,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 VALUES (:client_id, :name, :billing, :b_phone, 'quote_req', :permit, :wall, :skin, :sky, :kisohari)
             ");
             $stmt->execute([
-                'client_id' => $current_user_id,
+                'client_id' => $client_company_id,
                 'name'      => $project_name,
                 'billing'   => trim($_POST['billing_company_name'] ?? ''),
                 'b_phone'   => trim($_POST['phone_number'] ?? ''),
