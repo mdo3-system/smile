@@ -51,27 +51,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ==========================================
-$stmtSubs = $pdo->prepare("
-    SELECT o.*, u.contact_name, p.project_name
-    FROM subcontractor_orders o
-    JOIN users u ON o.subcontractor_id = u.id
-    JOIN projects p ON o.project_id = p.id
-    WHERE o.status = 'completed'
-      AND o.completed_at >= :sd AND o.completed_at <= :ed
-    ORDER BY u.contact_name, o.completed_at ASC
-");
-$stmtSubs->execute(['sd' => $start_date, 'ed' => $end_date]);
-$sub_orders = $stmtSubs->fetchAll();
+// 3. データ集計・取得ロジック
+// ==========================================
+$period = $financeService->getClosingPeriod($current_month);
+$start_date = $period['start_date'];
+$end_date = $period['end_date'];
 
-$payments_by_sub = [];
-foreach ($sub_orders as $o) {
-    $sub_name = $o['contact_name'];
-    if (!isset($payments_by_sub[$sub_name])) {
-        $payments_by_sub[$sub_name] = ['total' => 0, 'tasks' => []];
-    }
-    $payments_by_sub[$sub_name]['total'] += $o['order_amount'];
-    $payments_by_sub[$sub_name]['tasks'][] = $o;
-}
+$summary = $financeService->getSalesSummary($current_month);
+$actual_deposit_total = $summary['actual_deposit_total'];
+$actual_payment_total = $summary['actual_payment_total'];
+$expected_payment_total = $summary['expected_payment_total'];
+$total_sales = $summary['total_sales'];
+$total_deposit = $summary['total_deposit'];
+$total_balance = $summary['total_balance'];
+$sales_list = $summary['sales_list'];
+
+$payments_by_sub = $financeService->getSubcontractorPayments($current_month);
 
 $status_labels = [
     'quote_req'      => '見積依頼',
