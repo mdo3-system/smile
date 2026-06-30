@@ -27,7 +27,7 @@ if ($invite_parent_id > 0) {
 } elseif ($invite_role === 'client') {
     $prefilled_role = 'client';
 } elseif ($invite_role === 'subcontractor') {
-    $prefilled_role = 'subcontractor';
+    die("協力業者の新規ポータル開設はシステム側で制限されています。管理者による事前登録が必要です。");
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
