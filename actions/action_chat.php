@@ -29,11 +29,15 @@ if ($action === 'send_message') {
         if ($is_admin) {
             try {
                 $stmtEmail = $pdo->prepare("
-                    SELECT u.email FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
+                    SELECT u.email, u.email_notifications FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
                 ");
                 $stmtEmail->execute(['pid' => $project_id]);
-                $to_email = $stmtEmail->fetchColumn();
-                if ($to_email && filter_var($to_email, FILTER_VALIDATE_EMAIL)) {
+                $user_info = $stmtEmail->fetch();
+                
+                $to_email = $user_info['email'] ?? '';
+                $notifications_enabled = (int)($user_info['email_notifications'] ?? 1);
+                
+                if ($notifications_enabled === 1 && $to_email && filter_var($to_email, FILTER_VALIDATE_EMAIL)) {
                     $project_name = $project_info['project_name'];
                     $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
                     $body  = "案件「{$project_name}」にて、担当者から新着メッセージが届きました。\n\n";

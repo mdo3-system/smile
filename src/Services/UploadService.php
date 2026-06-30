@@ -203,11 +203,15 @@ class UploadService
             // 依頼主へのメール通知
             try {
                 $stmtClientEmail = $this->pdo->prepare("
-                    SELECT u.email FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
+                    SELECT u.email, u.email_notifications FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
                 ");
                 $stmtClientEmail->execute(['pid' => $projectId]);
-                $clientEmail = $stmtClientEmail->fetchColumn();
-                if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+                $user_info = $stmtClientEmail->fetch();
+                
+                $clientEmail = $user_info['email'] ?? '';
+                $notifications_enabled = (int)($user_info['email_notifications'] ?? 1);
+                
+                if ($notifications_enabled === 1 && $clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
                     $pname = $project['project_name'] ?? 'your project';
                     $subj = "【設計サポート】案件「{$pname}」に新しい成果物が登録されました";
                     $body  = "案件「{$pname}」に完成成果物・図書が登録されました。\n\n";

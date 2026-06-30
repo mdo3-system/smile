@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.7');
+define('SYSTEM_VERSION', 'v1.5.8');
 
 
 // ==========================================
@@ -188,8 +188,8 @@ function sendSystemEmail($to, $subject, $body) {
     }
     mb_language("Japanese");
     mb_internal_encoding("UTF-8");
-    $headers = "From: system@antigravity-jp.net\r\n";
-    $headers .= "Reply-To: no-reply@antigravity-jp.net\r\n";
+    $headers = "From: system@thanks.work\r\n";
+    $headers .= "Reply-To: support@thanks.work\r\n";
     return mb_send_mail($to, $subject, $body, $headers);
 }
 

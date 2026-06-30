@@ -644,6 +644,11 @@
                         <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '', ENT_QUOTES) ?>" placeholder="※変更がある場合のみ入力（空欄時は会社名＋担当者名）" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                     </div>
                     
+                    <div style="margin-bottom:15px; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" name="email_notifications" id="email_notifications" value="1" <?= ($project_info['email_notifications'] ?? 1) == 1 ? 'checked' : '' ?> style="cursor:pointer; width:16px; height:16px;">
+                        <label for="email_notifications" style="font-weight:bold; font-size:12px; cursor:pointer; user-select:none;">チャットや成果物の登録時にメール通知を受け取る</label>
+                    </div>
+                    
                     <div class="modal-btns">
                         <button type="button" onclick="document.getElementById('editInfoModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
                         <button type="submit" style="padding:8px 20px; background:#0056b3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">保存</button>

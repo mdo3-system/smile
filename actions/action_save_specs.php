@@ -342,9 +342,19 @@ if ($action === 'update_client_info') {
     $contact_name = trim($_POST['contact_name'] ?? '');
     $contact_kana = trim($_POST['contact_kana'] ?? '');
     $mobile_number = trim($_POST['mobile_number'] ?? '');
+    $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
     
     $pdo->beginTransaction();
     try {
+        // 案件に紐づく依頼主のユーザーIDを取得（管理者からの更新時にも正しく対象の依頼主を更新するため）
+        $stmtGetClient = $pdo->prepare("SELECT client_id FROM projects WHERE id = :pid");
+        $stmtGetClient->execute(['pid' => $project_id]);
+        $target_uid = $stmtGetClient->fetchColumn();
+        
+        if (!$target_uid) {
+            $target_uid = $_SESSION['user_id']; // フォールバック
+        }
+
         if ($project_name !== '') {
             $stmt = $pdo->prepare("UPDATE projects SET project_name = :name, billing_company_name = :billing WHERE id = :pid");
             $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'pid' => $project_id]);
@@ -360,7 +370,8 @@ if ($action === 'update_client_info') {
                 contact_name = :contact_name,
                 contact_kana = :contact_kana,
                 mobile_number = :mobile_number,
-                billing_company_name = :billing_company_name
+                billing_company_name = :billing_company_name,
+                email_notifications = :email_notifications
             WHERE id = :uid
         ");
         $stmtUser->execute([
@@ -373,7 +384,8 @@ if ($action === 'update_client_info') {
             'contact_kana' => $contact_kana,
             'mobile_number' => $mobile_number,
             'billing_company_name' => $billing_company_name,
-            'uid' => $_SESSION['user_id']
+            'email_notifications' => $email_notifications,
+            'uid' => $target_uid
         ]);
         
         $pdo->commit();

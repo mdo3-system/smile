@@ -2,7 +2,12 @@
             <h2 class="section-title" style="background:#4a5568;">📋 案件情報と依頼主図書</h2>
             
             <div class="box">
-                <h3 style="margin-top:0; font-size:14px; border-bottom:1px solid #ccc; padding-bottom:5px;">基本情報</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:10px;">
+                    <h3 style="margin:0; font-size:14px;">基本情報</h3>
+                    <?php if ($is_admin): ?>
+                    <button onclick="document.getElementById('editInfoModal').classList.add('active')" style="background:#e2e8f0; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; color:#475569; font-weight:bold;">編集</button>
+                    <?php endif; ?>
+                </div>
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
                     <?php if ($is_admin): ?>
@@ -683,4 +688,81 @@
             </div>
             <?php endif; ?>
 
-                    </div>
+            <?php if ($is_admin): ?>
+            <!-- ===== 管理者用 基本情報編集モーダル ===== -->
+            <div class="modal-overlay" id="editInfoModal">
+                <div class="modal-box" style="max-width:550px; text-align:left;">
+                    <div class="modal-title">🏠 依頼主情報の登録・編集</div>
+                    <form method="POST" action="project_detail.php?id=<?= $project_id ?>">
+                        <input type="hidden" name="action" value="update_client_info">
+                        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                        
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">案件名</label>
+                            <input type="text" name="project_name" value="<?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">会社・事務所名</label>
+                                <input type="text" name="company_name" value="<?= htmlspecialchars($project_info['company_name'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">会社・事務所名フリガナ</label>
+                                <input type="text" name="company_kana" value="<?= htmlspecialchars($project_info['company_kana'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="全角カタカナ">
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:100px 1fr; gap:10px; margin-bottom:12px;">
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">郵便番号</label>
+                                <input type="text" name="zip_code" value="<?= htmlspecialchars($project_info['zip_code'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 123-4567">
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">住所</label>
+                                <input type="text" name="address" value="<?= htmlspecialchars($project_info['address'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="市区町村・番地・マンション名等">
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">電話番号</label>
+                                <input type="text" name="phone_number" value="<?= htmlspecialchars($project_info['client_phone'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 03-1234-5678">
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">担当者名</label>
+                                <input type="text" name="contact_name" value="<?= htmlspecialchars($project_info['client_name'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" required>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">担当者名フリガナ</label>
+                                <input type="text" name="contact_kana" value="<?= htmlspecialchars($project_info['contact_kana'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="全角カタカナ">
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">担当者携帯電話番号</label>
+                                <input type="text" name="mobile_number" value="<?= htmlspecialchars($project_info['mobile_number'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="例: 090-1234-5678">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">お見積書・ご請求書宛先名称</label>
+                            <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '', ENT_QUOTES) ?>" placeholder="※変更がある場合のみ入力（空欄時は会社名＋担当者名）" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                        </div>
+
+                        <div style="margin-bottom:15px; display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" name="email_notifications" id="email_notifications_admin" value="1" <?= ($project_info['email_notifications'] ?? 1) == 1 ? 'checked' : '' ?> style="cursor:pointer; width:16px; height:16px;">
+                            <label for="email_notifications_admin" style="font-weight:bold; font-size:12px; cursor:pointer; user-select:none;">チャットや成果物の登録時にメール通知を受け取る</label>
+                        </div>
+                        
+                        <div class="modal-btns">
+                            <button type="button" onclick="document.getElementById('editInfoModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
+                            <button type="submit" style="padding:8px 20px; background:#0056b3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <?php endif; ?>
+
+         </div>
