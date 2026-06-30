@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.9');
+define('SYSTEM_VERSION', 'v1.5.10');
 
 
 // ==========================================
@@ -186,10 +186,11 @@ function sendSystemEmail($to, $subject, $body) {
     if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
     }
-    mb_language("Japanese");
+    mb_language("uni");
     mb_internal_encoding("UTF-8");
     $headers = "From: system@thanks.work\r\n";
     $headers .= "Reply-To: support@thanks.work\r\n";
+    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
     return mb_send_mail($to, $subject, $body, $headers);
 }
 

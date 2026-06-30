@@ -12,6 +12,17 @@ check_auth(['admin', 'subcontractor', 'accountant']);
 $user_id = $_SESSION['user_id']; 
 $is_admin = in_array($_SESSION['role'], ['admin', 'accountant']);
 
+// 協力業者の場合、親ID（代表者ID）を基準ID（$sub_company_id）とする
+$sub_company_id = $user_id;
+if (!$is_admin) {
+    $stmtParent = $pdo->prepare("SELECT parent_id FROM users WHERE id = :id");
+    $stmtParent->execute(['id' => $user_id]);
+    $p_id = $stmtParent->fetchColumn();
+    if ($p_id) {
+        $sub_company_id = (int)$p_id;
+    }
+}
+
 $subcontractorOrderService = new SubcontractorOrderService($pdo);
 
 // 承諾処理 (POST)
@@ -19,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
     $order_id = intval($_POST['order_id']);
     $expected_delivery_date = $_POST['expected_delivery_date'];
     
-    $subcontractorOrderService->acceptOrder($order_id, $user_id, $expected_delivery_date);
+    $subcontractorOrderService->acceptOrder($order_id, $sub_company_id, $expected_delivery_date);
 
     $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
     $stmtP->execute(['id' => $order_id]);
@@ -33,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['action']) && $_POST['action'] === 'reject_order') {
     $order_id = intval($_POST['order_id']);
     
-    $subcontractorOrderService->rejectOrder($order_id, $user_id);
+    $subcontractorOrderService->rejectOrder($order_id, $sub_company_id);
 
     header("Location: subcontractor_portal.php");
     exit;
@@ -152,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($uploaded_any || $via_archiserver) {
             // 発注ステータスを delivered (納品済) に更新
             $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered', updated_at = NOW() WHERE id = :id AND subcontractor_id = :sub_id");
-            $stmtOrder->execute(['id' => $order_id, 'sub_id' => $user_id]);
+            $stmtOrder->execute(['id' => $order_id, 'sub_id' => $sub_company_id]);
 
             // 協力業者から管理者への納品報告チャットを自動登録
             $stmtGetSubName = $pdo->prepare("SELECT contact_name FROM users WHERE id = :uid");
@@ -251,7 +262,7 @@ if (!$is_admin) {
         WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid
         ORDER BY o.created_at DESC
     ");
-    $stmt->execute(['sub_id' => $user_id, 'pid' => $project_id]);
+    $stmt->execute(['sub_id' => $sub_company_id, 'pid' => $project_id]);
     $orders = $stmt->fetchAll();
     
     if (empty($orders)) {

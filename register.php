@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $headers .= "Reply-To: support@thanks.work\r\n";
             $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
             
-            mb_language("Japanese");
+            mb_language("uni");
             mb_internal_encoding("UTF-8");
             
             $mail_sent = mb_send_mail($to, $subject, $body, $headers);
