@@ -141,7 +141,10 @@ $status_labels = [
     <div class="container">
         <div class="header">
             <div class="logo-title">📊 経理・売上・支払い管理システム</div>
-            <a href="index.php" class="btn-back">➔ 案件一覧に戻る</a>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <a href="api_backup_db.php" target="_blank" class="btn-back" style="color:#8b5cf6; border-color:#8b5cf6;" onclick="return confirm('現在のデータベースのバックアップ（ZIP圧縮SQL）をダウンロードします。よろしいですか？')">🗄️ DBバックアップ</a>
+                <a href="index.php" class="btn-back">➔ 案件一覧に戻る</a>
+            </div>
         </div>
 
         <?php if ($msg === 'deposit_updated'): ?>

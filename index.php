@@ -118,6 +118,8 @@ $status_labels = [
             } elseif ($user_role === 'subcontractor') {
                 echo '<a href="manual_subcontractor.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 操作マニュアル (協力業者向け)</a>';
             } elseif ($user_role === 'admin' || $user_role === 'accountant') {
+                echo '<a href="admin_sales.php" style="font-size:12px; color:#10b981; text-decoration:none; font-weight:bold; margin-right:15px;">📊 経理・売上管理</a>';
+                echo '<a href="api_backup_db.php" target="_blank" style="font-size:12px; color:#8b5cf6; text-decoration:none; font-weight:bold; margin-right:15px;" onclick="return confirm(\'現在のデータベースのバックアップ（ZIP圧縮SQL）をダウンロードします。よろしいですか？\')">🗄️ DBバックアップ</a>';
                 echo '<a href="manual_client.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 依頼主マニュアル</a>';
                 echo '<a href="manual_subcontractor.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 協力業者マニュアル</a>';
             }
