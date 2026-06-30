@@ -1,6 +1,7 @@
 <?php
 // login.php
 require_once 'db_connect.php';
+require_once 'functions.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -21,10 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user) {
             // トークン生成 (64文字)
             $token = bin2hex(random_bytes(32));
-            // magic_links へ登録 (有効期限はDBサーバー時間で15分後)
+            // magic_links へ登録 (有効期限はDBサーバー時間で24時間後)
             $stmtInsert = $pdo->prepare("
                 INSERT INTO magic_links (user_id, token, expires_at) 
-                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 15 MINUTE))
+                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 24 HOUR))
             ");
             $stmtInsert->execute([
                 'user_id' => $user['id'],
@@ -69,8 +70,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $target_page = ($user['role'] === 'subcontractor') ? 'subcontractor_portal.php' : 'index.php';
             $login_url = "{$app_url}/{$target_page}?token={$token}";
             
-            $message = "ご入力のメールアドレス宛にログインリンクを送信しました（開発環境用に下記にリンクを表示します）。";
-            $devel_link = $login_url;
+            // 本物のメール送信処理 (XServer本番環境用)
+            $to = $email;
+            $subject = "【構造設計サポート・ポータル】ログインリンクのご案内";
+            $body = "いつもお世話になっております。構造設計サポート・ポータルです。\n\n";
+            $body .= "以下のログインリンクをクリックして、システムにアクセスしてください。\n";
+            $body .= "（このリンクは送信から24時間有効です）\n\n";
+            $body .= "{$login_url}\n\n";
+            $body .= "※本メールに心当たりがない場合は、破棄してください。\n";
+            
+            $headers = "From: support@thanks.work\r\n";
+            $headers .= "Reply-To: support@thanks.work\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            
+            mb_language("Japanese");
+            mb_internal_encoding("UTF-8");
+            
+            $mail_sent = mb_send_mail($to, $subject, $body, $headers);
+            
+            if ($mail_sent) {
+                $message = "ご入力のメールアドレス宛にログインリンクを送信しました。メールボックスをご確認ください。";
+            } else {
+                $message = "ログインメールの送信に失敗しました。管理者までお問い合わせください。";
+            }
+            
+            // 開発環境 (HTTP_HOST が localhost や IP の場合) のみ、デバッグ用に画面へもリンクを露出する
+            $is_local = (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false || strpos($_SERVER['HTTP_HOST'], '192.168.') !== false);
+            if ($is_local) {
+                $devel_link = $login_url;
+            }
         } else {
             $message = "指定されたメールアドレスは登録されていません。";
         }
@@ -246,7 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
         </div>
-        <div style="text-align:center; font-size:11px; color:#475569; margin-top:20px; font-weight:bold;">Ver: v1.3.6</div>
+        <div style="text-align:center; font-size:11px; color:#475569; margin-top:20px; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : 'v1.5.6' ?></div>
     </div>
 </body>
 </html>

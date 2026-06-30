@@ -55,10 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // トークン生成 (64文字)
             $token = bin2hex(random_bytes(32));
-            // magic_links へ登録 (有効期限は15分後)
+            // magic_links へ登録 (有効期限は24時間後)
             $stmtMagic = $pdo->prepare("
                 INSERT INTO magic_links (user_id, token, expires_at) 
-                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 15 MINUTE))
+                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 24 HOUR))
             ");
             $stmtMagic->execute([
                 'user_id' => $new_user_id,
@@ -102,8 +102,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $login_url = "{$app_url}/{$target_page}" . (strpos($target_page, '?') === false ? '?' : '&') . "token={$token}";
             
-            $message = "ご登録ありがとうございます。以下のログインリンクからポータルへアクセスできます。";
-            $devel_link = $login_url;
+            // 本物のメール送信処理 (XServer本番環境用)
+            $to = $email;
+            $subject = "【構造設計サポート・ポータル】ご登録完了およびログインのご案内";
+            $body = "いつもお世話になっております。構造設計サポート・ポータルです。\n\n";
+            $body .= "この度はポータルへのご登録、誠にありがとうございます。\n";
+            $body .= "登録が完了いたしましたので、以下のログインリンクをクリックしてシステムにアクセスしてください。\n";
+            $body .= "（このリンクは送信から24時間有効です）\n\n";
+            $body .= "{$login_url}\n\n";
+            $body .= "※本メールに心当たりがない場合は、破棄してください。\n";
+            
+            $headers = "From: support@thanks.work\r\n";
+            $headers .= "Reply-To: support@thanks.work\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            
+            mb_language("Japanese");
+            mb_internal_encoding("UTF-8");
+            
+            $mail_sent = mb_send_mail($to, $subject, $body, $headers);
+            
+            if ($mail_sent) {
+                $message = "ご登録ありがとうございました。ご登録のメールアドレス宛にログインリンクを送信しましたのでご確認ください。";
+            } else {
+                $message = "登録完了メールの送信に失敗しましたが、アカウント作成は完了しています。ログイン画面よりログインをお試しください。";
+            }
+            
+            // 開発環境 (HTTP_HOST が localhost や IP の場合) のみ、デバッグ用に画面へもリンクを露出する
+            $is_local = (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false || strpos($_SERVER['HTTP_HOST'], '192.168.') !== false);
+            if ($is_local) {
+                $devel_link = $login_url;
+            }
         }
     }
 }
