@@ -413,17 +413,8 @@
                     echo '<tbody>';
                     
                     $calc_date = $primary_due_date;
-                    $current_step_idx = -1;
-                    if ($primary_due_date) {
-                        for ($i = 0; $i < count($scheduleItem['steps']); $i++) {
-                            if (empty($schedule_actuals[$i])) {
-                                $current_step_idx = $i;
-                                break;
-                            }
-                        }
-                    } else {
-                        $current_step_idx = 0;
-                    }
+                    $scheduleService = new \App\Services\ScheduleService($pdo);
+                    $current_step_idx = $scheduleService->getCurrentStepIndex($scheduleItem['steps'], $schedule_actuals, $primary_due_date);
                     
                     foreach ($scheduleItem['steps'] as $idx => $step) {
                         $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';

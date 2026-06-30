@@ -9,266 +9,48 @@ $current_month = $_GET['m'] ?? date('Y-m');
 $msg = $_GET['msg'] ?? '';
 
 // ==========================================
-// 1. POSTデータ処理 (更新保存処理)
+// 1. サービスの初期化
+// ==========================================
+$financeService = new \App\Services\SalesFinanceService($pdo);
+
+// ==========================================
+// 2. POSTデータ処理 (更新保存処理)
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    $sender_id = $_SESSION['user_id'] ?? 1;
     
     if ($action === 'update_deposit') {
-        // 依頼主の入金・ステータス更新
         $project_id = intval($_POST['project_id'] ?? 0);
         $deposit_amount = intval($_POST['deposit_amount'] ?? 0);
         $deposit_date = !empty($_POST['deposit_date']) ? $_POST['deposit_date'] : null;
-        $status = $_POST['status'] ?? ''; // 案件自体のステータス変更も許可する
+        $status = $_POST['status'] ?? '';
         
         try {
-            $pdo->beginTransaction();
-            
-            // 請求総額(税込)を計算する
-            $stmtEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
-            $stmtEst->execute(['pid' => $project_id]);
-            $est_price = $stmtEst->fetchColumn() ?: 0;
-            $est_price_tax = round($est_price * 1.1);
-            
-            $stmtProjAdd = $pdo->prepare("SELECT additional_amount FROM projects WHERE id = :pid");
-            $stmtProjAdd->execute(['pid' => $project_id]);
-            $additional_amount = intval($stmtProjAdd->fetchColumn() ?: 0);
-            
-            $req_total = $est_price_tax + $additional_amount;
-            
-            // 入金状況を自動決定
-            $deposit_status = 'unpaid';
-            if ($deposit_amount >= $req_total) {
-                $deposit_status = 'paid';
-            } elseif ($deposit_amount > 0) {
-                $deposit_status = 'partially_paid';
-            }
-            
-            // 変更前データの取得
-            $stmtOld = $pdo->prepare("SELECT deposit_amount, deposit_date, deposit_status, status FROM projects WHERE id = :id");
-            $stmtOld->execute(['id' => $project_id]);
-            $old_data = $stmtOld->fetch(PDO::FETCH_ASSOC);
-            
-            // 入金情報更新
-            $stmt = $pdo->prepare("
-                UPDATE projects 
-                SET deposit_amount = :dep_amt, 
-                    deposit_date = :dep_date, 
-                    deposit_status = :dep_status
-                WHERE id = :id
-            ");
-            $stmt->execute([
-                'dep_amt' => $deposit_amount,
-                'dep_date' => $deposit_date,
-                'dep_status' => $deposit_status,
-                'id' => $project_id
-            ]);
-            
-            // 案件ステータスの更新（選択されている場合）
-            if (!empty($status)) {
-                $stmtStatus = $pdo->prepare("UPDATE projects SET status = :status WHERE id = :id");
-                $stmtStatus->execute(['status' => $status, 'id' => $project_id]);
-            }
-            
-            // チャットへの自動通知挿入
-            if ($old_data) {
-                $status_labels_local = [
-                    'unpaid' => '未入金',
-                    'partially_paid' => '一部入金',
-                    'paid' => '完済'
-                ];
-                $proj_status_labels = [
-                    'quote_req' => '見積依頼', 
-                    'quote_sent' => '見積送付済', 
-                    'doc_submitted' => '図書提出済', 
-                    'primary_prep' => '一次回答準備中', 
-                    'contracted' => '受注済', 
-                    'structural_dwg' => '申請図書作成中', 
-                    'submission' => '提出済・確認中', 
-                    'submitting' => '申請中',
-                    'correction' => '補正対応中', 
-                    'completed' => '完了'
-                ];
-                
-                $changes = [];
-                if (intval($old_data['deposit_amount']) !== $deposit_amount || $old_data['deposit_status'] !== $deposit_status || $old_data['deposit_date'] !== $deposit_date) {
-                    $old_status_text = $status_labels_local[$old_data['deposit_status']] ?? $old_data['deposit_status'];
-                    $new_status_text = $status_labels_local[$deposit_status] ?? $deposit_status;
-                    $changes[] = "・入金状況: {$old_status_text} ➔ {$new_status_text}\n  入金額: " . number_format($deposit_amount) . "円\n  入金日: " . ($deposit_date ?: '未設定');
-                }
-                
-                if (!empty($status) && $old_data['status'] !== $status) {
-                    $old_p_status = $proj_status_labels[$old_data['status']] ?? $old_data['status'];
-                    $new_p_status = $proj_status_labels[$status] ?? $status;
-                    $changes[] = "・案件ステータス: {$old_p_status} ➔ {$new_p_status}";
-                }
-                
-                if (!empty($changes)) {
-                    $sender_id = $_SESSION['user_id'] ?? 1;
-                    $msg_text = "【経理情報更新】\n経理担当（または管理者）が案件情報を更新しました。\n" . implode("\n", $changes);
-                    
-                    $stmtMsg = $pdo->prepare("
-                        INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
-                        VALUES (:pid, :sid, 'client_admin', :msg)
-                    ");
-                    $stmtMsg->execute([
-                        'pid' => $project_id,
-                        'sid' => $sender_id,
-                        'msg' => $msg_text
-                    ]);
-                }
-            }
-            
-            $pdo->commit();
+            $financeService->updateDeposit($project_id, $deposit_amount, $deposit_date, $status, $sender_id);
             header("Location: admin_sales.php?m=" . $current_month . "&msg=deposit_updated");
             exit;
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
             $error = "入金情報の更新に失敗しました: " . $e->getMessage();
         }
     }
     
     if ($action === 'update_payment') {
-        // 協力業者への支払い状況更新
         $order_id = intval($_POST['order_id'] ?? 0);
         $payment_status = $_POST['payment_status'] ?? 'unpaid';
         $payment_date = !empty($_POST['payment_date']) ? $_POST['payment_date'] : null;
         
         try {
-            $pdo->beginTransaction();
-            
-            // 変更前データの取得
-            $stmtOrder = $pdo->prepare("SELECT project_id, subcontractor_id, task_title, payment_status FROM subcontractor_orders WHERE id = :id");
-            $stmtOrder->execute(['id' => $order_id]);
-            $order_info = $stmtOrder->fetch(PDO::FETCH_ASSOC);
-            
-            // 支払い状況更新
-            $stmt = $pdo->prepare("
-                UPDATE subcontractor_orders 
-                SET payment_status = :pay_status,
-                    payment_date = :pay_date
-                WHERE id = :id
-            ");
-            $stmt->execute([
-                'pay_status' => $payment_status,
-                'pay_date' => $payment_date,
-                'id' => $order_id
-            ]);
-            
-            // チャットへの自動通知挿入
-            if ($order_info && $order_info['payment_status'] !== $payment_status) {
-                $pay_status_labels = [
-                    'unpaid' => '未払',
-                    'paid' => '支払済'
-                ];
-                $old_p_text = $pay_status_labels[$order_info['payment_status']] ?? $order_info['payment_status'];
-                $new_p_text = $pay_status_labels[$payment_status] ?? $payment_status;
-                
-                $sender_id = $_SESSION['user_id'] ?? 1;
-                $msg_text = "【お支払い状況更新】\n経理担当がタスク「{$order_info['task_title']}」のお支払い状況を更新しました。\n・支払状況: {$old_p_text} ➔ {$new_p_text}\n・支払日: " . ($payment_date ?: '未設定');
-                
-                $stmtMsg = $pdo->prepare("
-                    INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
-                    VALUES (:pid, :sid, 'sub_admin', :msg)
-                ");
-                $stmtMsg->execute([
-                    'pid' => $order_info['project_id'],
-                    'sid' => $sender_id,
-                    'msg' => $msg_text
-                ]);
-            }
-            
-            $pdo->commit();
+            $financeService->updateSubcontractorPayment($order_id, $payment_status, $payment_date, $sender_id);
             header("Location: admin_sales.php?m=" . $current_month . "&msg=payment_updated");
             exit;
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
             $error = "支払い情報の更新に失敗しました: " . $e->getMessage();
         }
     }
 }
 
 // ==========================================
-// 2. データ集計・取得ロジック
-// ==========================================
-
-// 締め日の設定 (前月26日〜当月25日)
-$dt = new DateTime($current_month . '-25 23:59:59');
-$end_date = $dt->format('Y-m-d H:i:s');
-$dt->modify('-1 month')->modify('+1 day')->setTime(0, 0, 0);
-$start_date = $dt->format('Y-m-d H:i:s');
-
-// A. 当月内の「実際に入金された」総額 (実績)
-$stmtActualDeposit = $pdo->prepare("
-    SELECT SUM(deposit_amount) as total 
-    FROM projects 
-    WHERE DATE_FORMAT(deposit_date, '%Y-%m') = :m
-");
-$stmtActualDeposit->execute(['m' => $current_month]);
-$actual_deposit_total = $stmtActualDeposit->fetch()['total'] ?? 0;
-
-// B. 当月内の「実際に支払われた」総額 (支払済実績)
-$stmtActualPayment = $pdo->prepare("
-    SELECT SUM(order_amount) as total 
-    FROM subcontractor_orders 
-    WHERE DATE_FORMAT(payment_date, '%Y-%m') = :m AND payment_status = 'paid'
-");
-$stmtActualPayment->execute(['m' => $current_month]);
-$actual_payment_total = $stmtActualPayment->fetch()['total'] ?? 0;
-
-// C. 当月締め対象の「支払予定総額（買掛金）」(今月締め分の全タスク)
-$stmtExpectedPayment = $pdo->prepare("
-    SELECT SUM(order_amount) as total 
-    FROM subcontractor_orders 
-    WHERE status = 'completed'
-      AND completed_at >= :sd AND completed_at <= :ed
-");
-$stmtExpectedPayment->execute(['sd' => $start_date, 'ed' => $end_date]);
-$expected_payment_total = $stmtExpectedPayment->fetch()['total'] ?? 0;
-
-
-// --- 案件一覧 (売上・入金・残金管理) ---
-// 対象月に登録された案件、または「現在未収金がある（残金 > 0）」アクティブな案件を対象とする
-$stmtProjects = $pdo->prepare("
-    SELECT p.*, u.company_name, u.contact_name,
-           (SELECT total_price FROM estimates e WHERE e.project_id = p.id ORDER BY e.id DESC LIMIT 1) as formal_estimate
-    FROM projects p
-    JOIN users u ON p.client_id = u.id
-    WHERE p.status != 'completed' 
-      AND (DATE_FORMAT(p.created_at, '%Y-%m') = :m OR p.deposit_status != 'paid')
-    ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
-");
-$stmtProjects->execute(['m' => $current_month]);
-$projects = $stmtProjects->fetchAll();
-
-$total_sales = 0;
-$total_deposit = 0;
-$total_balance = 0;
-
-$sales_list = [];
-foreach ($projects as $p) {
-    $est = ($p['formal_estimate'] !== null) ? round($p['formal_estimate'] * 1.1) : 0;
-    $add = $p['additional_amount'] ?? 0;
-    $dep = $p['deposit_amount'] ?? 0;
-    $req = $est + $add;
-    $bal = $req - $dep;
-    
-    // 集計は当月作成された案件のみを対象にする (過年度や別月の未回収案件は除外してサマリーを出すため)
-    if (date('Y-m', strtotime($p['created_at'])) === $current_month) {
-        $total_sales += $req;
-        $total_deposit += $dep;
-        $total_balance += $bal;
-    }
-    
-    $sales_list[] = array_merge($p, [
-        'req_total' => $req,
-        'balance' => $bal,
-        'is_current_month' => (date('Y-m', strtotime($p['created_at'])) === $current_month)
-    ]);
-}
-
-
-// --- 協力業者 支払管理 (25日締め) ---
 $stmtSubs = $pdo->prepare("
     SELECT o.*, u.contact_name, p.project_name
     FROM subcontractor_orders o
