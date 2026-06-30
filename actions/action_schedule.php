@@ -45,7 +45,7 @@ if ($action === 'set_primary_due_date') {
                     $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
                     $actuals[1] = $due_date;
                     $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
-                    $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                    $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
                 }
             }
             
@@ -104,7 +104,7 @@ if ($action === 'update_schedule_override') {
                 $overrides[$step_idx] = $override_date;
             }
             $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
-            $stmt->execute(['act' => json_encode($overrides), 'pid' => $project_id]);
+            $stmt->execute(['act' => json_encode($overrides, JSON_FORCE_OBJECT), 'pid' => $project_id]);
             
             // もし一次回答予定日 (idx=1) が上書きされた場合は、primary_due_date カラムも同期する
             if ($step_idx == 1 && !empty($override_date)) {
@@ -173,7 +173,7 @@ if ($action === 'update_schedule_actual') {
                 $actuals[$step_idx] = $actual_date;
             }
             $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
-            $stmt->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+            $stmt->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
 
             // 「申請図書一式UP」の実施日が設定された場合、案件ステータスを「申請中」(submitting) に自動遷移
             if (!empty($actual_date)) {
@@ -316,7 +316,7 @@ if ($action === 'submit_primary_response') {
                     $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
                     $actuals[2] = $today; // 初回提示
                     $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
-                    $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+                    $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
                 }
             }
 
@@ -371,7 +371,7 @@ if ($action === 'complete_review') {
                 }
             }
             $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
-            $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $project_id]);
+            $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
         }
     }
     

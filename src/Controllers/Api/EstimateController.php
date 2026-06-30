@@ -109,7 +109,7 @@ class EstimateController
                             }
                             if ($updated) {
                                 $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
-                                $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $projectId]);
+                                $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $projectId]);
                             }
                         }
                     }
