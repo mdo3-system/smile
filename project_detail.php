@@ -318,6 +318,7 @@ $chat_messages = $stmtMsgs->fetchAll();
                 </span>
             </div>
             <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold; margin-right: 10px;">➔ 案件一覧に戻る</a>
+            <a href="manual_client.php" style="color:#2563eb; text-decoration:none; font-weight:bold; margin-right: 10px;">📖 操作マニュアル</a>
             <?php if ($has_finance_access): ?>
                 <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
                 <a href="admin_sales.php" style="background:#10b981; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">📊 経理・売上・支払い管理</a>

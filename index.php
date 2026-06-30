@@ -110,6 +110,7 @@ $status_labels = [
                 </div>
             <?php endif; ?>
             <div>ログイン中: <?= htmlspecialchars($current_user['contact_name'], ENT_QUOTES) ?> 様 <span style="font-size:11px; background:#4b5563; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;"><?= htmlspecialchars($_SESSION['role'], ENT_QUOTES) ?></span></div>
+            <a href="manual_client.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 操作マニュアル</a>
             <a href="logout.php" style="font-size:12px; color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>
     </div>
