@@ -102,4 +102,68 @@ class EstimateControllerTest extends TestCase {
          $this->assertEquals('2026-06-20', $actuals_wall[0]);
          $this->assertEquals('2026-06-25', $actuals_wall[1]);
      }
+
+     /**
+      * 壁量計算の進捗実績がある案件に基礎横架材を追加した際、進捗実績が正しく許容応力スケジュール(schedule_actuals)へ引き継がれることの検証
+      */
+     public function testSaveMigratesMilestonesWhenWallAddsKisohari() {
+         // 初期化：ID 1 の案件を「壁量計算のみ (req_wall=1)」で、
+         // かつ壁量実績 (schedule_actuals_wall) に 0:受領日, 1:期日, 2:初回提示, 3:CB確認, 4:申請UP を設定
+         $this->pdo->exec("DELETE FROM projects");
+         $stmt = $this->pdo->prepare("
+             INSERT INTO projects (id, project_name, status, primary_due_date, req_permit, req_wall, schedule_actuals_wall) 
+             VALUES (2, '壁量から基礎追加テスト', 'structural_dwg', '2026-06-10', 0, 1, :act_wall)
+         ");
+         $stmt->execute([
+             'act_wall' => json_encode([
+                 0 => '2026-06-01', // 受領日
+                 1 => '2026-06-10', // 期日
+                 2 => '2026-06-09', // 初回提示
+                 3 => '2026-06-12', // CB確認
+                 4 => '2026-06-18'  // 申請UP
+             ], JSON_FORCE_OBJECT)
+         ]);
+
+         $_POST['project_id'] = '2';
+         $_POST['req_wall'] = '1';
+         $_POST['req_opt_kisohari'] = '1'; // 基礎横架材オプションが追加された！
+         $_POST['req_permit'] = '0';
+         $_POST['req_skin'] = '0';
+         $_POST['req_sky'] = '0';
+
+         $inputs = [
+             'est_active_permit' => false,
+             'est_active_wall' => true, // 壁量計算もアクティブ
+             'est_active_skin' => false,
+             'est_active_sky' => false,
+             'est_kisohari_wall' => true // 基礎梁オプションオン
+         ];
+         $_POST['inputs_json'] = json_encode($inputs);
+
+         $controller = new EstimateController();
+         ob_start();
+         try {
+             $controller->save();
+         } catch (\Throwable $e) {
+             // 外部 require 失敗は無視
+         }
+         ob_end_clean();
+
+         // DB 状態の確認
+         $stmtCheck = $this->pdo->query("SELECT * FROM projects WHERE id = 2");
+         $proj = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+         // 仕様フラグが正しく更新されていることを確認
+         $this->assertEquals(1, $proj['req_wall']);
+         $this->assertEquals(1, $proj['req_opt_kisohari']);
+
+         // 新しく有効になった schedule_actuals (許容・基礎横架材用) に、
+         // 壁量計算側の実績がマッピングルールに従って完璧に引き継がれていることを検証！
+         $actuals_permit = json_decode($proj['schedule_actuals'] ?? '{}', true);
+         $this->assertEquals('2026-06-01', $actuals_permit[0]); // 受領
+         $this->assertEquals('2026-06-10', $actuals_permit[1]); // 期日
+         $this->assertEquals('2026-06-09', $actuals_permit[2]); // 初回提示
+         $this->assertEquals('2026-06-12', $actuals_permit[3]); // CB確認
+         $this->assertEquals('2026-06-18', $actuals_permit[7]); // 壁量[4] (申請UP) -> 許容[7] (申請UP) へ引き継ぎ！
+     }
 }

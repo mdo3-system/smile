@@ -83,36 +83,81 @@ class EstimateController
             $act_row = $stmtAct->fetch(\PDO::FETCH_ASSOC);
 
             if ($act_row) {
-                $base_actuals = json_decode($act_row['schedule_actuals'] ?? '{}', true) ?: [];
-                $received_date = $base_actuals[0] ?? date('Y-m-d');
+                // A. すべての実績カラムを走査し、共通の進捗イベント日（受領日、期日、その他）を吸い上げる
+                $received_date = null;
                 $due_date = $act_row['primary_due_date'] ?? null;
+                
+                // 各計算仕様の実績データ
+                $act_permit = json_decode($act_row['schedule_actuals'] ?? '{}', true) ?: [];
+                $act_wall = json_decode($act_row['schedule_actuals_wall'] ?? '{}', true) ?: [];
+                $act_skin = json_decode($act_row['schedule_actuals_skin'] ?? '{}', true) ?: [];
+                $act_sky = json_decode($act_row['schedule_actuals_sky'] ?? '{}', true) ?: [];
+                
+                // 受領日 (idx=0) を探す
+                foreach ([$act_permit, $act_wall, $act_skin, $act_sky] as $arr) {
+                    if (!empty($arr[0])) {
+                        $received_date = $arr[0];
+                        break;
+                    }
+                }
+                if (!$received_date) {
+                    $received_date = date('Y-m-d');
+                }
 
+                // 共通マイルストーンの一時収集
+                // 標準的なマイルストーンキー => 日付
+                $m_recv = $received_date;
+                $m_due = $due_date ?: ($act_permit[1] ?? $act_wall[1] ?? $act_skin[1] ?? $act_sky[1] ?? null);
+                
+                // 各計算仕様ごとの進捗実績から、初回提示、CB確認、申請図書UP、審査合格、補正、精算の各共通マイルストーン日を吸い上げる
+                $m_present  = $act_permit[2]  ?? $act_wall[2] ?? $act_skin[2] ?? $act_sky[2] ?? null;
+                $m_cb       = $act_permit[3]  ?? $act_wall[3] ?? $act_skin[3] ?? null;
+                $m_app_up   = $act_permit[7]  ?? $act_wall[4] ?? $act_skin[4] ?? $act_sky[3] ?? null;
+                $m_wait     = $act_permit[8]  ?? $act_wall[5] ?? $act_skin[5] ?? $act_sky[4] ?? null;
+                $m_correct  = $act_permit[9]  ?? $act_wall[6] ?? $act_skin[6] ?? $act_sky[5] ?? null;
+                $m_settle   = $act_permit[10] ?? $act_wall[7] ?? $act_skin[7] ?? $act_sky[6] ?? null;
+
+                // B. 有効になっている計算仕様の実績カラムに対し、標準マイルストーンを配分して同期・復元する
                 $colsToSync = [
-                    'req_permit' => ['schedule_actuals'],
-                    'req_wall' => ['schedule_actuals_wall'],
-                    'req_skin' => ['schedule_actuals_skin'],
-                    'req_sky' => ['schedule_actuals_sky']
+                    'req_permit'       => ['col' => 'schedule_actuals',      'map' => [0 => $m_recv, 1 => $m_due, 2 => $m_present, 3 => $m_cb, 7 => $m_app_up, 8 => $m_wait, 9 => $m_correct, 10 => $m_settle]],
+                    'req_opt_kisohari' => ['col' => 'schedule_actuals',      'map' => [0 => $m_recv, 1 => $m_due, 2 => $m_present, 3 => $m_cb, 7 => $m_app_up, 8 => $m_wait, 9 => $m_correct, 10 => $m_settle]],
+                    'req_wall'         => ['col' => 'schedule_actuals_wall', 'map' => [0 => $m_recv, 1 => $m_due, 2 => $m_present, 3 => $m_cb, 4 => $m_app_up, 5 => $m_wait, 6 => $m_correct,  7 => $m_settle]],
+                    'req_skin'         => ['col' => 'schedule_actuals_skin', 'map' => [0 => $m_recv, 1 => $m_due, 2 => $m_present, 3 => $m_cb, 4 => $m_app_up, 5 => $m_wait, 6 => $m_correct,  7 => $m_settle]],
+                    'req_sky'          => ['col' => 'schedule_actuals_sky',  'map' => [0 => $m_recv, 1 => $m_due, 2 => $m_present,                 3 => $m_app_up, 4 => $m_wait, 5 => $m_correct,  6 => $m_settle]],
                 ];
 
-                foreach ($colsToSync as $req_key => $cols) {
-                    if ($_POST[$req_key] == 1) {
-                        foreach ($cols as $col) {
-                            $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
-                            $updated = false;
-                            if (empty($actuals[0])) {
-                                $actuals[0] = $received_date;
-                                $updated = true;
-                            }
-                            if ($due_date && empty($actuals[1])) {
-                                $actuals[1] = $due_date;
-                                $updated = true;
-                            }
-                            if ($updated) {
-                                $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
-                                $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $projectId]);
+                // データベース上の更新用配列
+                $updated_actuals = [
+                    'schedule_actuals' => $act_permit,
+                    'schedule_actuals_wall' => $act_wall,
+                    'schedule_actuals_skin' => $act_skin,
+                    'schedule_actuals_sky' => $act_sky
+                ];
+
+                $updated_cols = [];
+
+                foreach ($colsToSync as $req_key => $syncInfo) {
+                    // もし仕様がオン (1) の場合、マッピングから日付を割り当てる
+                    if (($_POST[$req_key] ?? 0) == 1) {
+                        $col = $syncInfo['col'];
+                        $map = $syncInfo['map'];
+                        
+                        foreach ($map as $idx => $date) {
+                            if ($date && empty($updated_actuals[$col][$idx])) {
+                                $updated_actuals[$col][$idx] = $date;
+                                $updated_cols[$col] = true;
                             }
                         }
                     }
+                }
+
+                // 変更があったカラムのみDBに反映
+                foreach ($updated_cols as $col => $unused) {
+                    $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                    $stmtUpdateAct->execute([
+                        'act' => json_encode($updated_actuals[$col], JSON_FORCE_OBJECT),
+                        'pid' => $projectId
+                    ]);
                 }
             }
 
