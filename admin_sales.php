@@ -235,7 +235,7 @@ $status_labels = [
                                 </td>
                                 <td class="num" style="color:<?= $data['balance'] > 0 ? '#ef4444' : '#10b981' ?>; font-weight:bold;"><?= number_format($data['balance']) ?>円</td>
                                 <td>
-                                    <input type="date" name="deposit_date" value="<?= htmlspecialchars($data['deposit_date'] ?? '') ?>" class="form-control">
+                                    <input type="date" name="deposit_date" value="<?= !empty($data['deposit_date']) ? date('Y-m-d', strtotime($data['deposit_date'])) : '' ?>" class="form-control">
                                 </td>
                                 <td>
                                     <select name="status" class="form-control">
@@ -305,7 +305,7 @@ $status_labels = [
                                                     <?= date('Y-m-d', strtotime($current_month . '-25 +1 month')) ?>
                                                 </td>
                                                 <td style="width: 17%; padding: 5px; white-space: nowrap;">
-                                                    <input type="date" name="payment_date" value="<?= htmlspecialchars($t['payment_date'] ?? '') ?>" class="form-control" style="width:105px; font-size:11px; padding:2px;">
+                                                    <input type="date" name="payment_date" value="<?= !empty($t['payment_date']) ? date('Y-m-d', strtotime($t['payment_date'])) : '' ?>" class="form-control" style="width:105px; font-size:11px; padding:2px;">
                                                 </td>
                                                 <td style="width: 12%; padding: 5px; white-space: nowrap;">
                                                     <select name="payment_status" class="form-control" style="font-weight:bold; font-size:11px; padding:2px;">

@@ -599,7 +599,7 @@
                 </div>
                 <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
                     <input type="hidden" name="action" value="set_primary_due_date">
-                    <input type="date" name="primary_due_date" value="<?= $project_info['primary_due_date'] ?? '' ?>" required style="padding:6px; font-size:13px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; width:100%; box-sizing:border-box;">
+                    <input type="date" name="primary_due_date" value="<?= !empty($project_info['primary_due_date']) ? date('Y-m-d', strtotime($project_info['primary_due_date'])) : '' ?>" required style="padding:6px; font-size:13px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; width:100%; box-sizing:border-box;">
                     <button type="submit" style="width:100%; background:#28a745; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">期日を設定/変更して更新</button>
                 </form>
             </div>

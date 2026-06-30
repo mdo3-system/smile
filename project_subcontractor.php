@@ -613,7 +613,7 @@ if (!$is_admin) {
                                             </div>
                                             <div style="flex:1;">
                                                 <label style="font-weight:bold; font-size:11px; display:block; margin-bottom:3px; color:#475569;">納品完了日 (completed_at):</label>
-                                                <input type="date" name="completed_at" value="<?= htmlspecialchars($o['completed_at'] ?? '') ?>" style="width:100%; box-sizing:border-box; padding:4px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px;">
+                                                <input type="date" name="completed_at" value="<?= !empty($o['completed_at']) ? date('Y-m-d', strtotime($o['completed_at'])) : '' ?>" style="width:100%; box-sizing:border-box; padding:4px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px;">
                                             </div>
                                         </div>
                                         <div style="text-align:right;">
