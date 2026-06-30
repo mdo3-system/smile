@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($invite_project_id > 0) {
                 $target_page = "project_detail.php?id=" . $invite_project_id;
             } elseif ($invite_parent_id > 0) {
-                $target_page = "subcontractor_portal.php";
+                $target_page = ($prefilled_role === 'subcontractor') ? "subcontractor_portal.php" : "index.php";
             } else {
                 $target_page = "index.php";
             }
