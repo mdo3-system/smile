@@ -108,7 +108,8 @@ if (!empty($all_estimates)) {
                     </div>
                     <label>母屋下がり箇所数: <input type="number" id="est_moya_permit" value="<?= htmlspecialchars($saved_inputs['est_moya_permit'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+15,000円/箇所)</label><br>
                     <label>斜め壁等（耐力壁なし）箇所数: <input type="number" id="est_slant_wall_no_bearing" value="<?= htmlspecialchars($saved_inputs['est_slant_wall_no_bearing'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+15,000円/箇所)</label><br>
-                    <label>斜め壁等（耐力壁あり）箇所数: <input type="number" id="est_slant_wall_bearing" value="<?= htmlspecialchars($saved_inputs['est_slant_wall_bearing'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+30,000円/箇所)</label>
+                    <label>斜め壁等（耐力壁あり）箇所数: <input type="number" id="est_slant_wall_bearing" value="<?= htmlspecialchars($saved_inputs['est_slant_wall_bearing'] ?? '0', ENT_QUOTES) ?>" min="0" onchange="calcClientEstimate()" style="width:40px; font-size:11px; padding:2px;"> 箇所 (+30,000円/箇所)</label><br>
+                    <label><input type="checkbox" id="est_opt_kisohari_calc" onchange="calcClientEstimate()" <?= ($saved_inputs['est_opt_kisohari_calc'] ?? false) ? 'checked' : '' ?>> 基礎横架材計算 (+15,000円)</label>
                 </div>
             </div>
         </div>
@@ -263,6 +264,7 @@ if (!empty($all_estimates)) {
                         "許容応力度計算 母屋下がり加算",
                         "許容応力度計算 斜め壁等（耐力壁なし）",
                         "許容応力度計算 斜め壁等（耐力壁あり）",
+                        "許容応力度計算 基礎横架材計算",
                         "性能表示壁量計算 基本料金",
                         "性能表示壁量計算 構造床面積割増",
                         "性能表示壁量計算 PH階がある",

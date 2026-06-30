@@ -216,7 +216,9 @@ class ScheduleService {
         if (!$primary_due_date) {
             return 0;
         }
-        for ($i = 0; $i < count($steps); $i++) {
+        // primary_due_dateがある場合は設計図書の受領(0)は完了したものとみなし、
+        // インデックス1(着手基準日・一次回答)以降から未完了ステップを探す
+        for ($i = 1; $i < count($steps); $i++) {
             if (empty($actuals[$i])) {
                 return $i;
             }

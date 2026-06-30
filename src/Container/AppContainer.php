@@ -23,6 +23,16 @@ class AppContainer
         $this->pdo = $pdo;
     }
 
+    public static function setInstance(?AppContainer $instance): void
+    {
+        self::$instance = $instance;
+    }
+
+    public function setPDO(PDO $pdo): void
+    {
+        $this->pdo = $pdo;
+    }
+
     public static function getInstance(): self
     {
         if (self::$instance === null) {

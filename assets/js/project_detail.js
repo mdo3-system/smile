@@ -368,6 +368,10 @@ function calcClientEstimate() {
         currentEstimate += pushEstimateItem("許容応力度計算 母屋下がり加算", moya_permit > 0 ? moya_permit : 1, "箇所", 15000, moya_permit > 0);
         currentEstimate += pushEstimateItem("許容応力度計算 斜め壁等（耐力壁なし）", slant_no_bearing > 0 ? slant_no_bearing : 1, "箇所", 15000, slant_no_bearing > 0);
         currentEstimate += pushEstimateItem("許容応力度計算 斜め壁等（耐力壁あり）", slant_bearing > 0 ? slant_bearing : 1, "箇所", 30000, slant_bearing > 0);
+        
+        const el_opt_kisohari = document.getElementById('est_opt_kisohari_calc');
+        const opt_kisohari = el_opt_kisohari ? el_opt_kisohari.checked : false;
+        currentEstimate += pushEstimateItem("許容応力度計算 基礎横架材計算", 1, "式", 15000, opt_kisohari);
     }
     
     // 2. 性能表示壁量計算

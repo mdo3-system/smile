@@ -53,6 +53,8 @@ class EstimateController
                 $req_opt_kisohari = 1;
             } elseif (!empty($inputs['est_kisohari_wall'])) {
                 $req_opt_kisohari = 1;
+            } elseif (!empty($inputs['est_opt_kisohari_calc'])) {
+                $req_opt_kisohari = 1;
             }
             $_POST['req_opt_kisohari'] = $req_opt_kisohari;
 
@@ -74,6 +76,45 @@ class EstimateController
                 'kisohari' => $_POST['req_opt_kisohari'],
                 'pid'      => $projectId
             ]);
+
+            // 新しく追加された仕様に対応するスケジュールの実績同期
+            $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky, primary_due_date FROM projects WHERE id = :id");
+            $stmtAct->execute(['id' => $projectId]);
+            $act_row = $stmtAct->fetch(\PDO::FETCH_ASSOC);
+
+            if ($act_row) {
+                $base_actuals = json_decode($act_row['schedule_actuals'] ?? '{}', true) ?: [];
+                $received_date = $base_actuals[0] ?? date('Y-m-d');
+                $due_date = $act_row['primary_due_date'] ?? null;
+
+                $colsToSync = [
+                    'req_permit' => ['schedule_actuals'],
+                    'req_wall' => ['schedule_actuals_wall'],
+                    'req_skin' => ['schedule_actuals_skin'],
+                    'req_sky' => ['schedule_actuals_sky']
+                ];
+
+                foreach ($colsToSync as $req_key => $cols) {
+                    if ($_POST[$req_key] == 1) {
+                        foreach ($cols as $col) {
+                            $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+                            $updated = false;
+                            if (empty($actuals[0])) {
+                                $actuals[0] = $received_date;
+                                $updated = true;
+                            }
+                            if ($due_date && empty($actuals[1])) {
+                                $actuals[1] = $due_date;
+                                $updated = true;
+                            }
+                            if ($updated) {
+                                $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                                $stmtUpdateAct->execute(['act' => json_encode($actuals), 'pid' => $projectId]);
+                            }
+                        }
+                    }
+                }
+            }
 
             // 1. まず見積もりデータをDBに保存（この時点ではDrive IDは無し）
             $service = $this->container->getEstimateCalculatorService();

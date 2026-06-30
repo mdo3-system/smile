@@ -111,7 +111,7 @@ if ($success) {
     try {
         $stmtUpdateChatAt = $pdo->prepare("UPDATE projects SET last_manual_chat_at = NOW() WHERE id = :pid");
         $stmtUpdateChatAt->execute(['pid' => (int)$projectId]);
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         // ログ出力など必要であれば行うが、メッセージ送信自体は成功しているためスルーでも良い
     }
 }
