@@ -124,12 +124,14 @@ $status_labels = [
     <div class="grid">
         <?php foreach ($projects as $project): 
             $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo, $_SESSION['role'] ?? null);
+            $current_step = getCurrentStepInfo($project, $pdo);
         ?>
             <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
                 <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
                 <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
                 <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
-                    📅 一次回答予定: <?= !empty($project['primary_due_date']) ? date('Y/m/d', strtotime($project['primary_due_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                    📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                    <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
                 </div>
                 <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
                 <?php if (($_SESSION['role'] ?? '') !== 'client'): ?>

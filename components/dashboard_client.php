@@ -413,6 +413,17 @@
                     echo '<tbody>';
                     
                     $calc_date = $primary_due_date;
+                    $current_step_idx = -1;
+                    if ($primary_due_date) {
+                        for ($i = 0; $i < count($scheduleItem['steps']); $i++) {
+                            if (empty($schedule_actuals[$i])) {
+                                $current_step_idx = $i;
+                                break;
+                            }
+                        }
+                    } else {
+                        $current_step_idx = 0;
+                    }
                     
                     foreach ($scheduleItem['steps'] as $idx => $step) {
                         $bg_color = ($idx % 2 == 0) ? '#ffffff' : '#f8fafc';
@@ -458,8 +469,15 @@
                             $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
                         }
 
-                        echo "<tr style='background:{$bg_color}; border-bottom:1px solid #e2e8f0;'>";
-                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
+                        $is_current = ($idx === $current_step_idx);
+                        $row_style = "background:{$bg_color}; border-bottom:1px solid #e2e8f0;";
+                        if ($is_current) {
+                            $row_style = "background:#fee2e2; border:2px solid #ef4444; font-weight:bold;";
+                        }
+                        $current_badge = $is_current ? ' <span style="background:#ef4444; color:white; padding:1px 5px; border-radius:3px; font-size:9px; margin-left:5px; font-weight:bold;">👉 現在地</span>' : '';
+
+                        echo "<tr style='{$row_style}'>";
+                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                         echo "<td style='padding:6px;'>{$badge}</td>";
                         echo "<td style='padding:6px;'>{$date_str}</td>";
                         echo "</tr>";

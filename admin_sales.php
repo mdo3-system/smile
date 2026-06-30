@@ -544,8 +544,8 @@ $status_labels = [
                                     <?php endforeach; ?>
                                 </table>
                             </td>
-                            <td style="text-align:right; font-weight:bold; color:#f97316; vertical-align:top; border-bottom:2px solid #cbd5e1; padding-top:15px; font-size:12px; white-space:nowrap;">
-                                合計:<br><span style="font-size:14px; font-weight:bold;"><?= number_format($data['total']) ?>円</span>
+                            <td style="text-align:right; font-weight:bold; color:#f97316; vertical-align:top; border-bottom:2px solid #cbd5e1; padding-top:15px; font-size:14px; white-space:nowrap;">
+                                <?= number_format($data['total']) ?>円
                             </td>
                         </tr>
                     <?php endforeach; ?>

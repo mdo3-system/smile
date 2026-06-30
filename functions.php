@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.4.25');
+define('SYSTEM_VERSION', 'v1.4.26');
 
 
 // ==========================================
@@ -232,4 +232,109 @@ function renderFileSlot($c_key, $c_label, $latest_files, $project_id) {
     echo '<input type="file" name="upload_file" onchange="this.form.submit()" style="display:none;" id="btn_f_'.$c_key.'">';
     echo '<button type="button" onclick="document.getElementById(\'btn_f_'.$c_key.'\').click();" class="btn-upload-sm">UP/更新</button>';
     echo '</form></div></div>';
+}
+
+/**
+ * プロジェクトの現在地の工程名と予定日を取得する
+ * @param array $project プロジェクトレコード
+ * @param PDO $pdo
+ * @return array ['step_name' => string, 'plan_date' => string, 'is_completed' => bool]
+ */
+function getCurrentStepInfo(array $project, PDO $pdo): array {
+    $req_permit = (int)($project['req_permit'] ?? 0);
+    $req_wall = (int)($project['req_wall'] ?? 0);
+    $req_skin = (int)($project['req_skin'] ?? 0);
+    $req_sky = (int)($project['req_sky'] ?? 0);
+    $req_opt_kisohari = (int)($project['req_opt_kisohari'] ?? 0);
+    $primary_due_date = $project['primary_due_date'] ?? null;
+
+    // スケジュールタイプと工程リストの選定
+    if ($req_permit == 1 || $req_opt_kisohari == 1) {
+        $base_days = getScheduleBaseDays($project);
+        $steps = getScheduleSteps($base_days, true);
+        $actuals = json_decode($project['schedule_actuals'] ?? '[]', true) ?: [];
+        $overrides = json_decode($project['schedule_overrides'] ?? '[]', true) ?: [];
+    } elseif ($req_wall == 1) {
+        $base_days = getScheduleBaseDays($project);
+        $steps = getScheduleStepsWall($base_days);
+        $actuals = json_decode($project['schedule_actuals_wall'] ?? '[]', true) ?: [];
+        $overrides = json_decode($project['schedule_overrides_wall'] ?? '[]', true) ?: [];
+    } elseif ($req_skin == 1) {
+        $base_days = getScheduleBaseDays($project);
+        $steps = getScheduleStepsSkin($base_days);
+        $actuals = json_decode($project['schedule_actuals_skin'] ?? '[]', true) ?: [];
+        $overrides = json_decode($project['schedule_overrides_skin'] ?? '[]', true) ?: [];
+    } elseif ($req_sky == 1) {
+        $base_days = getScheduleBaseDays($project);
+        $steps = getScheduleStepsSky($base_days);
+        $actuals = json_decode($project['schedule_actuals_sky'] ?? '[]', true) ?: [];
+        $overrides = json_decode($project['schedule_overrides_sky'] ?? '[]', true) ?: [];
+    } else {
+        $base_days = getScheduleBaseDays($project);
+        $steps = getScheduleSteps($base_days, false);
+        $actuals = json_decode($project['schedule_actuals'] ?? '[]', true) ?: [];
+        $overrides = json_decode($project['schedule_overrides'] ?? '[]', true) ?: [];
+    }
+
+    // 1. 現在進行中の工程（実施日が入っていない最初のステップ）の特定
+    $current_step_idx = -1;
+    if ($primary_due_date) {
+        for ($i = 0; $i < count($steps); $i++) {
+            if (empty($actuals[$i])) {
+                $current_step_idx = $i;
+                break;
+            }
+        }
+    } else {
+        $current_step_idx = 0;
+    }
+
+    if ($current_step_idx === -1) {
+        return [
+            'step_name' => '完了',
+            'plan_date' => '',
+            'is_completed' => true
+        ];
+    }
+
+    // 2. その工程の予定日の計算
+    $calc_date = $primary_due_date;
+    $target_plan_date = '';
+
+    if ($primary_due_date) {
+        for ($idx = 0; $idx <= $current_step_idx; $idx++) {
+            $step = $steps[$idx];
+
+            if ($idx == 0) {
+                // 開始時は計算日なし
+            } elseif ($idx == 1) {
+                $calc_date = $overrides[$idx] ?? $primary_due_date;
+            } else {
+                if ($step['type'] == 'biz') {
+                    $calc_date = addBusinessDays($calc_date, $step['days']);
+                } elseif ($step['type'] == 'cal') {
+                    $calc_date = date('Y-m-d', strtotime($calc_date . " +{$step['days']} days"));
+                }
+                
+                if (!empty($overrides[$idx])) {
+                    $calc_date = $overrides[$idx];
+                }
+            }
+
+            $actual_date = $actuals[$idx] ?? '';
+            if ($actual_date) {
+                $calc_date = $actual_date;
+            }
+
+            if ($idx === $current_step_idx) {
+                $target_plan_date = $calc_date;
+            }
+        }
+    }
+
+    return [
+        'step_name' => $steps[$current_step_idx]['name'],
+        'plan_date' => $target_plan_date,
+        'is_completed' => false
+    ];
 }
