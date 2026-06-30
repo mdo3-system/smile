@@ -110,7 +110,17 @@ $status_labels = [
                 </div>
             <?php endif; ?>
             <div>ログイン中: <?= htmlspecialchars($current_user['contact_name'], ENT_QUOTES) ?> 様 <span style="font-size:11px; background:#4b5563; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;"><?= htmlspecialchars($_SESSION['role'], ENT_QUOTES) ?></span></div>
-            <a href="manual_client.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 操作マニュアル</a>
+            <?php
+            $user_role = $_SESSION['role'] ?? 'client';
+            if ($user_role === 'client') {
+                echo '<a href="manual_client.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 操作マニュアル (依頼主向け)</a>';
+            } elseif ($user_role === 'subcontractor') {
+                echo '<a href="manual_subcontractor.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 操作マニュアル (協力業者向け)</a>';
+            } elseif ($user_role === 'admin' || $user_role === 'accountant') {
+                echo '<a href="manual_client.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 依頼主マニュアル</a>';
+                echo '<a href="manual_subcontractor.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 協力業者マニュアル</a>';
+            }
+            ?>
             <a href="logout.php" style="font-size:12px; color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>
     </div>

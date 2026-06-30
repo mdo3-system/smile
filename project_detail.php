@@ -289,7 +289,7 @@ $chat_messages = $stmtMsgs->fetchAll();
     </style>
 </head>
 <body>
-    <div style="max-width: 1400px; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
+    <div style="width: 98%; max-width: none; margin: 0 auto 15px auto; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap: 10px;">
             <?php 
             $ball = \App\Helpers\StatusHelper::getBallStatus($project_info, $pdo, $_SESSION['role'] ?? null);
@@ -318,7 +318,17 @@ $chat_messages = $stmtMsgs->fetchAll();
                 </span>
             </div>
             <a href="index.php" style="color:#0056b3; text-decoration:none; font-weight:bold; margin-right: 10px;">➔ 案件一覧に戻る</a>
-            <a href="manual_client.php" style="color:#2563eb; text-decoration:none; font-weight:bold; margin-right: 10px;">📖 操作マニュアル</a>
+            <?php
+            $user_role = $_SESSION['role'] ?? 'client';
+            if ($user_role === 'client') {
+                echo '<a href="manual_client.php" style="color:#2563eb; text-decoration:none; font-weight:bold; margin-right: 10px;">📖 操作マニュアル (依頼主向け)</a>';
+            } elseif ($user_role === 'subcontractor') {
+                echo '<a href="manual_subcontractor.php" style="color:#2563eb; text-decoration:none; font-weight:bold; margin-right: 10px;">📖 操作マニュアル (協力業者向け)</a>';
+            } elseif ($user_role === 'admin' || $user_role === 'accountant') {
+                echo '<a href="manual_client.php" style="color:#2563eb; text-decoration:none; font-weight:bold; margin-right: 10px;">📖 依頼主マニュアル</a>';
+                echo '<a href="manual_subcontractor.php" style="color:#2563eb; text-decoration:none; font-weight:bold; margin-right: 10px;">📖 協力業者マニュアル</a>';
+            }
+            ?>
             <?php if ($has_finance_access): ?>
                 <a href="project_subcontractor.php?id=<?= $project_id ?>" style="background:#3b82f6; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">👷 協力業者ダッシュボードを開く</a>
                 <a href="admin_sales.php" style="background:#10b981; color:white; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold;">📊 経理・売上・支払い管理</a>
@@ -329,7 +339,7 @@ $chat_messages = $stmtMsgs->fetchAll();
     </div>
 
     <!-- ===== タブUI ===== -->
-    <div style="max-width: 1400px; margin: 0 auto;">
+    <div style="width: 98%; max-width: none; margin: 0 auto;">
         <div class="nav-tabs">
             <?php foreach ($available_tabs as $key => $label): ?>
                 <a href="project_detail.php?id=<?= $project_id ?>&tab=<?= $key ?>" 

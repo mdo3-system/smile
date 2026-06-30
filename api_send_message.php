@@ -1,6 +1,7 @@
 <?php
 ini_set('display_errors', 0);
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/db_connect.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/google_drive_client.php';
 
