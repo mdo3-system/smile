@@ -148,7 +148,7 @@
                     <div class="chat-input-row">
                         <label class="chat-attach-btn" title="ファイルを添付">
                             📎
-                            <input type="file" id="chatFileInput" accept="image/*,.pdf" style="display:none;" onchange="previewFile(this)" multiple>
+                            <input type="file" id="chatFileInput" style="display:none;" onchange="previewFile(this)" multiple>
                         </label>
                         <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" onkeydown="handleKey(event)"></textarea>
                         <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>

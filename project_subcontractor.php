@@ -774,7 +774,7 @@ if (!$is_admin) {
                         <textarea id="chatText_<?= $project_id ?>" style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px 12px; font-size:13px; resize:vertical; display:block; margin-bottom:8px;" rows="3" placeholder="メッセージを入力..."></textarea>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
-                                <input type="file" id="chatFile_<?= $project_id ?>" accept="image/*,.pdf" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
+                                <input type="file" id="chatFile_<?= $project_id ?>" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
                                 <label for="chatFile_<?= $project_id ?>" id="fileLabel_<?= $project_id ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
                             </div>
                             <button onclick="sendProjMessage(<?= $project_id ?>)" style="background:#3b82f6; color:white; border:none; border-radius:4px; padding:6px 16px; cursor:pointer; font-size:13px; font-weight:bold; height:32px; display:flex; align-items:center; justify-content:center;">送信</button>
@@ -1260,7 +1260,7 @@ if (!$is_admin) {
                                 <textarea id="chatText_<?= $project_id ?>" style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px 12px; font-size:13px; resize:vertical; display:block; margin-bottom:8px;" rows="3" placeholder="メッセージを入力..."></textarea>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div>
-                                        <input type="file" id="chatFile_<?= $project_id ?>" accept="image/*,.pdf" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
+                                        <input type="file" id="chatFile_<?= $project_id ?>" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
                                         <label for="chatFile_<?= $project_id ?>" id="fileLabel_<?= $project_id ?>" style="cursor:pointer; font-size:18px; color:#6c757d;" title="ファイルを添付">📎</label>
                                     </div>
                                     <button onclick="sendProjMessage(<?= $project_id ?>)" style="background:#3b82f6; color:white; border:none; border-radius:4px; padding:6px 16px; cursor:pointer; font-size:13px; font-weight:bold; height:32px; display:flex; align-items:center; justify-content:center;">送信</button>

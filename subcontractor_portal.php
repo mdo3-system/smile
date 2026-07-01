@@ -75,11 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($target_month !== '') {
             $pdo->beginTransaction();
             try {
-                // UPSERT処理
+                // UPSERT処理 (is_archivedを1にして保存)
                 $stmt = $pdo->prepare("
-                    INSERT INTO subcontractor_payments (subcontractor_id, target_month, paid_amount, paid_at, note) 
-                    VALUES (:sub_id, :t_month, :amt, NOW(), :note)
-                    ON DUPLICATE KEY UPDATE paid_amount = :amt_update, paid_at = NOW(), note = :note_update
+                    INSERT INTO subcontractor_payments (subcontractor_id, target_month, paid_amount, paid_at, note, is_archived) 
+                    VALUES (:sub_id, :t_month, :amt, NOW(), :note, 1)
+                    ON DUPLICATE KEY UPDATE paid_amount = :amt_update, paid_at = NOW(), note = :note_update, is_archived = 1
                 ");
                 $stmt->execute([
                     'sub_id' => $target_sub_id,
@@ -115,6 +115,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->rollBack();
                 die("支払記録の保存に失敗しました: " . $e->getMessage());
             }
+        }
+        header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
+        exit;
+    }
+
+    // アーカイブから戻す
+    if ($action === 'unarchive_sub_payment' && $has_finance_access) {
+        $target_month = $_POST['target_month'] ?? '';
+        if ($target_month !== '') {
+            $stmt = $pdo->prepare("
+                UPDATE subcontractor_payments 
+                SET is_archived = 0 
+                WHERE subcontractor_id = :sub_id AND target_month = :t_month
+            ");
+            $stmt->execute([
+                'sub_id' => $target_sub_id,
+                't_month' => $target_month
+            ]);
         }
         header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
         exit;
@@ -486,87 +504,161 @@ $global_messages = $stmtChat->fetchAll();
                                             <?php else: ?>
                                                 📄 添付ファイルを見る
                                             <?php endif; ?>
-                                        </a>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div style="text-align:center; color:#aaa; font-size:12px; margin-top:20px;">まだメッセージはありません。</div>
-                    <?php endif; ?>
-                </div>
-
-                <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;">
-                    <input type="hidden" name="action" value="send_global_message">
-                    <div style="background:#fff; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        <textarea name="message_text" rows="4" style="width:100%; box-sizing:border-box; border:none; resize:vertical; font-family:inherit; font-size:13px; outline:none; display:block; margin-bottom:8px;" placeholder="メッセージを入力..."></textarea>
-                        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding-top:5px;">
-                            <div>
-                                <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
-                                <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
-                            </div>
-                            <button type="submit" style="background:#10b981; color:white; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <!-- 💰 月次報酬・お受け取り状況 -->
+                                 <!-- 💰 月次報酬・お受け取り状況 -->
             <div class="box">
                 <h3>💰 月次報酬・お受け取り状況</h3>
                 <p style="font-size:12px; color:#666; margin-top:0;">納品完了した案件の報酬額（月別）などのお受け取り状況を管理します。</p>
                 
-                <?php if (count($monthly_totals) > 0): ?>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <?php foreach ($monthly_totals as $month => $total): 
-                            $payment = $payments[$month] ?? null;
-                            $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
-                            $balance = $total - $paid_amount;
-                        ?>
-                            <div style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#f8fafc;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:5px;">
-                                    <strong style="font-size:15px; color:#1e293b;"><?= $month ?> 納品分</strong>
-                                    <?php if ($balance <= 0): ?>
-                                        <span class="badge" style="background:#10b981;">お受け取り完了</span>
-                                    <?php else: ?>
-                                        <span class="badge" style="background:#ef4444;">支払期日前</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
-                                    <span>ご請求額:</span>
-                                    <strong><?= number_format($total) ?> 円</strong>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; color:#10b981;">
-                                    <span>弊社支払額:</span>
-                                    <strong><?= number_format($paid_amount) ?> 円</strong>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444;">
-                                    <span>未払残高:</span>
-                                    <strong><?= number_format($balance) ?> 円</strong>
-                                </div>
+                <?php 
+                $active_months = [];
+                $archived_months = [];
+                foreach ($monthly_totals as $month => $total) {
+                    $payment = $payments[$month] ?? null;
+                    $is_archived = $payment ? intval($payment['is_archived']) : 0;
+                    if ($is_archived) {
+                        $archived_months[$month] = $total;
+                    } else {
+                        $active_months[$month] = $total;
+                    }
+                }
+                ?>
 
-                                <!-- 📄 アップロード済み請求書の表示 -->
-                                <?php if (!empty($payment['invoice_file_path'])): 
-                                    $inv_url = (strpos($payment['invoice_file_path'], 'uploads/') === 0) 
-                                        ? $payment['invoice_file_path'] 
-                                        : 'https://drive.google.com/file/d/' . htmlspecialchars($payment['invoice_file_path'], ENT_QUOTES) . '/view?usp=drivesdk';
+                <?php if (count($active_months) > 0 || count($archived_months) > 0): ?>
+                    <div style="display:flex; flex-direction:column; gap:15px;">
+                        
+                        <!-- アクティブリスト -->
+                        <?php if (count($active_months) > 0): ?>
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                <?php foreach ($active_months as $month => $total): 
+                                    $payment = $payments[$month] ?? null;
+                                    $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
+                                    $balance = $total - $paid_amount;
                                 ?>
-                                    <div style="margin-top: 8px; padding: 6px; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 4px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="color: #0369a1; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
-                                            📄 <?= htmlspecialchars($payment['invoice_file_name'], ENT_QUOTES) ?>
-                                        </span>
-                                        <a href="<?= $inv_url ?>" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: bold;">ダウンロード</a>
-                                    </div>
-                                <?php endif; ?>
+                                    <div style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#f8fafc;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:5px;">
+                                            <strong style="font-size:15px; color:#1e293b;"><?= $month ?> 納品分</strong>
+                                            <?php if ($balance <= 0): ?>
+                                                <span class="badge" style="background:#10b981;">お受け取り完了</span>
+                                            <?php else: ?>
+                                                <span class="badge" style="background:#ef4444;">支払期日前</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+                                            <span>ご請求額:</span>
+                                            <strong><?= number_format($total) ?> 円</strong>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; color:#10b981;">
+                                            <span>弊社支払額:</span>
+                                            <strong><?= number_format($paid_amount) ?> 円</strong>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444;">
+                                            <span>未払残高:</span>
+                                            <strong><?= number_format($balance) ?> 円</strong>
+                                        </div>
 
-                                <!-- 協力業者自身による請求書アップロード枠 -->
-                                <?php if (!$is_admin): ?>
-                                    <form method="POST" enctype="multipart/form-data" style="margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
-                                        <input type="hidden" name="action" value="upload_sub_invoice">
-                                        <input type="hidden" name="target_month" value="<?= $month ?>">
-                                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                                            <span style="font-size: 11px; font-weight: bold; color: #475569;">
-                                                <?= !empty($payment['invoice_file_path']) ? '🔄 請求書を差し替える:' : '📤 請求書(PDF)をアップロード:' ?>
+                                        <!-- 📄 アップロード済み請求書の表示 -->
+                                        <?php if (!empty($payment['invoice_file_path'])): 
+                                            $inv_url = (strpos($payment['invoice_file_path'], 'uploads/') === 0) 
+                                                ? $payment['invoice_file_path'] 
+                                                : 'https://drive.google.com/file/d/' . htmlspecialchars($payment['invoice_file_path'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                        ?>
+                                            <div style="margin-top: 8px; padding: 6px; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 4px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                                <span style="color: #0369a1; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
+                                                    📄 <?= htmlspecialchars($payment['invoice_file_name'], ENT_QUOTES) ?>
+                                                </span>
+                                                <a href="<?= $inv_url ?>" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: bold;">ダウンロード</a>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <!-- 協力業者自身による請求書アップロード枠 -->
+                                        <?php if (!$is_admin): ?>
+                                            <form method="POST" enctype="multipart/form-data" style="margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                                <input type="hidden" name="action" value="upload_sub_invoice">
+                                                <input type="hidden" name="target_month" value="<?= $month ?>">
+                                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                                    <span style="font-size: 11px; font-weight: bold; color: #475569;">
+                                                        <?= !empty($payment['invoice_file_path']) ? '🔄 請求書を差し替える:' : '📤 請求書(PDF)をアップロード:' ?>
+                                                    </span>
+                                                    <div style="display: flex; gap: 5px; align-items: center;">
+                                                        <input type="file" name="invoice_file" accept=".pdf" required style="font-size: 11px; max-width: 170px;">
+                                                        <button type="submit" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; cursor: pointer;">送信</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        <?php endif; ?>
+                                        
+                                        <?php if ($has_finance_access): ?>
+                                            <form method="POST" style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:10px;">
+                                                <input type="hidden" name="action" value="log_sub_payment">
+                                                <input type="hidden" name="target_month" value="<?= $month ?>">
+                                                <div style="display:flex; gap:5px; align-items:center;">
+                                                    <input type="number" name="paid_amount" value="<?= $total ?>" style="width:100px; padding:4px; font-size:12px;"> 円を
+                                                    <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">支払い記録として保存</button>
+                                                </div>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- アーカイブされた月次リスト (アコーディオン) -->
+                        <?php if (count($archived_months) > 0): ?>
+                            <details style="border: 1px solid #cbd5e1; border-radius: 6px; background: #f1f5f9; padding: 10px;" open>
+                                <summary style="cursor: pointer; font-size: 13px; font-weight: bold; color: #475569;">
+                                    📂 支払済アーカイブ (全 <?= count($archived_months) ?> 件)
+                                </summary>
+                                <div style="display:flex; flex-direction:column; gap:10px; margin-top: 10px;">
+                                    <?php foreach ($archived_months as $month => $total): 
+                                        $payment = $payments[$month] ?? null;
+                                        $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
+                                    ?>
+                                        <div style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#fff;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:5px;">
+                                                <strong style="font-size:14px; color:#64748b;"><?= $month ?> 納品分</strong>
+                                                <span class="badge" style="background:#64748b;">アーカイブ済</span>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px; color:#64748b;">
+                                                <span>ご請求額:</span>
+                                                <strong><?= number_format($total) ?> 円</strong>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px; color:#10b981;">
+                                                <span>支払済額:</span>
+                                                <strong><?= number_format($paid_amount) ?> 円</strong>
+                                            </div>
+
+                                            <?php if (!empty($payment['invoice_file_path'])): 
+                                                $inv_url = (strpos($payment['invoice_file_path'], 'uploads/') === 0) 
+                                                    ? $payment['invoice_file_path'] 
+                                                    : 'https://drive.google.com/file/d/' . htmlspecialchars($payment['invoice_file_path'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                            ?>
+                                                <div style="margin-top: 6px; padding: 4px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+                                                    <span style="color: #64748b; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 180px;">
+                                                        📄 <?= htmlspecialchars($payment['invoice_file_name'], ENT_QUOTES) ?>
+                                                    </span>
+                                                    <a href="<?= $inv_url ?>" target="_blank" style="color: #0284c7; font-weight: bold;">ダウンロード</a>
+                                                </div>
+                                            <?php endif; ?>
+
+                                            <?php if ($has_finance_access): ?>
+                                                <form method="POST" style="margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px; display:flex; justify-content: flex-end;">
+                                                    <input type="hidden" name="action" value="unarchive_sub_payment">
+                                                    <input type="hidden" name="target_month" value="<?= $month ?>">
+                                                    <button type="submit" style="background:#64748b; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer; font-weight:bold;">↩ アクティブに戻す</button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </details>
+                        <?php endif; ?>
+
+                    </div>
+                <?php else: ?>
+                    <div style="background:#f8f9fa; border:1px solid #ddd; height:80px; border-radius:4px; display:flex; justify-content:center; align-items:center; color:#999; font-size:13px;">
+                        納品済みの案件がありません。
+                    </div>
+                <?php endif; ?>(PDF)をアップロード:' ?>
                                             </span>
                                             <div style="display: flex; gap: 5px; align-items: center;">
                                                 <input type="file" name="invoice_file" accept=".pdf" required style="font-size: 11px; max-width: 170px;">
