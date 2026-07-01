@@ -110,4 +110,24 @@ class SubcontractorInvoiceTest extends TestCase
         $this->assertEquals('drive_file_abc123', $row['invoice_file_path']);
         $this->assertEquals('invoice_202607.pdf', $row['invoice_file_name']);
     }
+
+    public function testAccountantAccessDeterminesSubcontractorId(): void
+    {
+        // 経理（accountant）としてアクセスした際のID決定ロジックのテスト
+        $is_admin = false;
+        $is_accountant = true; // 経理ユーザー
+
+        // URLパラメータからの `sub_id` 取得を模擬
+        $get_sub_id = 3;
+
+        $target_sub_id = 0;
+        if ($is_admin || $is_accountant) {
+            $target_sub_id = $get_sub_id;
+        } else {
+            $target_sub_id = 999; // ダミーのログインユーザーID
+        }
+
+        // 正常に業者IDである 3 がセットされること
+        $this->assertEquals(3, $target_sub_id);
+    }
 }

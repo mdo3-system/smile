@@ -10,7 +10,7 @@ $has_finance_access = ($is_admin || $is_accountant);
 
 // 表示対象の協力業者IDを決定
 $target_sub_id = 0;
-if ($is_admin) {
+if ($is_admin || $is_accountant) {
     $target_sub_id = intval($_GET['sub_id'] ?? 0);
     if ($target_sub_id === 0) {
         die("業者IDが指定されていません。");
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'ftype' => $file_type
             ]);
         }
-        header("Location: subcontractor_portal.php" . ($is_admin ? "?sub_id=" . $target_sub_id : ""));
+        header("Location: subcontractor_portal.php" . (($is_admin || $is_accountant) ? "?sub_id=" . $target_sub_id : ""));
         exit;
     }
     
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 die("請求書のアップロードに失敗しました: " . $e->getMessage());
             }
         }
-        header("Location: subcontractor_portal.php" . ($is_admin ? "?sub_id=" . $target_sub_id : ""));
+        header("Location: subcontractor_portal.php" . (($is_admin || $is_accountant) ? "?sub_id=" . $target_sub_id : ""));
         exit;
     }
 }
@@ -362,7 +362,7 @@ $global_messages = $stmtChat->fetchAll();
             <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
             <a href="completed_sub_orders.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; margin-right:5px;">📂 支払済アーカイブDB</a>
-            <?php if ($is_admin): ?>
+            <?php if ($is_admin || $is_accountant): ?>
                 <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
             <?php else: ?>
                 <a href="logout.php" style="color:#c0392b; font-weight:bold; text-decoration:none;">ログアウト</a>
