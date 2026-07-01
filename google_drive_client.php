@@ -518,4 +518,53 @@ function sanitize_local_folder_name($name) {
     return trim($name);
 }
 
+/**
+ * 協力業者に関連する Google Drive フォルダIDを取得、無ければ自動作成してDBにキャッシュ保存する
+ * @param PDO $pdo データベース接続インスタンス
+ * @param int $subcontractor_id 協力業者ID
+ * @return string 協力業者フォルダのGoogle Drive ID
+ */
+function get_or_create_subcontractor_drive_folder($pdo, $subcontractor_id) {
+    $stmt = $pdo->prepare("SELECT contact_name, company_name, drive_folder_id FROM users WHERE id = :id");
+    $stmt->execute(['id' => $subcontractor_id]);
+    $sub = $stmt->fetch();
+    if (!$sub) {
+        throw new Exception("協力業者が見つかりません。");
+    }
+
+    if (!empty($sub['drive_folder_id'])) {
+        try {
+            $service = get_google_drive_service();
+            $service->files->get($sub['drive_folder_id'], ['supportsAllDrives' => true]);
+            return $sub['drive_folder_id'];
+        } catch (Exception $e) {
+            // 存在しない場合は再作成へ
+        }
+    }
+
+    $root_folder_id = getenv('GOOGLE_DRIVE_FOLDER_ID');
+    if (empty($root_folder_id)) {
+        throw new Exception("環境変数 GOOGLE_DRIVE_FOLDER_ID が設定されていません。");
+    }
+
+    $sub_root_folder_id = find_google_drive_folder("協力業者", $root_folder_id);
+    if (!$sub_root_folder_id) {
+        $sub_root_folder_id = create_google_drive_folder("協力業者", $root_folder_id);
+    }
+
+    $folder_name = !empty($sub['company_name']) ? trim($sub['company_name']) : trim($sub['contact_name']);
+    if (empty($folder_name)) {
+        $folder_name = "協力業者_ID_" . $subcontractor_id;
+    }
+    $folder_id = find_google_drive_folder($folder_name, $sub_root_folder_id);
+    if (!$folder_id) {
+        $folder_id = create_google_drive_folder($folder_name, $sub_root_folder_id);
+    }
+
+    $stmtUpdate = $pdo->prepare("UPDATE users SET drive_folder_id = :fid WHERE id = :uid");
+    $stmtUpdate->execute(['fid' => $folder_id, 'uid' => $subcontractor_id]);
+
+    return $folder_id;
+}
+
 

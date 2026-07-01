@@ -1,8 +1,8 @@
 <?php
 require_once 'auth.php';
-check_auth(['admin']);
+check_auth(['admin', 'accountant']);
 
-$is_admin = true;
+$is_admin = ($_SESSION['role'] === 'admin');
 
 // 協力業者の一覧を取得
 $stmt = $pdo->query("

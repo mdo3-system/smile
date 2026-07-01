@@ -79,13 +79,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("
                     INSERT INTO subcontractor_payments (subcontractor_id, target_month, paid_amount, paid_at, note) 
                     VALUES (:sub_id, :t_month, :amt, NOW(), :note)
-                    ON DUPLICATE KEY UPDATE paid_amount = :amt, paid_at = NOW(), note = :note
+                    ON DUPLICATE KEY UPDATE paid_amount = :amt_update, paid_at = NOW(), note = :note_update
                 ");
                 $stmt->execute([
                     'sub_id' => $target_sub_id,
                     't_month' => $target_month,
                     'amt' => $paid_amount,
-                    'note' => $note
+                    'note' => $note,
+                    'amt_update' => $paid_amount,
+                    'note_update' => $note
                 ]);
 
                 // 協力業者チャット（global_messages）へ自動通知メッセージを投稿
@@ -115,6 +117,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
+        exit;
+    }
+
+    // 請求書のアップロード (協力業者)
+    if ($action === 'upload_sub_invoice') {
+        $target_month = $_POST['target_month'] ?? '';
+        
+        if ($target_month !== '' && isset($_FILES['invoice_file']) && $_FILES['invoice_file']['error'] === UPLOAD_ERR_OK) {
+            require_once 'google_drive_client.php';
+            $file_tmp = $_FILES['invoice_file']['tmp_name'];
+            $file_name = $_FILES['invoice_file']['name'];
+            $mime_type = $_FILES['invoice_file']['type'];
+            
+            try {
+                $pdo->beginTransaction();
+                
+                // 協力業者フォルダの取得・作成
+                $folder_id = get_or_create_subcontractor_drive_folder($pdo, $target_sub_id);
+                // アップロード
+                $drive_file_id = upload_to_google_drive_folder($file_tmp, $file_name, $mime_type, $folder_id);
+                
+                // subcontractor_payments テーブルの更新 (paid_amountは既存がある場合に上書きされないよう ON DUPLICATE では指定しない)
+                $stmt = $pdo->prepare("
+                    INSERT INTO subcontractor_payments (subcontractor_id, target_month, invoice_file_path, invoice_file_name, paid_amount)
+                    VALUES (:sub_id, :t_month, :fpath, :fname, 0)
+                    ON DUPLICATE KEY UPDATE invoice_file_path = :fpath_update, invoice_file_name = :fname_update
+                ");
+                $stmt->execute([
+                    'sub_id'        => $target_sub_id,
+                    't_month'       => $target_month,
+                    'fpath'         => $drive_file_id,
+                    'fname'         => $file_name,
+                    'fpath_update'  => $drive_file_id,
+                    'fname_update'  => $file_name
+                ]);
+                
+                $pdo->commit();
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                die("請求書のアップロードに失敗しました: " . $e->getMessage());
+            }
+        }
+        header("Location: subcontractor_portal.php" . ($is_admin ? "?sub_id=" . $target_sub_id : ""));
         exit;
     }
 }
@@ -497,6 +544,37 @@ $global_messages = $stmtChat->fetchAll();
                                     <span>未払残高:</span>
                                     <strong><?= number_format($balance) ?> 円</strong>
                                 </div>
+
+                                <!-- 📄 アップロード済み請求書の表示 -->
+                                <?php if (!empty($payment['invoice_file_path'])): 
+                                    $inv_url = (strpos($payment['invoice_file_path'], 'uploads/') === 0) 
+                                        ? $payment['invoice_file_path'] 
+                                        : 'https://drive.google.com/file/d/' . htmlspecialchars($payment['invoice_file_path'], ENT_QUOTES) . '/view?usp=drivesdk';
+                                ?>
+                                    <div style="margin-top: 8px; padding: 6px; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 4px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="color: #0369a1; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
+                                            📄 <?= htmlspecialchars($payment['invoice_file_name'], ENT_QUOTES) ?>
+                                        </span>
+                                        <a href="<?= $inv_url ?>" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: bold;">ダウンロード</a>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- 協力業者自身による請求書アップロード枠 -->
+                                <?php if (!$is_admin): ?>
+                                    <form method="POST" enctype="multipart/form-data" style="margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                        <input type="hidden" name="action" value="upload_sub_invoice">
+                                        <input type="hidden" name="target_month" value="<?= $month ?>">
+                                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                                            <span style="font-size: 11px; font-weight: bold; color: #475569;">
+                                                <?= !empty($payment['invoice_file_path']) ? '🔄 請求書を差し替える:' : '📤 請求書(PDF)をアップロード:' ?>
+                                            </span>
+                                            <div style="display: flex; gap: 5px; align-items: center;">
+                                                <input type="file" name="invoice_file" accept=".pdf" required style="font-size: 11px; max-width: 170px;">
+                                                <button type="submit" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; cursor: pointer;">送信</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                <?php endif; ?>
                                 
                                 <?php if ($has_finance_access): ?>
                                     <form method="POST" style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:10px;">

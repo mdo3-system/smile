@@ -79,7 +79,7 @@ $status_labels = [
         <h1>💼 <?= ($_SESSION['role'] === 'client') ? '木造住宅設計サポート案件ダッシュボード' : '案件ダッシュボード' ?></h1>
         <div style="display:flex; align-items:center; gap:15px;">
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
-            <?php if ($_SESSION['role'] === 'admin'): ?>
+            <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant'): ?>
                 <a href="subcontractors_list.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">👷 協力業者マスター</a>
             <?php endif; ?>
             <a href="completed_projects.php" style="font-weight:bold; color:white; background:#10b981; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px;">📂 完了案件DB</a>
