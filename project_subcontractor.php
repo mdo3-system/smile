@@ -347,7 +347,7 @@ if (!$is_admin) {
         </div>
 
                 <!-- 3カラムレイアウト化 -->
-        <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 20px; align-items: start;">
+        <div style="display: grid; grid-template-columns: 1.1fr 0.9fr 1.3fr; gap: 20px; align-items: start; width: 98%; margin: 0 auto; max-width: none;">
             
             <!-- カラム1（左）: 新規発注依頼 ＆ 共通図書公開設定 -->
             <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -821,10 +821,10 @@ if (!$is_admin) {
                     <h3 style="margin:0; font-size:18px;">案件名: <?= htmlspecialchars($proj['project_name'], ENT_QUOTES) ?></h3>
                 </div>
 
-                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; width: 98%; margin: 0 auto; max-width: none;">
                     
-                    <!-- 左カラム：案件スケジュール・納品フォーム（width: 55%） -->
-                    <div style="flex: 1.2; min-width: 320px; display:flex; flex-direction:column; gap:15px;">
+                    <!-- 左カラム：案件スケジュール・納品フォーム -->
+                    <div style="flex: 1; min-width: 320px; display:flex; flex-direction:column; gap:15px;">
                         
                         <!-- 共有された図書・CADデータ表示セクション -->
                         <div class="shared-files-section" style="border:1px solid #cce5ff; background:#e6f2ff; padding:12px; border-radius:6px; font-size:13px; border-left: 5px solid #2563eb;">
@@ -1219,8 +1219,8 @@ if (!$is_admin) {
                         </div>
                     </div>
 
-                    <!-- 右カラム：この案件の連絡・質疑チャット（width: 45%） -->
-                    <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; border-left:1px solid #eee; padding-left:20px;">
+                    <!-- 右カラム：この案件の連絡・質疑チャット -->
+                    <div style="flex: 1.5; min-width: 300px; display:flex; flex-direction:column; border-left:1px solid #eee; padding-left:20px;">
                         <h4 style="margin:0 0 10px 0; color:#d97706; font-size:14px; display:flex; align-items:center; gap:5px;">💬 この案件の連絡・質疑チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#c0392b;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h4>
                         <div style="background:#fdf6e3; border:1px solid #e2e8f0; border-radius:8px; display:flex; flex-direction:column; height:calc(100vh - 220px); min-height:450px;">
                             <div style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;" id="chatList_<?= $project_id ?>">
@@ -1371,7 +1371,7 @@ if (!$is_admin) {
             });
         }
 
-        const sendBtn = fileEl.parentElement.querySelector('button');
+        const sendBtn = textEl.parentElement.querySelector('button');
         if (sendBtn) {
             sendBtn.disabled = true;
             sendBtn.textContent = '...';

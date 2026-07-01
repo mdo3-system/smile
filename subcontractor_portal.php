@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $file_tmp = $_FILES['chat_file']['tmp_name'];
             $file_name = $_FILES['chat_file']['name'];
             $mime_type = $_FILES['chat_file']['type'];
-            $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type);
+            $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type, null, $pdo, $target_sub_id);
             $file_type = (strpos($mime_type, 'image') === 0) ? 'image' : 'file';
         }
 
@@ -284,9 +284,9 @@ $global_messages = $stmtChat->fetchAll();
     <title>協力業者専用ポータル - <?= htmlspecialchars($subcontractor['contact_name']) ?></title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; }
-        .col-main { flex: 2; }
-        .col-side { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+        .container { max-width: 1800px; width: 98%; margin: 0 auto; display: flex; gap: 20px; }
+        .col-main { flex: 1.8; }
+        .col-side { flex: 1.2; display: flex; flex-direction: column; gap: 20px; }
         .box { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         h2, h3 { margin-top: 0; }
         .task-card { border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; margin-bottom: 10px; }

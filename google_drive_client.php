@@ -329,8 +329,16 @@ function upload_to_google_drive_folder($local_file_path, $file_name, $mime_type,
  * @param string $mime_type MIMEタイプ
  * @return string Google DriveのファイルID
  */
-function upload_to_google_drive($local_file_path, $file_name, $mime_type, $project_id = null, $pdo = null) {
+function upload_to_google_drive($local_file_path, $file_name, $mime_type, $project_id = null, $pdo = null, $subcontractor_id = null) {
     try {
+        if ($subcontractor_id && $pdo) {
+            try {
+                $folder_id = get_or_create_subcontractor_drive_folder($pdo, $subcontractor_id);
+                return upload_to_google_drive_folder($local_file_path, $file_name, $mime_type, $folder_id);
+            } catch (Exception $e) {
+                error_log("Failed to upload to subcontractor drive folder for ID {$subcontractor_id}: " . $e->getMessage());
+            }
+        }
         if ($project_id && $pdo) {
             try {
                 $folder_id = get_or_create_project_drive_folder($pdo, $project_id);
@@ -349,7 +357,26 @@ function upload_to_google_drive($local_file_path, $file_name, $mime_type, $proje
         $p_folder = '';
         $sub_dir = '';
         
-        if ($project_id && $pdo) {
+        if ($subcontractor_id && $pdo) {
+            try {
+                $stmt = $pdo->prepare("SELECT contact_name, company_name FROM users WHERE id = :id");
+                $stmt->execute(['id' => $subcontractor_id]);
+                $sub = $stmt->fetch();
+                if ($sub) {
+                    $sub_folder_name = !empty($sub['company_name']) ? trim($sub['company_name']) : trim($sub['contact_name']);
+                    if (empty($sub_folder_name)) {
+                        $sub_folder_name = "協力業者_ID_" . $subcontractor_id;
+                    }
+                    $c_folder = sanitize_local_folder_name("協力業者");
+                    $p_folder = sanitize_local_folder_name($sub_folder_name);
+                    if ($c_folder !== '' && $p_folder !== '') {
+                        $sub_dir = '/' . $c_folder . '/' . $p_folder;
+                    }
+                }
+            } catch (Exception $db_ex) {
+                error_log("Failed to fetch subcontractor info for local fallback: " . $db_ex->getMessage());
+            }
+        } elseif ($project_id && $pdo) {
             try {
                 // 案件情報と依頼主情報をDBから取得
                 $stmt = $pdo->prepare("

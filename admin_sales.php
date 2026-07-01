@@ -86,7 +86,7 @@ $status_labels = [
     <title>経理・売上・支払い管理 | 構造設計サポート・ポータル</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
-        .container { max-width: 1400px; margin: 0 auto; }
+        .container { max-width: 1800px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; }
         .logo-title { font-size: 24px; font-weight: bold; color: #1e3a8a; display: flex; align-items: center; gap: 10px; }
         .btn-back { color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; padding: 8px 16px; border: 1px solid #2563eb; border-radius: 6px; transition: all 0.2s; background: white; }

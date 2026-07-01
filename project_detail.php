@@ -181,7 +181,7 @@ $chat_messages = $stmtMsgs->fetchAll();
         .column { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; }
         .col-left { flex: 1; min-width: 300px; }
         .col-center { flex: 1; min-width: 300px; }
-        .col-right { flex: 1; min-width: 350px; }
+        .col-right { flex: 1.5; min-width: 450px; }
         
         .section-title { font-size: 15px; color: white; padding: 8px 12px; border-radius: 4px; margin-top: 0; margin-bottom: 10px; display:flex; align-items:center; gap:8px; }
         .box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; }
