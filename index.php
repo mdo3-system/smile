@@ -104,6 +104,7 @@ $status_labels = [
                     <?php elseif (file_exists(__DIR__ . '/token.json')): ?>
                         <span style="color:#28a745; font-weight:bold;">🟢 完了 (OAuth)</span>
                         <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">認証更新</a>
+                        <a href="api_sync_all_calendar.php" style="font-weight:bold; color:white; background:#10b981; padding:3px 8px; border-radius:4px; text-decoration:none; margin-left:5px;" onclick="return confirm('既存の全案件のスケジュールをGoogleカレンダーへ一括再同期します。よろしいですか？')">📅 カレンダー全件同期</a>
                     <?php else: ?>
                         <span style="color:#dc3545; font-weight:bold;">🔴 未連携</span>
                         <a href="google_auth.php" target="_blank" style="font-weight:bold; color:white; background:#4285F4; padding:3px 8px; border-radius:4px; text-decoration:none;">連携ログイン</a>
@@ -120,6 +121,9 @@ $status_labels = [
             } elseif ($user_role === 'admin' || $user_role === 'accountant') {
                 echo '<a href="admin_sales.php" style="font-size:12px; color:#10b981; text-decoration:none; font-weight:bold; margin-right:15px;">📊 経理・売上管理</a>';
                 echo '<a href="api_backup_db.php" target="_blank" style="font-size:12px; color:#8b5cf6; text-decoration:none; font-weight:bold; margin-right:15px;" onclick="return confirm(\'現在のデータベースのバックアップ（ZIP圧縮SQL）をダウンロードします。よろしいですか？\')">🗄️ DBバックアップ</a>';
+                if ($user_role === 'admin' && file_exists(__DIR__ . '/token.json')) {
+                    echo '<a href="api_sync_all_calendar.php" style="font-size:12px; color:#10b981; text-decoration:none; font-weight:bold; margin-right:15px;" onclick="return confirm(\'既存の全案件のスケジュールをGoogleカレンダーへ一括再同期します。よろしいですか？\')">📅 カレンダー全件同期</a>';
+                }
                 echo '<a href="manual_client.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 依頼主マニュアル</a>';
                 echo '<a href="manual_subcontractor.php" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:bold; margin-right:10px;">📖 協力業者マニュアル</a>';
             }
@@ -128,6 +132,11 @@ $status_labels = [
         </div>
     </div>
 
+    <?php if (isset($_GET['msg'])): ?>
+        <div style="background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:12px 20px; border-radius:6px; margin-bottom:20px; font-size:14px; font-weight:bold;">
+            ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES) ?>
+        </div>
+    <?php endif; ?>
 
     <?php 
     // 招待リンク生成の準備
