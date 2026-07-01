@@ -139,45 +139,66 @@ class GoogleCalendarService
         $schedulesToRender = [];
         $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
         if ($is_koyou_or_kisohari) {
-            $schedulesToRender[] = [
+            $schedulesToRender['許可申請・基礎梁'] = [
                 'steps' => getScheduleSteps($base_days, true),
                 'actuals_col' => 'schedule_actuals'
             ];
         }
         if (($project['req_wall'] ?? 0) == 1) {
-            $schedulesToRender[] = [
+            $schedulesToRender['壁量計算'] = [
                 'steps' => getScheduleStepsWall($base_days),
                 'actuals_col' => 'schedule_actuals_wall'
             ];
         }
         if (($project['req_skin'] ?? 0) == 1) {
-            $schedulesToRender[] = [
+            $schedulesToRender['外皮計算'] = [
                 'steps' => getScheduleStepsSkin($base_days),
                 'actuals_col' => 'schedule_actuals_skin'
             ];
         }
         if (($project['req_sky'] ?? 0) == 1) {
-            $schedulesToRender[] = [
+            $schedulesToRender['天空率'] = [
                 'steps' => getScheduleStepsSky($base_days),
                 'actuals_col' => 'schedule_actuals_sky'
             ];
         }
 
         if (empty($schedulesToRender)) {
-            $schedulesToRender[] = [
+            $schedulesToRender['設計サポートスケジュール'] = [
                 'steps' => getScheduleSteps($base_days, false),
                 'actuals_col' => 'schedule_actuals'
             ];
         }
 
-        foreach ($schedulesToRender as $sched) {
+        $min_date = $primaryDueDate;
+        $max_date = $primaryDueDate;
+        $desc_lines = [];
+
+        foreach ($schedulesToRender as $title_type => $sched) {
             $actuals = json_decode($project[$sched['actuals_col']] ?? '{}', true) ?: [];
             $override_col = str_replace('actuals', 'overrides', $sched['actuals_col']);
             $overrides = json_decode($project[$override_col] ?? '{}', true) ?: [];
             $calc_date = $primaryDueDate;
 
+            $desc_lines[] = "■ {$title_type}";
+
             foreach ($sched['steps'] as $idx => $step) {
-                if ($idx == 0) continue; // Skip initial doc reception (day 0)
+                // Initial step (reception)
+                if ($idx == 0) {
+                    $actual_date = $actuals[$idx] ?? '';
+                    $step_date = !empty($actual_date) ? $actual_date : $primaryDueDate;
+                    $is_done = !empty($actual_date);
+                    
+                    $desc_lines[] = sprintf("  ・%s: %s%s", $step['name'], str_replace('-', '/', $step_date), $is_done ? ' (完了)' : '');
+                    
+                    if (strcmp($step_date, $min_date) < 0) {
+                        $min_date = $step_date;
+                    }
+                    if (strcmp($step_date, $max_date) > 0) {
+                        $max_date = $step_date;
+                    }
+                    continue;
+                }
 
                 if ($idx == 1) {
                     $calc_date = $overrides[$idx] ?? $primaryDueDate;
@@ -195,40 +216,48 @@ class GoogleCalendarService
 
                 $actual_date = $actuals[$idx] ?? '';
                 $is_done = !empty($actual_date);
-                $event_date = $is_done ? $actual_date : $calc_date;
+                $step_date = $is_done ? $actual_date : $calc_date;
 
-                // Create Event title
-                $title = "[{$projectName}] {$step['name']}";
-                if ($is_done) {
-                    $title .= " (完了)";
+                $desc_lines[] = sprintf("  ・%s: %s%s", $step['name'], str_replace('-', '/', $step_date), $is_done ? ' (完了)' : '');
+
+                if (strcmp($step_date, $min_date) < 0) {
+                    $min_date = $step_date;
+                }
+                if (strcmp($step_date, $max_date) > 0) {
+                    $max_date = $step_date;
                 }
 
-                // Insert event as All-Day event
-                try {
-                    $event = new Event();
-                    $event->setSummary($title);
-                    $event->setDescription("担当: " . ($step['actor'] === 'designer' ? '設計サポート' : ($step['actor'] === 'client' ? '依頼主' : '審査・待機')));
-
-                    $start = new EventDateTime();
-                    $start->setDate($event_date);
-                    $event->setStart($start);
-
-                    $end = new EventDateTime();
-                    // All day events end date must be exclusive (+1 day)
-                    $end_date = date('Y-m-d', strtotime($event_date . ' +1 day'));
-                    $end->setDate($end_date);
-                    $event->setEnd($end);
-
-                    $this->service->events->insert($this->calendarId, $event);
-                } catch (Exception $e) {
-                    file_put_contents(__DIR__ . '/../../debug_api.txt', date('[Y-m-d H:i:s] ') . "Calendar insert failed: " . $e->getMessage() . "\n", FILE_APPEND);
-                }
-
-                // Update calculation reference date to actual date if completed
                 if ($is_done) {
                     $calc_date = $actual_date;
                 }
             }
+            $desc_lines[] = ""; // empty line
+        }
+
+        // Create contiguous All-Day event
+        // End date is exclusive in Google Calendar All-day events, so add 1 day to max_date
+        $start_date = $min_date;
+        $end_date = date('Y-m-d', strtotime($max_date . ' +1 day'));
+
+        $eventTitle = "[{$projectName}] 設計サポート";
+        $eventDescription = "案件名: {$projectName}\n\n【スケジュール内訳】\n" . implode("\n", $desc_lines);
+
+        try {
+            $event = new Event();
+            $event->setSummary($eventTitle);
+            $event->setDescription($eventDescription);
+
+            $start = new EventDateTime();
+            $start->setDate($start_date);
+            $event->setStart($start);
+
+            $end = new EventDateTime();
+            $end->setDate($end_date);
+            $event->setEnd($end);
+
+            $this->service->events->insert($this->calendarId, $event);
+        } catch (Exception $e) {
+            file_put_contents(__DIR__ . '/../../debug_api.txt', date('[Y-m-d H:i:s] ') . "Calendar insert failed: " . $e->getMessage() . "\n", FILE_APPEND);
         }
     }
 }
