@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
             } catch (Exception $e) {
                 $pdo->rollBack();
-                die("支払記録の保存に失敗しました: " . $e->getMessage());
+                die("支払記録 of 保存に失敗しました: " . $e->getMessage());
             }
         }
         header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
@@ -504,7 +504,32 @@ $global_messages = $stmtChat->fetchAll();
                                             <?php else: ?>
                                                 📄 添付ファイルを見る
                                             <?php endif; ?>
-                                 <!-- 💰 月次報酬・お受け取り状況 -->
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="text-align:center; color:#aaa; font-size:12px; margin-top:20px;">まだメッセージはありません。</div>
+                    <?php endif; ?>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;">
+                    <input type="hidden" name="action" value="send_global_message">
+                    <div style="background:#fff; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <textarea name="message_text" rows="4" style="width:100%; box-sizing:border-box; border:none; resize:vertical; font-family:inherit; font-size:13px; outline:none; display:block; margin-bottom:8px;" placeholder="メッセージを入力..."></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding-top:5px;">
+                            <div>
+                                <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
+                                <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
+                            </div>
+                            <button type="submit" style="background:#10b981; color:white; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 💰 月次報酬・お受け取り状況 -->
             <div class="box">
                 <h3>💰 月次報酬・お受け取り状況</h3>
                 <p style="font-size:12px; color:#666; margin-top:0;">納品完了した案件の報酬額（月別）などのお受け取り状況を管理します。</p>
@@ -593,7 +618,7 @@ $global_messages = $stmtChat->fetchAll();
                                                 <input type="hidden" name="target_month" value="<?= $month ?>">
                                                 <div style="display:flex; gap:5px; align-items:center;">
                                                     <input type="number" name="paid_amount" value="<?= $total ?>" style="width:100px; padding:4px; font-size:12px;"> 円を
-                                                    <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">支払い記録として保存</button>
+                                                    <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">支払記録として保存</button>
                                                 </div>
                                             </form>
                                         <?php endif; ?>
@@ -653,33 +678,6 @@ $global_messages = $stmtChat->fetchAll();
                             </details>
                         <?php endif; ?>
 
-                    </div>
-                <?php else: ?>
-                    <div style="background:#f8f9fa; border:1px solid #ddd; height:80px; border-radius:4px; display:flex; justify-content:center; align-items:center; color:#999; font-size:13px;">
-                        納品済みの案件がありません。
-                    </div>
-                <?php endif; ?>(PDF)をアップロード:' ?>
-                                            </span>
-                                            <div style="display: flex; gap: 5px; align-items: center;">
-                                                <input type="file" name="invoice_file" accept=".pdf" required style="font-size: 11px; max-width: 170px;">
-                                                <button type="submit" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; cursor: pointer;">送信</button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                <?php endif; ?>
-                                
-                                <?php if ($has_finance_access): ?>
-                                    <form method="POST" style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:10px;">
-                                        <input type="hidden" name="action" value="log_sub_payment">
-                                        <input type="hidden" name="target_month" value="<?= $month ?>">
-                                        <div style="display:flex; gap:5px; align-items:center;">
-                                            <input type="number" name="paid_amount" value="<?= $total ?>" style="width:100px; padding:4px; font-size:12px;"> 円を
-                                            <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">支払記録として保存</button>
-                                        </div>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
                     </div>
                 <?php else: ?>
                     <div style="background:#f8f9fa; border:1px solid #ddd; height:80px; border-radius:4px; display:flex; justify-content:center; align-items:center; color:#999; font-size:13px;">
