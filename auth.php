@@ -10,21 +10,34 @@ require_once 'db_connect.php';
 if (isset($_GET['token'])) {
     $token = trim($_GET['token']);
     
-    // 有効な（未使用かつ期限内の）マジックリンクを検索
+    // 有効期限内のマジックリンクを検索
     $stmt = $pdo->prepare("
         SELECT * FROM magic_links 
         WHERE token = :token 
-        AND used = 0 
         AND expires_at > NOW()
     ");
     $stmt->execute(['token' => $token]);
     $link = $stmt->fetch();
 
+    $allow_login = false;
     if ($link) {
-        // トークンを「使用済み」に更新
-        $stmtUpdate = $pdo->prepare("UPDATE magic_links SET used = 1 WHERE id = :id");
-        $stmtUpdate->execute(['id' => $link['id']]);
+        if (intval($link['used']) === 0) {
+            $allow_login = true;
+            // 未使用なら used_at を現在時刻にして使用済みに更新
+            $stmtUpdate = $pdo->prepare("UPDATE magic_links SET used = 1, used_at = NOW() WHERE id = :id");
+            $stmtUpdate->execute(['id' => $link['id']]);
+        } else {
+            // 使用済みの場合、使用日時 (used_at) から 5分以内 (300秒) であれば二重リクエストとしてログインを許可する (プリフェッチ誤爆対策)
+            if (!empty($link['used_at'])) {
+                $used_time = strtotime($link['used_at']);
+                if ($used_time && (time() - $used_time) < 300) {
+                    $allow_login = true;
+                }
+            }
+        }
+    }
 
+    if ($allow_login && $link) {
         // ユーザー情報を取得してログインセッションを確立
         $stmtUser = $pdo->prepare("SELECT * FROM users WHERE id = :id");
         $stmtUser->execute(['id' => $link['user_id']]);
