@@ -379,7 +379,7 @@ $global_messages = $stmtChat->fetchAll();
                 </div>
             <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
-            <a href="completed_sub_orders.php" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; margin-right:5px;">📂 支払済アーカイブDB</a>
+            <a href="completed_sub_orders.php<?= $target_sub_id ? '?sub_id=' . intval($target_sub_id) : '' ?>" style="font-weight:bold; color:white; background:#3b82f6; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:12px; margin-right:5px;">📂 支払済アーカイブDB</a>
             <?php if ($is_admin || $is_accountant): ?>
                 <a href="subcontractors_list.php" style="color:#0056b3; font-weight:bold; text-decoration:none;">➔ 業者一覧に戻る</a>
             <?php else: ?>
@@ -539,7 +539,16 @@ $global_messages = $stmtChat->fetchAll();
                 $archived_months = [];
                 foreach ($monthly_totals as $month => $total) {
                     $payment = $payments[$month] ?? null;
+                    $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
+                    $balance = $total - $paid_amount;
+                    
                     $is_archived = $payment ? intval($payment['is_archived']) : 0;
+                    
+                    // 未払残高が 0 以下の場合は、自動的にアーカイブ扱いにする
+                    if ($balance <= 0) {
+                        $is_archived = 1;
+                    }
+                    
                     if ($is_archived) {
                         $archived_months[$month] = $total;
                     } else {

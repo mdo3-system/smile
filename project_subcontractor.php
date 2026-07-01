@@ -465,7 +465,12 @@ if (!$is_admin) {
             </div>
                 <!-- 共通図書・CADデータの公開設定 -->
             <div class="task-card" style="border-left-color: #3b82f6; margin-bottom:0;">
-                <h2 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:10px; color:#1e3a8a;">📂 共通図書・CADデータの業者公開設定</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding-bottom:10px; margin-bottom:15px; flex-wrap:wrap; gap:5px;">
+                    <h2 style="margin:0; color:#1e3a8a; font-size:18px;">📂 共通図書・CADデータの業者公開設定</h2>
+                    <a href="api_download_sub_files_zip.php?project_id=<?= $project_id ?>" class="btn-accept" style="background:#0284c7; text-decoration:none; padding:4px 10px; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:3px;" title="公開中の図書ファイルをZIPで一括ダウンロードします">
+                        ⚡ 公開図書を一括ダウンロード (ZIP)
+                    </a>
+                </div>
                 <div style="font-size:12px; color:#555; margin-bottom:15px;">
                     依頼主から提出されたCADデータや共通図書を、協力業者ポータルに公開・非表示にする設定を行えます。<br>
                     <strong>初期状態はすべて非表示です。</strong>
@@ -828,7 +833,14 @@ if (!$is_admin) {
                         
                         <!-- 共有された図書・CADデータ表示セクション -->
                         <div class="shared-files-section" style="border:1px solid #cce5ff; background:#e6f2ff; padding:12px; border-radius:6px; font-size:13px; border-left: 5px solid #2563eb;">
-                            <strong style="color:#004085; display:block; margin-bottom:8px; font-size:14px;">📂 共有された共通図書・CADデータ:</strong>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:5px;">
+                                <strong style="color:#004085; font-size:14px; margin:0;">📂 共有された共通図書・CADデータ:</strong>
+                                <?php if (count($shared_files) > 0): ?>
+                                    <a href="api_download_sub_files_zip.php?project_id=<?= $project_id ?>" class="btn-accept" style="background:#0284c7; text-decoration:none; padding:4px 8px; border-radius:3px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:3px;" title="公開中の図書ファイルをZIPで一括ダウンロードします">
+                                        ⚡ 公開図書を一括ダウンロード (ZIP)
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                             <?php if (count($shared_files) > 0): ?>
                                 <ul style="margin:5px 0 0 0; padding-left:20px; line-height:1.8; list-style-type:square;">
                                     <?php 

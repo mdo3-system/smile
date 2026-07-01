@@ -19,14 +19,19 @@ $sql = "
 ";
 $params = [];
 
-if (!$is_admin) {
+// URLパラメータから sub_id を取得 (経理や管理者が特定の業者を見ている場合)
+$target_sub_id = isset($_GET['sub_id']) ? intval($_GET['sub_id']) : null;
+
+if (!$is_admin && !$target_sub_id) {
     // 協力業者の場合は自身（およびスタッフ）宛てのもの
     // まず親IDがあるか調べる
     $stmtUserParent = $pdo->prepare("SELECT parent_id FROM users WHERE id = :id");
     $stmtUserParent->execute(['id' => $user_id]);
     $parent_id = $stmtUserParent->fetchColumn();
     $target_sub_id = $parent_id ? $parent_id : $user_id;
+}
 
+if ($target_sub_id) {
     $sql .= " AND (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2))";
     $params['sub_id_1'] = $target_sub_id;
     $params['sub_id_2'] = $target_sub_id;
@@ -77,17 +82,20 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="header">
         <h1>📂 支払済タスクDB（アーカイブ）</h1>
         <div style="display:flex; align-items:center; gap:15px;">
-            <a href="subcontractor_portal.php" class="back-btn">⬅️ ポータルへ戻る</a>
+            <a href="subcontractor_portal.php<?= $target_sub_id ? '?sub_id=' . intval($target_sub_id) : '' ?>" class="back-btn">⬅️ ポータルへ戻る</a>
         </div>
     </div>
 
     <!-- 検索フォーム -->
     <div class="search-card">
         <form method="GET" class="search-form">
+            <?php if ($target_sub_id): ?>
+                <input type="hidden" name="sub_id" value="<?= intval($target_sub_id) ?>">
+            <?php endif; ?>
             <input type="text" name="search" placeholder="物件名で検索..." class="search-input" value="<?= htmlspecialchars($search_query, ENT_QUOTES) ?>">
             <button type="submit" class="search-btn">検索</button>
             <?php if ($search_query !== ''): ?>
-                <a href="completed_sub_orders.php" style="background:#e2e8f0; color:#475569; padding:8px 15px; border-radius:4px; text-decoration:none; font-size:14px; display:flex; align-items:center; justify-content:center;">リセット</a>
+                <a href="completed_sub_orders.php<?= $target_sub_id ? '?sub_id=' . intval($target_sub_id) : '' ?>" style="background:#e2e8f0; color:#475569; padding:8px 15px; border-radius:4px; text-decoration:none; font-size:14px; display:flex; align-items:center; justify-content:center;">リセット</a>
             <?php endif; ?>
         </form>
     </div>

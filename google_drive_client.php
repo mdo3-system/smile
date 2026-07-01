@@ -594,4 +594,13 @@ function get_or_create_subcontractor_drive_folder($pdo, $subcontractor_id) {
     return $folder_id;
 }
 
-
+/**
+ * Google Driveからファイルの内容をバイナリとしてダウンロードする
+ * @param string $file_id Google DriveのファイルID
+ * @return string ファイルのバイナリデータ
+ */
+function download_google_drive_file($file_id) {
+    $service = get_google_drive_service();
+    $response = $service->files->get($file_id, ['alt' => 'media']);
+    return $response->getBody()->getContents();
+}
