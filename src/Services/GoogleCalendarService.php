@@ -173,6 +173,7 @@ class GoogleCalendarService
         $min_date = $primaryDueDate;
         $max_date = $primaryDueDate;
         $desc_lines = [];
+        $designer_active_steps = [];
 
         foreach ($schedulesToRender as $title_type => $sched) {
             $actuals = json_decode($project[$sched['actuals_col']] ?? '{}', true) ?: [];
@@ -181,6 +182,8 @@ class GoogleCalendarService
             $calc_date = $primaryDueDate;
 
             $desc_lines[] = "■ {$title_type}";
+            $found_active_for_this_sched = false;
+            $prev_step_done_date = null;
 
             foreach ($sched['steps'] as $idx => $step) {
                 // Initial step (reception)
@@ -196,6 +199,19 @@ class GoogleCalendarService
                     }
                     if (strcmp($step_date, $max_date) > 0) {
                         $max_date = $step_date;
+                    }
+
+                    if ($is_done) {
+                        $prev_step_done_date = $actual_date;
+                    } else {
+                        if (!$found_active_for_this_sched && ($step['actor'] ?? '') === 'designer') {
+                            $designer_active_steps[] = [
+                                'name' => $step['name'],
+                                'start_date' => $primaryDueDate,
+                                'end_date' => date('Y-m-d')
+                            ];
+                            $found_active_for_this_sched = true;
+                        }
                     }
                     continue;
                 }
@@ -225,6 +241,25 @@ class GoogleCalendarService
                 }
                 if (strcmp($step_date, $max_date) > 0) {
                     $max_date = $step_date;
+                }
+
+                if (!$is_done) {
+                    if (!$found_active_for_this_sched) {
+                        if (($step['actor'] ?? '') === 'designer') {
+                            $start_d = !empty($prev_step_done_date) ? $prev_step_done_date : $primaryDueDate;
+                            $today = date('Y-m-d');
+                            $end_d = (strcmp($calc_date, $today) > 0) ? $calc_date : $today;
+                            
+                            $designer_active_steps[] = [
+                                'name' => $step['name'],
+                                'start_date' => $start_d,
+                                'end_date' => $end_d
+                            ];
+                        }
+                        $found_active_for_this_sched = true;
+                    }
+                } else {
+                    $prev_step_done_date = $actual_date;
                 }
 
                 if ($is_done) {
@@ -258,6 +293,38 @@ class GoogleCalendarService
             $this->service->events->insert($this->calendarId, $event);
         } catch (Exception $e) {
             file_put_contents(__DIR__ . '/../../debug_api.txt', date('[Y-m-d H:i:s] ') . "Calendar insert failed: " . $e->getMessage() . "\n", FILE_APPEND);
+        }
+
+        // Add daily 13:00 - 18:00 events for designer active steps, excluding Wednesday (3) and Sunday (0)
+        foreach ($designer_active_steps as $active_step) {
+            $current_date = $active_step['start_date'];
+            $end_loop_date = $active_step['end_date'];
+
+            while (strcmp($current_date, $end_loop_date) <= 0) {
+                $day_of_week = date('w', strtotime($current_date));
+                if ($day_of_week != 0 && $day_of_week != 3) {
+                    try {
+                        $event = new Event();
+                        $event->setSummary("[{$projectName}] {$active_step['name']}（設計対応）");
+                        $event->setDescription("案件名: {$projectName}\n工程: {$active_step['name']}\n設計サポートにて対応中のタスクです。");
+
+                        $start = new EventDateTime();
+                        $start->setDateTime("{$current_date}T13:00:00");
+                        $start->setTimeZone('Asia/Tokyo');
+                        $event->setStart($start);
+
+                        $end = new EventDateTime();
+                        $end->setDateTime("{$current_date}T18:00:00");
+                        $end->setTimeZone('Asia/Tokyo');
+                        $event->setEnd($end);
+
+                        $this->service->events->insert($this->calendarId, $event);
+                    } catch (Exception $e) {
+                        file_put_contents(__DIR__ . '/../../debug_api.txt', date('[Y-m-d H:i:s] ') . "Calendar daily time event insert failed: " . $e->getMessage() . "\n", FILE_APPEND);
+                    }
+                }
+                $current_date = date('Y-m-d', strtotime($current_date . ' +1 day'));
+            }
         }
     }
 }
