@@ -45,7 +45,12 @@ class EstimateCalculatorService
         if (!empty($params['req_permit'])) {
             $base = $params['base_permit'] ?? 0;
             $area = $params['area_permit'] ?? 0;
-            $areaExtra = $area > 150 ? ceil($area - 150) * 600 : 0;
+            $area_qty = $area > 150 ? ceil($area - 150) : 0;
+            $tier1_qty = min($area_qty, 150);
+            $rem = $area_qty - $tier1_qty;
+            $tier2_qty = min($rem, 200);
+            $tier3_qty = max(0, $rem - $tier2_qty);
+            $areaExtra = ($tier1_qty * 600) + ($tier2_qty * 500) + ($tier3_qty * 400);
             $total += $base + $areaExtra;
             // 他の割増等は省略 (サンプルロジック)
         }

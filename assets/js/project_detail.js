@@ -334,10 +334,36 @@ function calcClientEstimate() {
         let base = parseInt(document.getElementById('est_base_permit').value) || 0;
         let area = parseFloat(document.getElementById('est_area_permit').value) || 0;
         let area_qty = area > 150 ? Math.ceil(area - 150) : 0;
-        let base_with_area = base + (area_qty * 600);
+        let tier1_qty = 0;
+        let tier2_qty = 0;
+        let tier3_qty = 0;
+
+        if (area_qty > 0) {
+            let temp = area_qty;
+            tier1_qty = Math.min(temp, 150); // 150㎡超〜300㎡未満の範囲 (最大150㎡分)
+            temp -= tier1_qty;
+            if (temp > 0) {
+                tier2_qty = Math.min(temp, 200); // 300㎡以上〜500㎡未満の範囲 (最大200㎡分)
+                temp -= tier2_qty;
+                if (temp > 0) {
+                    tier3_qty = temp; // 500㎡以上の範囲
+                }
+            }
+        }
+
+        let area_extra_price = (tier1_qty * 600) + (tier2_qty * 500) + (tier3_qty * 400);
+        let base_with_area = base + area_extra_price;
         
         currentEstimate += pushEstimateItem("許容応力度計算 基本料金", 1, "式", base, true);
-        currentEstimate += pushEstimateItem("許容応力度計算 構造床面積割増 (150㎡超)", area_qty, "㎡", 600, area_qty > 0);
+        if (tier1_qty > 0) {
+            currentEstimate += pushEstimateItem("許容応力度計算 構造床面積割増 (150㎡〜300㎡未満)", tier1_qty, "㎡", 600, true);
+        }
+        if (tier2_qty > 0) {
+            currentEstimate += pushEstimateItem("許容応力度計算 構造床面積割増 (300㎡〜500㎡未満)", tier2_qty, "㎡", 500, true);
+        }
+        if (tier3_qty > 0) {
+            currentEstimate += pushEstimateItem("許容応力度計算 構造床面積割増 (500㎡以上)", tier3_qty, "㎡", 400, true);
+        }
         
         // 形状加算 (基本料金+面積割増に乗算)
         document.querySelectorAll('.est_mult_permit').forEach(cb => {
@@ -489,7 +515,7 @@ function addManualEstimateRow() {
     div.style.alignItems = 'center';
     div.innerHTML = `
         <input type="text" placeholder="項目名" class="manual-est-name" oninput="calcClientEstimate()" onfocus="if(this.value==='') { this.value='　'; this.setSelectionRange(0, 1); setTimeout(() => { if(this.value==='　') { this.value=''; } }, 20); }" style="flex:1; padding:3px; font-size:11px; ime-mode: active;" inputmode="text" lang="ja" required>
-        <input type="text" placeholder="金額(税抜)" class="manual-est-price" oninput="this.value = this.value.replace(/[^0-9]/g, ''); calcClientEstimate();" style="width:80px; padding:3px; font-size:11px; ime-mode: disabled;" inputmode="numeric" pattern="[0-9]*" required>
+        <input type="text" placeholder="金額(税抜)" class="manual-est-price" oninput="this.value = this.value.replace(/[^-0-9]/g, '').replace(/(?!^)-/g, ''); calcClientEstimate();" style="width:80px; padding:3px; font-size:11px; ime-mode: disabled;" inputmode="text" pattern="^-?[0-9]*" required>
         <button type="button" onclick="this.parentElement.remove(); calcClientEstimate();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer; font-weight:bold;">✕</button>
     `;
     container.appendChild(div);
