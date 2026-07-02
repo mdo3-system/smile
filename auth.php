@@ -49,6 +49,7 @@ if (isset($_GET['token'])) {
             $_SESSION['contact_name'] = $user['contact_name'];
             $_SESSION['allowed_project_id'] = $user['allowed_project_id'];
             $_SESSION['parent_id'] = $user['parent_id'];
+            $_SESSION['email_notification_enabled'] = $user['email_notification_enabled'];
             
             // トークンパラメータを除去したURLへリダイレクトしてログインセッションを保持
             $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
@@ -69,9 +70,12 @@ function check_auth($allowed_roles = []) {
         exit;
     }
 
-    // 常にDBから最新情報を取得してセッションを同期
+    // 常にDBから最新情報を取得してセッションを同期、および最終アクティブ日時を更新
     if (isset($pdo)) {
-        $stmt = $pdo->prepare("SELECT role, contact_name, allowed_project_id, parent_id FROM users WHERE id = :id");
+        $stmtUpdate = $pdo->prepare("UPDATE users SET last_active_at = NOW() WHERE id = :id");
+        $stmtUpdate->execute(['id' => $_SESSION['user_id']]);
+
+        $stmt = $pdo->prepare("SELECT role, contact_name, allowed_project_id, parent_id, email_notification_enabled FROM users WHERE id = :id");
         $stmt->execute(['id' => $_SESSION['user_id']]);
         $user = $stmt->fetch();
         if ($user) {
@@ -79,6 +83,7 @@ function check_auth($allowed_roles = []) {
             $_SESSION['contact_name'] = $user['contact_name'];
             $_SESSION['allowed_project_id'] = $user['allowed_project_id'];
             $_SESSION['parent_id'] = $user['parent_id'];
+            $_SESSION['email_notification_enabled'] = $user['email_notification_enabled'];
         } else {
             session_destroy();
             header("Location: login.php");

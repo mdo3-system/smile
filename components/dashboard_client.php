@@ -9,11 +9,108 @@
         <div class="column col-left" style="flex: 1;">
             <h2 class="section-title" style="background:#4a5568;">📋 案件情報とご請求状況</h2>
             
-            <div class="box">
+            <div class="box" style="position:relative;">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:10px;">
                     <h3 style="margin:0; font-size:14px;">基本情報</h3>
-                    <button onclick="document.getElementById('editInfoModal').classList.add('active')" style="background:#e2e8f0; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; color:#475569; font-weight:bold;">編集</button>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <?php
+                        $company_id = $_SESSION['parent_id'] ?: $_SESSION['user_id'];
+                        $stmtStaff = $pdo->prepare("
+                            SELECT id, contact_name, last_active_at, email_notification_enabled 
+                            FROM users 
+                            WHERE id = :cid OR parent_id = :cid 
+                            ORDER BY id ASC
+                        ");
+                        $stmtStaff->execute(['cid' => $company_id]);
+                        $staff_members = $stmtStaff->fetchAll();
+                        ?>
+                        <div style="display:flex; gap:6px; align-items:center; margin-right:10px;">
+                            <?php foreach ($staff_members as $member): 
+                                $is_me = ($member['id'] == $_SESSION['user_id']);
+                                $is_online = (!empty($member['last_active_at']) && (time() - strtotime($member['last_active_at'])) < 300);
+                                $indicator_color = $is_online ? '#10b981' : '#94a3b8';
+                                $initial = mb_substr($member['contact_name'], 0, 1);
+                                $notif_status = $member['email_notification_enabled'] ? '通知ON' : '通知OFF';
+                            ?>
+                                <div class="staff-avatar-wrapper" style="position:relative; cursor:<?= $is_me ? 'pointer' : 'default' ?>;" 
+                                     title="<?= htmlspecialchars($member['contact_name'], ENT_QUOTES) ?> (<?= $notif_status ?>)"
+                                     <?= $is_me ? 'onclick="toggleNotificationPopup(event)"' : '' ?>>
+                                    <div style="width:24px; height:24px; border-radius:50%; background:#2563eb; color:white; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; border:1px solid <?= $is_me ? '#059669' : '#fff' ?>; box-shadow: 0 1px 3px rgba(0,0,0,0.15);">
+                                        <?= htmlspecialchars($initial, ENT_QUOTES) ?>
+                                    </div>
+                                    <div style="position:absolute; bottom:-1px; right:-1px; width:7px; height:7px; border-radius:50%; background:<?= $indicator_color ?>; border:1.5px solid #fff; <?= $is_online ? 'box-shadow: 0 0 6px #10b981;' : '' ?>"></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button onclick="document.getElementById('editInfoModal').classList.add('active')" style="background:#e2e8f0; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; color:#475569; font-weight:bold;">編集</button>
+                    </div>
                 </div>
+
+                <!-- 通知設定ポップアップ -->
+                <div id="myAccountPopup" style="display:none; position:absolute; background:white; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1px solid #cbd5e1; padding:12px; z-index:1000; width:180px; font-size:11px; top:35px; right:60px;">
+                    <div style="font-weight:bold; border-bottom:1px solid #edf2f7; padding-bottom:5px; margin-bottom:8px; color:#1e293b; display:flex; justify-content:space-between; align-items:center;">
+                        <span>⚙️ 通知設定</span>
+                        <span style="cursor:pointer; color:#94a3b8; font-size:12px;" onclick="closeMyAccountPopup()">✕</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:600; color:#475569;">メール通知の受け取り</span>
+                        <label class="switch" style="position:relative; display:inline-block; width:34px; height:18px;">
+                            <input type="checkbox" id="user_notification_toggle" style="opacity:0; width:0; height:0;" 
+                                   <?= ($_SESSION['email_notification_enabled'] ?? 1) ? 'checked' : '' ?>
+                                   onchange="updateNotificationSetting(this.checked)">
+                            <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.3s; border-radius:18px;"></span>
+                        </label>
+                    </div>
+                    <div style="font-size:9px; color:#94a3b8; line-height:1.3;">
+                        ※新着メッセージや設計成果物アップロード時の通知メールを制御します。
+                    </div>
+                </div>
+
+                <style>
+                    .slider:before {
+                        position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px;
+                        background-color: white; transition: .3s; border-radius: 50%;
+                    }
+                    input:checked + .slider { background-color: #10b981; }
+                    input:checked + .slider:before { transform: translateX(16px); }
+                </style>
+
+                <script>
+                function toggleNotificationPopup(event) {
+                    event.stopPropagation();
+                    const popup = document.getElementById('myAccountPopup');
+                    popup.style.display = (popup.style.display === 'none' || popup.style.display === '') ? 'block' : 'none';
+                }
+
+                function closeMyAccountPopup() {
+                    document.getElementById('myAccountPopup').style.display = 'none';
+                }
+
+                document.addEventListener('click', function(e) {
+                    const popup = document.getElementById('myAccountPopup');
+                    if (popup && !popup.contains(e.target) && !e.target.closest('.staff-avatar-wrapper')) {
+                        popup.style.display = 'none';
+                    }
+                });
+
+                function updateNotificationSetting(checked) {
+                    fetch('api_update_notification.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: checked ? 1 : 0 })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log("Notification setting updated:", data.enabled);
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("設定の更新に失敗しました。");
+                    });
+                }
+                </script>
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
                     <strong>担当者:</strong> <?= htmlspecialchars($project_info['client_name'], ENT_QUOTES) ?> 様<br>
@@ -41,13 +138,74 @@
                         }
                     ?>
                     <strong>ステータス:</strong> <span class="badge" style="background:<?= $status_bg ?>;"><?= htmlspecialchars($status_ja, ENT_QUOTES) ?></span>
+                    <?php
+                    // 中間金支払いの判定
+                    $actuals_column = 'schedule_actuals';
+                    if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
+                        $actuals_column = 'schedule_actuals';
+                    } elseif ($project_info['req_wall'] == 1) {
+                        $actuals_column = 'schedule_actuals_wall';
+                    } elseif ($project_info['req_skin'] == 1) {
+                        $actuals_column = 'schedule_actuals_skin';
+                    } elseif ($project_info['req_sky'] == 1) {
+                        $actuals_column = 'schedule_actuals_sky';
+                    }
+                    $actuals_data = json_decode($project_info[$actuals_column] ?? '{}', true) ?: [];
+                    
+                    $scheduleService = new \App\Services\ScheduleService($pdo);
+                    $base_days = $scheduleService->getScheduleBaseDays($project_info);
+                    $steps_list = [];
+                    if ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1) {
+                        $steps_list = $scheduleService->getScheduleSteps($base_days, true);
+                    } elseif ($project_info['req_wall'] == 1) {
+                        $steps_list = $scheduleService->getScheduleStepsWall($base_days);
+                    } elseif ($project_info['req_skin'] == 1) {
+                        $steps_list = $scheduleService->getScheduleStepsSkin($base_days);
+                    } elseif ($project_info['req_sky'] == 1) {
+                        $steps_list = $scheduleService->getScheduleStepsSky($base_days);
+                    }
+                    
+                    $mid_pay_idx = -1;
+                    foreach ($steps_list as $idx => $step) {
+                        if ($step['name'] === '中間金（50％）のご入金') {
+                            $mid_pay_idx = $idx;
+                            break;
+                        }
+                    }
+                    
+                    $is_mid_paid = ($mid_pay_idx !== -1 && !empty($actuals_data[$mid_pay_idx]));
+                    
+                    // 中間金支払いボタンの表示（ステータスが進行中かつ見積中・完了以外）
+                    if (in_array($project_info['status'], ['contracted', 'primary_prep', 'structural_dwg', 'submission', 'submitting', 'correction'])):
+                    ?>
+                        <div style="margin-top: 12px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <?php if ($is_mid_paid): ?>
+                                <div style="color: #059669; font-weight: bold; font-size: 11px; display: flex; align-items: center; gap: 4px; justify-content: center;">
+                                    ✅ 中間金（50％）ご入金報告済み<br>
+                                    <span style="font-weight: normal; color: #64748b; font-size: 10px;">(報告日: <?= htmlspecialchars($actuals_data[$mid_pay_idx], ENT_QUOTES) ?>)</span>
+                                </div>
+                            <?php else: ?>
+                                <form method="POST" style="margin: 0;" onsubmit="return confirm('中間金（50％）のご入金を報告し、経理担当者へ通知します。よろしいですか？');">
+                                    <input type="hidden" name="action" value="pay_intermediate">
+                                    <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                    <button type="submit" style="width:100%; background:#2563eb; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+                                        💵 中間金（50％）を入金しました
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if ($project_info['status'] === 'submission'): ?>
-                        <div style="margin-top: 12px;">
-                            <form method="POST" style="margin: 0;" onsubmit="return confirm('確認機関の審査が完了（合格）したことを登録し、設計業務を完了にしてよろしいですか？');">
+                        <div style="margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 12px;">
+                            <div style="font-size: 10px; color: #dc2626; font-weight: bold; margin-bottom: 5px; line-height: 1.4; text-align: left;">
+                                ※確認申請の審査合格が確認できましたら、残金をお振込みいただき、本ボタンを押して完了登録を行ってください。
+                            </div>
+                            <form method="POST" style="margin: 0;" onsubmit="return confirm('確認機関の審査が完了（合格）し、残金の振込みが完了したことを登録して、設計業務を完了にします。よろしいですか？');">
                                 <input type="hidden" name="action" value="complete_review">
                                 <input type="hidden" name="project_id" value="<?= $project_id ?>">
-                                <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
-                                    💮 審査完了にする（審査合格）
+                                <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
+                                    💮 残金お振込み ＆ 審査完了にする（審査合格）
                                 </button>
                             </form>
                         </div>

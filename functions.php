@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.24');
+define('SYSTEM_VERSION', 'v1.5.25');
 
 
 // ==========================================
@@ -186,12 +186,74 @@ function sendSystemEmail($to, $subject, $body) {
     if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
     }
+
+    // 宛先アドレスの通知が有効か確認
+    global $pdo;
+    if (isset($pdo)) {
+        try {
+            $stmt = $pdo->prepare("SELECT email_notification_enabled FROM users WHERE email = :email LIMIT 1");
+            $stmt->execute(['email' => $to]);
+            $row = $stmt->fetch();
+            if ($row && intval($row['email_notification_enabled']) === 0) {
+                return true; // 通知無効のため送信スキップ (成功扱い)
+            }
+        } catch (Exception $e) {
+            // エラー時はフォールバックで通常送信を許可
+        }
+    }
+
     mb_language("uni");
     mb_internal_encoding("UTF-8");
     $headers = "From: system@thanks.work\r\n";
     $headers .= "Reply-To: support@thanks.work\r\n";
     $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
     return mb_send_mail($to, $subject, $body, $headers);
+}
+
+
+/**
+ * 指定されたユーザーIDの会社（親および紐づく全子ユーザー）のメールアドレスのうち、
+ * メール通知がONのものを配列で取得する
+ */
+function getCompanyNotificationEmails($userId, $pdo) {
+    if (!$pdo) return [];
+    try {
+        $stmtParent = $pdo->prepare("SELECT id, parent_id FROM users WHERE id = :uid");
+        $stmtParent->execute(['uid' => $userId]);
+        $row = $stmtParent->fetch();
+        if (!$row) return [];
+        
+        $parentId = $row['parent_id'] ?: $row['id'];
+        
+        $stmtEmails = $pdo->prepare("
+            SELECT email FROM users 
+            WHERE (id = :pid OR parent_id = :pid)
+            AND email_notification_enabled = 1
+            AND email IS NOT NULL AND email != ''
+        ");
+        $stmtEmails->execute(['pid' => $parentId]);
+        return $stmtEmails->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * 全管理者（role = 'admin'）のメールアドレスのうち、通知がONのものを配列で取得する
+ */
+function getAdminNotificationEmails($pdo) {
+    if (!$pdo) return [];
+    try {
+        $stmt = $pdo->query("
+            SELECT email FROM users 
+            WHERE role = 'admin'
+            AND email_notification_enabled = 1
+            AND email IS NOT NULL AND email != ''
+        ");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Exception $e) {
+        return [];
+    }
 }
 
 

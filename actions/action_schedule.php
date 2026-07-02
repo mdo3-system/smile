@@ -354,17 +354,17 @@ if ($action === 'submit_primary_response') {
 if ($action === 'complete_review') {
     $projectRepo->updateStatus($project_id, 'completed');
     
-    // スケジュール実績 JSON の更新（審査完了時の実績日設定）
+    // スケジュール実績 JSON の更新（審査完了時の実績日設定。中間金マイルストーン追加に伴いインデックスが+1シフト）
     $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
     $stmtAct->execute(['id' => $project_id]);
     $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
     $today = date('Y-m-d');
     if ($act_row) {
         $cols_to_steps = [
-            'schedule_actuals' => [8, 9],
-            'schedule_actuals_wall' => [5, 6],
-            'schedule_actuals_skin' => [5, 6],
-            'schedule_actuals_sky' => [5, 6],
+            'schedule_actuals' => [9, 10], // 質疑・審査待機[9], 補正対応[10]
+            'schedule_actuals_wall' => [6, 7], // 質疑・審査待機[6], 補正対応[7]
+            'schedule_actuals_skin' => [6, 7],
+            'schedule_actuals_sky' => [6, 7],
         ];
         foreach ($cols_to_steps as $col => $steps) {
             $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
@@ -387,6 +387,19 @@ if ($action === 'complete_review') {
         'msg' => $msg
     ]);
 
+    // 経理へ通知メール送信
+    $stmtAcc = $pdo->query("SELECT email FROM users WHERE role = 'accountant' AND email_notification_enabled = 1");
+    $accountant_emails = $stmtAcc->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    foreach ($accountant_emails as $acc_email) {
+        $acc_subject = "【経理通知】残金精算および審査完了のお知らせ: " . $project_info['project_name'];
+        $acc_body = "木造住宅設計サポートの以下の案件について、審査合格（審査完了）および残金清算手続き開始が登録されました。\n\n";
+        $acc_body .= "案件名: " . $project_info['project_name'] . "\n";
+        $acc_body .= "残金のご精算および最終請求の手続きを進めてください。\n\n";
+        $acc_body .= "▼案件管理画面\n";
+        $acc_body .= "https://system.thanks.work/project_detail.php?id=" . $project_id . "\n";
+        sendSystemEmail($acc_email, $acc_subject, $acc_body);
+    }
+
     // Googleカレンダー連携が有効な場合はカレンダーへも適宜反映されるようにする
     try {
         if (class_exists('App\Services\GoogleCalendarService')) {
@@ -395,6 +408,64 @@ if ($action === 'complete_review') {
         }
     } catch (Exception $cal_err) {
         // カレンダー連携エラーはログに記録するか無視して進行
+    }
+
+    header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
+}
+
+// 中間金（50％）のご入金登録 - 依頼主による操作
+if ($action === 'pay_intermediate') {
+    $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+    $stmtAct->execute(['id' => $project_id]);
+    $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+    $today = date('Y-m-d');
+    
+    if ($act_row) {
+        // 中間金マイルストーンのインデックス
+        $cols_to_mid_idx = [
+            'schedule_actuals' => 4,
+            'schedule_actuals_wall' => 4,
+            'schedule_actuals_skin' => 4,
+            'schedule_actuals_sky' => 3,
+        ];
+        foreach ($cols_to_mid_idx as $col => $step_idx) {
+            $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+            $actuals[$step_idx] = $today;
+            $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+            $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
+        }
+    }
+
+    // 自動メッセージ（チャット）の登録
+    $msg = "【通知】中間金（50％）のお支払いが登録されました。";
+    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+    $stmtMsg->execute([
+        'pid' => $project_id,
+        'sid' => $_SESSION['user_id'],
+        'msg' => $msg
+    ]);
+
+    // 経理へ通知メール送信
+    $stmtAcc = $pdo->query("SELECT email FROM users WHERE role = 'accountant' AND email_notification_enabled = 1");
+    $accountant_emails = $stmtAcc->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    foreach ($accountant_emails as $acc_email) {
+        $acc_subject = "【経理通知】中間金（50％）ご入金のお知らせ: " . $project_info['project_name'];
+        $acc_body = "木造住宅設計サポートの以下の案件について、依頼主より「中間金（50％）のご入金」が報告されました。\n\n";
+        $acc_body .= "案件名: " . $project_info['project_name'] . "\n";
+        $acc_body .= "入金確認および売上管理の手続きを行ってください。\n\n";
+        $acc_body .= "▼案件管理画面\n";
+        $acc_body .= "https://system.thanks.work/project_detail.php?id=" . $project_id . "\n";
+        sendSystemEmail($acc_email, $acc_subject, $acc_body);
+    }
+
+    // Googleカレンダーへ同期
+    try {
+        if (class_exists('App\Services\GoogleCalendarService')) {
+            $calendarService = new \App\Services\GoogleCalendarService($pdo);
+            $calendarService->syncProjectEvents($project_id);
+        }
+    } catch (Exception $cal_err) {
+        // エラーは無視して進行
     }
 
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;

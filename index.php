@@ -236,7 +236,7 @@ $status_labels = [
                         
                         // 進行中の協力業者タスクを取得
                         $stmtActiveTask = $pdo->prepare("
-                            SELECT task_title, order_type, due_date 
+                            SELECT task_title, order_type, due_date, status 
                             FROM subcontractor_orders 
                             WHERE project_id = :pid 
                             AND status IN ('requested', 'accepted', 'cb_requested')
@@ -255,6 +255,9 @@ $status_labels = [
                                 ?>
                                     <div style="color: #6d28d9; font-size: 11px; margin-bottom: 2px;">
                                         👷 進行タスク: <strong><?= htmlspecialchars($active_task['task_title'], ENT_QUOTES) ?></strong> (<?= $type_label ?>)
+                                        <?php if ($active_task['status'] === 'requested' || $active_task['status'] === 'cb_requested'): ?>
+                                            <span style="color: #ef4444; font-weight: bold; margin-left: 5px;">⚠️ 未承諾 (承諾待ち)</span>
+                                        <?php endif; ?>
                                     </div>
                                     <div style="color: #dc2626; font-size: 11px;">
                                         📅 納品予定日: <strong><?= $due_disp ?></strong>
