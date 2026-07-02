@@ -162,10 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 sendSystemEmail($email_input, $confirm_subject, $confirm_body);
             }
 
-            // メールが登録されたかどうかをセッションに保存してモーダル表示
-            $_SESSION['show_email_confirm'] = $email_input ? $email_input : '';
-
-            header("Location: index.php?email_confirmed=1");
+            $success_msg = "見積依頼を受け付けました。" . ($email_input ? "《{$email_input}》" : "登録されたアドレス") . "宛に確認メールを送信しました。※迷惑メールフォルダもご確認ください（送信元: system@thanks.work）";
+            header("Location: index.php?msg=" . urlencode($success_msg));
             exit;
 
         } catch (Exception $e) {
@@ -407,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="email" id="contact_email" name="contact_email" placeholder="例: sample@example.com" value="<?= htmlspecialchars($default_email, ENT_QUOTES) ?>" style="width:100%; padding:12px 16px; background:#fff; border:1px solid var(--border-color); border-radius:8px; font-size:15px; box-sizing:border-box;">
                     <div style="font-size:12px; color:#d97706; margin-top:5px; background:#fff8e1; padding:8px; border-radius:6px; border:1px solid #f59e0b;">
                         ⚠️ <strong>重要</strong>: 見積完了時・担当者からのメッセージ送信時などに通知メールをお送りします。<br>
-                        送信後、このアドレスへ確認メールをお送りします。<strong>迷惑メールフォルダをご確認ください</strong>（送信元: system@antigravity-jp.net）。
+                        送信後、このアドレスへ確認メールをお送りします。<strong>迷惑メールフォルダをご確認ください</strong>（送信元: system@thanks.work）。
                     </div>
                 </div>
                 
@@ -535,31 +533,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
 
-        // 迷惑メール確認モーダル
-        <?php if (!empty($_SESSION['show_email_confirm'])): ?>
-        window.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('emailConfirmModal').style.display = 'flex';
-            <?php unset($_SESSION['show_email_confirm']); ?>
-        });
-        <?php endif; ?>
     </script>
-
-    <!-- 確認メール送信完了モーダル -->
-    <div id="emailConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
-        <div style="background:#fff; border-radius:16px; padding:32px; max-width:500px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.4);">
-            <div style="font-size:48px; margin-bottom:16px;">📧</div>
-            <h2 style="font-size:20px; margin-bottom:12px; color:#1e293b;">確認メールを送信しました</h2>
-            <p style="font-size:14px; color:#475569; line-height:1.8; margin-bottom:20px;">
-                見積依頼を受け付けました。<br>
-                《<strong><?= htmlspecialchars($_SESSION['show_email_confirm'] ?? '', ENT_QUOTES) ?></strong>》宛に確認メールを送信しました。<br><br>
-                <span style="color:#ef4444; font-weight:bold;">※迷惑メールフォルダもご確認ください</span><br>
-                送信元: <code>system@antigravity-jp.net</code><br>
-                このアドレスを送信許可リストに追加すると、以後の通知が途切れずに届きます。
-            </p>
-            <button onclick="document.getElementById('emailConfirmModal').style.display='none'; window.location.href='index.php';" style="padding:12px 30px; background:#3b82f6; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer;">
-                メールを確認しました
-            </button>
-        </div>
-    </div>
 </body>
 </html>

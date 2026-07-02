@@ -233,13 +233,36 @@ $status_labels = [
                     <?php foreach ($subcontractor_ball_projects as $project): 
                         $ball = $project['_ball_info'];
                         $current_step = getCurrentStepInfo($project, $pdo);
+                        
+                        // 進行中の協力業者タスクを取得
+                        $stmtActiveTask = $pdo->prepare("
+                            SELECT task_title, order_type, due_date 
+                            FROM subcontractor_orders 
+                            WHERE project_id = :pid 
+                            AND status IN ('requested', 'accepted', 'cb_requested')
+                            ORDER BY id DESC LIMIT 1
+                        ");
+                        $stmtActiveTask->execute(['pid' => $project['id']]);
+                        $active_task = $stmtActiveTask->fetch();
                     ?>
                         <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
                             <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
                             <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
-                            <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
-                                📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
-                                <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+                            <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold; line-height: 1.4;">
+                                <?php if ($active_task): 
+                                    $type_label = ($active_task['order_type'] === 'design') ? '意匠図作図' : '構造図作図';
+                                    $due_disp = !empty($active_task['due_date']) ? date('Y/m/d', strtotime($active_task['due_date'])) : '未定';
+                                ?>
+                                    <div style="color: #6d28d9; font-size: 11px; margin-bottom: 2px;">
+                                        👷 進行タスク: <strong><?= htmlspecialchars($active_task['task_title'], ENT_QUOTES) ?></strong> (<?= $type_label ?>)
+                                    </div>
+                                    <div style="color: #dc2626; font-size: 11px;">
+                                        📅 納品予定日: <strong><?= $due_disp ?></strong>
+                                    </div>
+                                <?php else: ?>
+                                    📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                                    <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+                                <?php endif; ?>
                             </div>
                             <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
                             <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
