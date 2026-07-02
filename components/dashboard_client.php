@@ -18,10 +18,13 @@
                         $stmtStaff = $pdo->prepare("
                             SELECT id, contact_name, last_active_at, email_notification_enabled 
                             FROM users 
-                            WHERE id = :cid OR parent_id = :cid 
+                            WHERE id = :cid1 OR parent_id = :cid2 
                             ORDER BY id ASC
                         ");
-                        $stmtStaff->execute(['cid' => $company_id]);
+                        $stmtStaff->execute([
+                            'cid1' => $company_id,
+                            'cid2' => $company_id
+                        ]);
                         $staff_members = $stmtStaff->fetchAll();
                         ?>
                         <div style="display:flex; gap:6px; align-items:center; margin-right:10px;">
