@@ -61,6 +61,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'fpath' => $drive_file_id,
                 'ftype' => $file_type
             ]);
+
+            // 協力業者またはそのスタッフから管理者に送信された場合、メール通知
+            if ($_SESSION['role'] === 'subcontractor') {
+                try {
+                    $stmtSubName = $pdo->prepare("SELECT company_name, contact_name FROM users WHERE id = :id");
+                    $stmtSubName->execute(['id' => $target_sub_id]);
+                    $sub_info = $stmtSubName->fetch();
+                    $sub_company = $sub_info ? $sub_info['company_name'] : '協力業者';
+
+                    $stmtAdmins = $pdo->prepare("SELECT email FROM users WHERE role = 'admin'");
+                    $stmtAdmins->execute();
+                    $admin_emails = $stmtAdmins->fetchAll(PDO::FETCH_COLUMN);
+
+                    foreach ($admin_emails as $admin_email) {
+                        if ($admin_email && filter_var($admin_email, FILTER_VALIDATE_EMAIL)) {
+                            $subject = "【設計サポート】全体連絡チャットに協力業者から新着メッセージがあります";
+                            $body  = "協力業者「{$sub_company}」様より全体連絡チャットにメッセージが届きました。\n\n";
+                            $body .= "送信メッセージ:\n{$message_text}\n\n";
+                            $body .= "▼全体連絡チャットを確認する:\n";
+                            $body .= "https://system.thanks.work/system/subcontractor_portal.php?sub_id={$target_sub_id}\n\n";
+                            $body .= "------\n";
+                            $body .= "※このメールに返信いただいてもお返事できません。";
+                            sendSystemEmail($admin_email, $subject, $body);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log("Failed to send global chat email notification: " . $e->getMessage());
+                }
+            }
         }
         header("Location: subcontractor_portal.php" . (($is_admin || $is_accountant) ? "?sub_id=" . $target_sub_id : ""));
         exit;

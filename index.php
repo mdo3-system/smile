@@ -176,26 +176,101 @@ $status_labels = [
     </div>
     <?php endif; ?>
 
-    <div class="grid">
-        <?php foreach ($projects as $project): 
+    <?php
+    $isAdminOrAccountant = ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant');
+
+    if ($isAdminOrAccountant) {
+        $subcontractor_ball_projects = [];
+        $admin_client_ball_projects = [];
+
+        foreach ($projects as $project) {
             $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo, $_SESSION['role'] ?? null);
-            $current_step = getCurrentStepInfo($project, $pdo);
-        ?>
-            <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
-                <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
-                <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
-                <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
-                    📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
-                    <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+            $project['_ball_info'] = $ball;
+            
+            if ($ball['ball_owner'] === 'subcontractor') {
+                $subcontractor_ball_projects[] = $project;
+            } else {
+                $admin_client_ball_projects[] = $project;
+            }
+        }
+    ?>
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 18px; border-bottom: 2px solid #0056b3; padding-bottom: 8px; margin-bottom: 15px; color: #0056b3; display: flex; align-items: center; gap: 8px;">
+                👤 依頼主＆管理者ボールの案件 (<?= count($admin_client_ball_projects) ?>件)
+            </h2>
+            <?php if (empty($admin_client_ball_projects)): ?>
+                <p style="color: #666; font-size: 14px;">該当する案件はありません。</p>
+            <?php else: ?>
+                <div class="grid">
+                    <?php foreach ($admin_client_ball_projects as $project): 
+                        $ball = $project['_ball_info'];
+                        $current_step = getCurrentStepInfo($project, $pdo);
+                    ?>
+                        <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
+                            <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                            <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
+                            <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
+                                📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                                <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+                            </div>
+                            <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
+                            <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
+                            <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
-                <?php if (($_SESSION['role'] ?? '') !== 'client'): ?>
-                    <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
-                <?php endif; ?>
-                <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
-            </div>
-        <?php endforeach; ?>
-    </div>
+            <?php endif; ?>
+        </div>
+
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 18px; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px; margin-bottom: 15px; color: #8b5cf6; display: flex; align-items: center; gap: 8px;">
+                👷 協力業者ボールの案件 (<?= count($subcontractor_ball_projects) ?>件)
+            </h2>
+            <?php if (empty($subcontractor_ball_projects)): ?>
+                <p style="color: #666; font-size: 14px;">該当する案件はありません。</p>
+            <?php else: ?>
+                <div class="grid">
+                    <?php foreach ($subcontractor_ball_projects as $project): 
+                        $ball = $project['_ball_info'];
+                        $current_step = getCurrentStepInfo($project, $pdo);
+                    ?>
+                        <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
+                            <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                            <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
+                            <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
+                                📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                                <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+                            </div>
+                            <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
+                            <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
+                            <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php } else { ?>
+        <div class="grid">
+            <?php foreach ($projects as $project): 
+                $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo, $_SESSION['role'] ?? null);
+                $current_step = getCurrentStepInfo($project, $pdo);
+            ?>
+                <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
+                    <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                    <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
+                    <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
+                        📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                        <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+                    </div>
+                    <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
+                    <?php if (($_SESSION['role'] ?? '') !== 'client'): ?>
+                        <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
+                    <?php endif; ?>
+                    <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php } ?>
 
     <!-- Google Drive 連携切れ警告モーダル (管理者のみ) -->
     <?php if ($_SESSION['role'] === 'admin' && !empty($drive_connection_error)): ?>

@@ -111,8 +111,34 @@ if ($success) {
     try {
         $stmtUpdateChatAt = $pdo->prepare("UPDATE projects SET last_manual_chat_at = NOW() WHERE id = :pid");
         $stmtUpdateChatAt->execute(['pid' => (int)$projectId]);
+
+        // 協力業者またはそのスタッフから管理者に送信された場合、メール通知
+        if ($_SESSION['role'] === 'subcontractor' && $threadType === 'sub_admin') {
+            $stmtProj = $pdo->prepare("SELECT project_name FROM projects WHERE id = :pid");
+            $stmtProj->execute(['pid' => (int)$projectId]);
+            $project_name = $stmtProj->fetchColumn() ?: '不明';
+
+            // 管理者の全メールアドレスを取得
+            $stmtAdmins = $pdo->prepare("SELECT email FROM users WHERE role = 'admin'");
+            $stmtAdmins->execute();
+            $admin_emails = $stmtAdmins->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($admin_emails as $admin_email) {
+                if ($admin_email && filter_var($admin_email, FILTER_VALIDATE_EMAIL)) {
+                    $subject = "【設計サポート】協力業者から新着メッセージがあります（{$project_name}）";
+                    $body  = "案件「{$project_name}」にて、協力業者からメッセージが届きました。\n\n";
+                    $body .= "送信メッセージ:\n{$messageText}\n\n";
+                    $body .= "▼管理者用案件詳細で確認する:\n";
+                    $body .= "https://system.thanks.work/system/project_detail.php?id={$projectId}\n\n";
+                    $body .= "------\n";
+                    $body .= "※このメールに返信いただいてもお返事できません。";
+                    sendSystemEmail($admin_email, $subject, $body);
+                }
+            }
+        }
     } catch (\Exception $e) {
         // ログ出力など必要であれば行うが、メッセージ送信自体は成功しているためスルーでも良い
+        error_log("Failed to send chat email notification: " . $e->getMessage());
     }
 }
 
