@@ -11,6 +11,7 @@ try {
         SELECT id, project_name, client_id, status, 
                req_permit, req_wall, req_skin, req_sky, req_opt_kisohari,
                schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky,
+               formal_est_amount, add_est_amount, deposit_amount_50,
                inspection_reminder_sent
         FROM projects 
         WHERE status != 'completed' 
@@ -55,12 +56,26 @@ try {
                 if (!empty($emails)) {
                     $subject = "【設計サポート】確認申請の審査進捗状況のご確認: " . $project['project_name'];
                     
+                    $formal_amt = (int)($project['formal_est_amount'] ?? 0);
+                    $add_est_amt = (int)($project['add_est_amount'] ?? 0);
+                    $total_billed = $formal_amt + $add_est_amt;
+                    $deposit_50 = (int)($project['deposit_amount_50'] ?? 0);
+                    $remaining_balance = $total_billed - $deposit_50;
+                    $is_zero_balance = ($remaining_balance <= 0);
+
                     $body  = "木造住宅設計サポートをご利用いただきありがとうございます。\n\n";
                     $body .= "案件名: " . $project['project_name'] . "\n\n";
                     $body .= "補正対応のご対応（図面一式UP）から3週間が経過いたしました。\n";
                     $body .= "確認機関による確認申請の審査進捗状況（合格の見込み等）はいかがでしょうか？\n\n";
-                    $body .= "審査が合格（審査完了）になりましたら、残金をお振込みいただき、\n";
-                    $body .= "ダッシュボード基本情報エリアの「残金お振込み ＆ 審査完了にする」ボタンを押して登録を完了させてください。\n\n";
+                    
+                    if ($is_zero_balance) {
+                        $body .= "審査が合格（審査完了）になりましたら、お振込みは不要ですので、\n";
+                        $body .= "ダッシュボード基本情報エリアの「審査完了にする」ボタンを押して登録を完了させてください。\n\n";
+                    } else {
+                        $body .= "審査が合格（審査完了）になりましたら、残金をお振込みいただき、\n";
+                        $body .= "ダッシュボード基本情報エリアの「残金お振込み ＆ 審査完了にする」ボタンを押して登録を完了させてください。\n\n";
+                    }
+
                     $body .= "▼ダッシュボードはこちら\n";
                     $body .= "https://system.thanks.work/project_detail.php?id=" . $project['id'] . "\n\n";
                     $body .= "よろしくお願い申し上げます。\n";

@@ -200,15 +200,25 @@
                     <?php endif; ?>
 
                     <?php if ($project_info['status'] === 'submission'): ?>
+                        <?php 
+                        $formal_amt = (int)($project_info['formal_est_amount'] ?? 0);
+                        $add_est_amt = (int)($project_info['add_est_amount'] ?? 0);
+                        $total_billed = $formal_amt + $add_est_amt;
+                        $deposit_50 = (int)($project_info['deposit_amount_50'] ?? 0);
+                        $remaining_balance = $total_billed - $deposit_50;
+                        $is_zero_balance = ($remaining_balance <= 0);
+                        ?>
                         <div style="margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 12px;">
-                            <div style="font-size: 10px; color: #dc2626; font-weight: bold; margin-bottom: 5px; line-height: 1.4; text-align: left;">
-                                ※確認申請の審査合格が確認できましたら、残金をお振込みいただき、本ボタンを押して完了登録を行ってください。
-                            </div>
-                            <form method="POST" style="margin: 0;" onsubmit="return confirm('確認機関の審査が完了（合格）し、残金の振込みが完了したことを登録して、設計業務を完了にします。よろしいですか？');">
+                            <?php if (!$is_zero_balance): ?>
+                                <div style="font-size: 10px; color: #dc2626; font-weight: bold; margin-bottom: 5px; line-height: 1.4; text-align: left;">
+                                    ※確認申請の審査合格が確認できましたら、残金をお振込みいただき、本ボタンを押して完了登録を行ってください。
+                                </div>
+                            <?php endif; ?>
+                            <form method="POST" style="margin: 0;" onsubmit="return confirm('<?= $is_zero_balance ? '確認機関の審査が完了（合格）したことを登録して、設計業務を完了にします。よろしいですか？' : '確認機関の審査が完了（合格）し、残金の振込みが完了したことを登録して、設計業務を完了にします。よろしいですか？' ?>');">
                                 <input type="hidden" name="action" value="complete_review">
                                 <input type="hidden" name="project_id" value="<?= $project_id ?>">
                                 <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
-                                    💮 残金お振込み ＆ 審査完了にする（審査合格）
+                                    <?= $is_zero_balance ? '💮 審査完了にする（審査合格）' : '💮 残金お振込み ＆ 審査完了にする（審査合格）' ?>
                                 </button>
                             </form>
                         </div>
