@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.31');
+define('SYSTEM_VERSION', 'v1.5.32');
 
 
 // ==========================================
@@ -257,6 +257,113 @@ function getAdminNotificationEmails($pdo) {
         return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
     } catch (Exception $e) {
         return [];
+    }
+}
+
+/**
+ * チャット新着メッセージのメール通知を関係者に送信する（双方向）
+ */
+function sendChatEmailNotification($projectId, $senderId, $senderRole, $threadType, $messageText, $pdo) {
+    if (!$pdo) return;
+    try {
+        // プロジェクト名と依頼主会社IDを取得
+        $stmtProj = $pdo->prepare("SELECT project_name, client_id FROM projects WHERE id = :pid");
+        $stmtProj->execute(['pid' => (int)$projectId]);
+        $project = $stmtProj->fetch(PDO::FETCH_ASSOC);
+        if (!$project) return;
+        
+        $project_name = $project['project_name'];
+        $client_company_id = $project['client_id'];
+
+        // スレッドタイプが依頼主⇄管理者チャット（client_admin...）の場合
+        if (strpos($threadType, 'client_admin') === 0 || $threadType === 'client_admin') {
+            // 送信者が管理者 ➔ 依頼主（全スタッフ）に通知
+            if ($senderRole === 'admin') {
+                $emails = getCompanyNotificationEmails($client_company_id, $pdo);
+                if (!empty($emails)) {
+                    $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
+                    $body  = "案件「{$project_name}」にて、担当者から新着メッセージが届きました。\n\n";
+                    $body .= "送信メッセージ:\n{$messageText}\n\n";
+                    $body .= "▼ダッシュボードでご確認ください\n";
+                    $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";
+                    $body .= "------\n";
+                    $body .= "※このメールに返信いただいてもお返事できません。担当: 菅原 070-8305-8480（SMS可）";
+                    
+                    foreach ($emails as $email) {
+                        if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                            sendSystemEmail($email, $subject, $body);
+                        }
+                    }
+                }
+            }
+            // 送信者が依頼主 ➔ 管理者（全管理者）に通知
+            elseif ($senderRole === 'client') {
+                $admin_emails = getAdminNotificationEmails($pdo);
+                if (!empty($admin_emails)) {
+                    $subject = "【設計サポート】依頼主から新着メッセージがあります（{$project_name}）";
+                    $body  = "案件「{$project_name}」にて、依頼主から新着メッセージが届きました。\n\n";
+                    $body .= "送信メッセージ:\n{$messageText}\n\n";
+                    $body .= "▼管理者用案件詳細で確認する:\n";
+                    $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";
+                    $body .= "------\n";
+                    $body .= "※このメールに返信いただいてもお返事できません。";
+                    
+                    foreach ($admin_emails as $admin_email) {
+                        if ($admin_email && filter_var($admin_email, FILTER_VALIDATE_EMAIL)) {
+                            sendSystemEmail($admin_email, $subject, $body);
+                        }
+                    }
+                }
+            }
+        }
+        // スレッドタイプが協力業者⇄管理者チャット（sub_admin）の場合
+        elseif ($threadType === 'sub_admin') {
+            // 送信者が管理者 ➔ 協力業者（全スタッフ）に通知
+            if ($senderRole === 'admin') {
+                $stmtSubId = $pdo->prepare("SELECT subcontractor_id FROM subcontractor_orders WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+                $stmtSubId->execute(['pid' => (int)$projectId]);
+                $sub_id = $stmtSubId->fetchColumn();
+
+                if ($sub_id) {
+                    $sub_emails = getCompanyNotificationEmails($sub_id, $pdo);
+                    if (!empty($sub_emails)) {
+                        foreach ($sub_emails as $sub_email) {
+                            if ($sub_email && filter_var($sub_email, FILTER_VALIDATE_EMAIL)) {
+                                $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
+                                $body  = "案件「{$project_name}」にて、管理者から新着メッセージが届きました。\n\n";
+                                $body .= "送信メッセージ:\n{$messageText}\n\n";
+                                $body .= "▼協力業者用ポータルで確認する:\n";
+                                $body .= "https://system.thanks.work/subcontractor_portal.php?id={$projectId}\n\n";
+                                $body .= "------\n";
+                                $body .= "※このメールに返信いただいてもお返事できません。";
+                                sendSystemEmail($sub_email, $subject, $body);
+                            }
+                        }
+                    }
+                }
+            }
+            // 送信者が協力業者 ➔ 管理者（全管理者）に通知
+            elseif ($senderRole === 'subcontractor') {
+                $admin_emails = getAdminNotificationEmails($pdo);
+                if (!empty($admin_emails)) {
+                    $subject = "【設計サポート】協力業者から新着メッセージがあります（{$project_name}）";
+                    $body  = "案件「{$project_name}」にて、協力業者からメッセージが届きました。\n\n";
+                    $body .= "送信メッセージ:\n{$messageText}\n\n";
+                    $body .= "▼管理者用案件詳細で確認する:\n";
+                    $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";
+                    $body .= "------\n";
+                    $body .= "※このメールに返信いただいてもお返事できません。";
+
+                    foreach ($admin_emails as $admin_email) {
+                        if ($admin_email && filter_var($admin_email, FILTER_VALIDATE_EMAIL)) {
+                            sendSystemEmail($admin_email, $subject, $body);
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Failed to send chat email notification: " . $e->getMessage());
     }
 }
 

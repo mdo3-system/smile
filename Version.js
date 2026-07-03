@@ -127,6 +127,7 @@
 // 1.5.29: 管理者・経理向け詳細画面(dashboard_admin.php)のカラム2に「一次回答後のアップロード図書」セクションを表示するように改修
 // 1.5.30: 残金0円時の案内メール文面（cron）および依頼主画面の審査完了ボタン・案内表示の動的出し分け処理を追加
 // 1.5.31: 管理者➔協力業者への通知メール実装、管理者➔依頼主通知バグ修正、依頼主➔管理者へのチャット通知追加
+// 1.5.32: チャット通知を共通関数sendChatEmailNotificationへ統合し、Ajax（api_send_message.php）と通常POST（action_chat.php）双方での双方向通知（管理者⇄依頼主・管理者⇄協力業者）を完全網羅
 
-window.APP_VERSION = "1.5.31";
+window.APP_VERSION = "1.5.32";
 const APP_LAST_UPDATED = '2026-07-03';

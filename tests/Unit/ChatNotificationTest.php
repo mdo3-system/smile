@@ -64,4 +64,28 @@ class ChatNotificationTest extends TestCase {
         $this->assertCount(1, $emails);
         $this->assertContains('admin1@test.com', $emails);
     }
+
+    public function testSendChatEmailNotificationSmoke() {
+        // プロジェクトとユーザーをダミーデータベースに準備
+        $this->pdo->exec("INSERT INTO projects (id, project_name, client_id) VALUES (100, 'Test House', 10)");
+        $this->pdo->exec("INSERT INTO users (id, email, role, parent_id, email_notification_enabled) VALUES (10, 'parent@client.com', 'client', NULL, 1)");
+        $this->pdo->exec("INSERT INTO users (id, email, role, parent_id, email_notification_enabled) VALUES (1, 'admin@test.com', 'admin', NULL, 1)");
+
+        // 依頼主 ➔ 管理者スレッド
+        $exceptionThrown = false;
+        try {
+            sendChatEmailNotification(100, 10, 'client', 'client_admin', 'Hello admin!', $this->pdo);
+        } catch (\Exception $e) {
+            $exceptionThrown = true;
+        }
+        $this->assertFalse($exceptionThrown, "Notification function should execute without throwing exceptions.");
+
+        // 管理者 ➔ 依頼主スレッド
+        try {
+            sendChatEmailNotification(100, 1, 'admin', 'client_admin', 'Hello client!', $this->pdo);
+        } catch (\Exception $e) {
+            $exceptionThrown = true;
+        }
+        $this->assertFalse($exceptionThrown, "Notification function should execute without throwing exceptions.");
+    }
 }
