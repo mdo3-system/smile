@@ -8,6 +8,7 @@ class ProjectRepository {
 
     /**
      * 全案件を依頼主情報付きで取得する（管理者用）
+     * 進行中の本契約案件のみを抽出し、見積依頼中（quote_req）およびアーカイブ済みは除外
      */
     public function findAllWithClientInfo() {
         $query = "
@@ -15,6 +16,8 @@ class ProjectRepository {
             FROM projects p 
             JOIN users u ON p.client_id = u.id 
             WHERE p.status != 'completed'
+            AND p.status != 'quote_req'
+            AND p.is_archived = 0
             ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
         ";
         return $this->pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
@@ -22,13 +25,16 @@ class ProjectRepository {
 
     /**
      * 特定の依頼主の案件を情報付きで取得する（依頼主用）
+     * 見積依頼中（quote_req）も表示するが、依頼主が非表示（is_client_archived = 1）にしたものは除外
      */
     public function findByClientIdWithClientInfo($clientId) {
         $query = "
             SELECT p.*, u.company_name 
             FROM projects p 
             JOIN users u ON p.client_id = u.id 
-            WHERE p.client_id = :cid AND p.status != 'completed'
+            WHERE p.client_id = :cid 
+            AND p.status != 'completed'
+            AND p.is_client_archived = 0
             ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
         ";
         $stmt = $this->pdo->prepare($query);

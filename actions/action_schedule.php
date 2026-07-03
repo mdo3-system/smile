@@ -178,6 +178,9 @@ if ($action === 'update_schedule_actual') {
             $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
             $stmt->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
 
+            // 実績日保存時に経理財務データへ双方向同期
+            syncScheduleDatesToFinance($project_id, $pdo);
+
             // 「申請図書一式UP」の実施日が設定された場合、案件ステータスを「申請中」(submitting) に自動遷移
             if (!empty($actual_date)) {
                 $is_submitting_step = false;
@@ -400,6 +403,9 @@ if ($action === 'complete_review') {
         sendSystemEmail($acc_email, $acc_subject, $acc_body);
     }
 
+    // 実績日保存時に経理財務データへ双方向同期
+    syncScheduleDatesToFinance($project_id, $pdo);
+
     // Googleカレンダー連携が有効な場合はカレンダーへも適宜反映されるようにする
     try {
         if (class_exists('App\Services\GoogleCalendarService')) {
@@ -457,6 +463,9 @@ if ($action === 'pay_intermediate') {
         $acc_body .= "https://system.thanks.work/project_detail.php?id=" . $project_id . "\n";
         sendSystemEmail($acc_email, $acc_subject, $acc_body);
     }
+
+    // 実績日保存時に経理財務データへ双方向同期
+    syncScheduleDatesToFinance($project_id, $pdo);
 
     // Googleカレンダーへ同期
     try {

@@ -19,6 +19,24 @@ if ($_SESSION['role'] === 'admin') {
     }
 }
 
+// 依頼主による見積中案件の非表示（手動アーカイブ）処理
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'archive_client_project') {
+    $project_id = intval($_POST['project_id'] ?? 0);
+    if ($project_id > 0) {
+        $stmtCheck = $pdo->prepare("SELECT client_id FROM projects WHERE id = :id");
+        $stmtCheck->execute(['id' => $project_id]);
+        $owner_id = $stmtCheck->fetchColumn();
+        
+        $my_company_id = $_SESSION['parent_id'] ?: $_SESSION['user_id'];
+        if ($_SESSION['role'] === 'client' && (int)$owner_id === (int)$my_company_id) {
+            $stmtUpd = $pdo->prepare("UPDATE projects SET is_client_archived = 1 WHERE id = :id");
+            $stmtUpd->execute(['id' => $project_id]);
+            header("Location: index.php?msg=" . urlencode("見積案件をダッシュボードから非表示にしました。"));
+            exit;
+        }
+    }
+}
+
 // 1. ログインユーザーの情報を取得
 $current_user_id = $_SESSION['user_id'];
 require_once 'Repositories/UserRepository.php';
@@ -131,6 +149,18 @@ $status_labels = [
             <a href="logout.php" style="font-size:12px; color:#c0392b; text-decoration:none; font-weight:bold;">ログアウト</a>
         </div>
     </div>
+
+    <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant'): ?>
+        <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <a href="index.php" style="padding: 10px 20px; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(59,130,246,0.3);">📈 進行中案件</a>
+            <a href="admin_estimates.php" style="padding: 10px 20px; background: #fff; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='#fff'">
+                📝 見積中案件 (<?php
+                    $stmtCount = $pdo->query("SELECT COUNT(*) FROM projects WHERE status = 'quote_req' AND is_archived = 0");
+                    echo $stmtCount->fetchColumn();
+                ?>件)
+            </a>
+        </div>
+    <?php endif; ?>
 
     <?php if (isset($_GET['msg'])): ?>
         <div style="background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:12px 20px; border-radius:6px; margin-bottom:20px; font-size:14px; font-weight:bold;">
@@ -292,7 +322,16 @@ $status_labels = [
                     <?php if (($_SESSION['role'] ?? '') !== 'client'): ?>
                         <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
                     <?php endif; ?>
-                    <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>; flex: 1; text-align: center;">詳細を開く</a>
+                        <?php if (($_SESSION['role'] ?? '') === 'client' && $project['status'] === 'quote_req'): ?>
+                            <form method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('この見積案件をダッシュボードから非表示にしますか？\n※案件自体は削除されず、後から復旧も可能です。');">
+                                <input type="hidden" name="action" value="archive_client_project">
+                                <input type="hidden" name="project_id" value="<?= $project['id'] ?>">
+                                <button type="submit" class="btn" style="background-color: #64748b; font-size: 12px; height: 100%;">📦 非表示</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>

@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.26');
+define('SYSTEM_VERSION', 'v1.5.27');
 
 
 // ==========================================
@@ -296,6 +296,127 @@ function renderFileSlot($c_key, $c_label, $latest_files, $project_id) {
     echo '<button type="button" onclick="document.getElementById(\'btn_f_'.$c_key.'\').click();" class="btn-upload-sm">UP/更新</button>';
     echo '</form></div></div>';
 }
+
+/**
+ * 経理データ保存時：入金日（deposit_date_50, deposit_date_rem）をスケジュール実績に同期する
+ */
+function syncFinanceDatesToSchedule($projectId, $pdo) {
+    if (!$pdo) return;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT req_permit, req_wall, req_skin, req_sky, req_opt_kisohari,
+                   deposit_date_50, deposit_date_rem,
+                   schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky
+            FROM projects WHERE id = :pid
+        ");
+        $stmt->execute(['pid' => $projectId]);
+        $project = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$project) return;
+
+        $cols_to_indices = [
+            'schedule_actuals' => [
+                'mid' => 4,
+                'final' => 11
+            ],
+            'schedule_actuals_wall' => [
+                'mid' => 4,
+                'final' => 8
+            ],
+            'schedule_actuals_skin' => [
+                'mid' => 4,
+                'final' => 8
+            ],
+            'schedule_actuals_sky' => [
+                'mid' => 3,
+                'final' => 7
+            ]
+        ];
+
+        foreach ($cols_to_indices as $col => $indices) {
+            $actuals = json_decode($project[$col] ?? '{}', true) ?: [];
+            
+            if (!empty($project['deposit_date_50'])) {
+                $actuals[$indices['mid']] = $project['deposit_date_50'];
+            } else {
+                unset($actuals[$indices['mid']]);
+            }
+
+            if (!empty($project['deposit_date_rem'])) {
+                $actuals[$indices['final']] = $project['deposit_date_rem'];
+            } else {
+                unset($actuals[$indices['final']]);
+            }
+
+            $stmtUpdate = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+            $stmtUpdate->execute([
+                'act' => json_encode($actuals, JSON_FORCE_OBJECT),
+                'pid' => $projectId
+            ]);
+        }
+
+        if (class_exists('App\Services\GoogleCalendarService')) {
+            $calendarService = new \App\Services\GoogleCalendarService($pdo);
+            $calendarService->syncProjectEvents($projectId);
+        }
+    } catch (Exception $e) {
+    }
+}
+
+/**
+ * 実績日保存時：スケジュール実績日を経理入金日（deposit_date_50, deposit_date_rem）に同期する
+ */
+function syncScheduleDatesToFinance($projectId, $pdo) {
+    if (!$pdo) return;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT req_permit, req_wall, req_skin, req_sky, req_opt_kisohari,
+                   schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky
+            FROM projects WHERE id = :pid
+        ");
+        $stmt->execute(['pid' => $projectId]);
+        $project = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$project) return;
+
+        $actuals_col = 'schedule_actuals';
+        $mid_idx = 4;
+        $final_idx = 11;
+
+        if ($project['req_permit'] == 1 || $project['req_opt_kisohari'] == 1) {
+            $actuals_col = 'schedule_actuals';
+            $mid_idx = 4;
+            $final_idx = 11;
+        } elseif ($project['req_wall'] == 1) {
+            $actuals_col = 'schedule_actuals_wall';
+            $mid_idx = 4;
+            $final_idx = 8;
+        } elseif ($project['req_skin'] == 1) {
+            $actuals_col = 'schedule_actuals_skin';
+            $mid_idx = 4;
+            $final_idx = 8;
+        } elseif ($project['req_sky'] == 1) {
+            $actuals_col = 'schedule_actuals_sky';
+            $mid_idx = 3;
+            $final_idx = 7;
+        }
+
+        $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
+        $mid_date = !empty($actuals[$mid_idx]) ? $actuals[$mid_idx] : null;
+        $final_date = !empty($actuals[$final_idx]) ? $actuals[$final_idx] : null;
+
+        $stmtUpdateFinance = $pdo->prepare("
+            UPDATE projects 
+            SET deposit_date_50 = :dep_50, deposit_date_rem = :dep_rem 
+            WHERE id = :pid
+        ");
+        $stmtUpdateFinance->execute([
+            'dep_50' => $mid_date,
+            'dep_rem' => $final_date,
+            'pid' => $projectId
+        ]);
+    } catch (Exception $e) {
+    }
+}
+
 
 function getCurrentStepInfo(array $project, PDO $pdo): array {
     // オートローダーがある前提で ScheduleService を呼び出す

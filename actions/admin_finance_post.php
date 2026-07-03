@@ -148,6 +148,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => $project_id
         ]);
 
+        // 金銭データ保存時にスケジュール実績日を連動同期
+        syncFinanceDatesToSchedule($project_id, $pdo);
+
         // 差分検知と詳細チャットメッセージ構築
         if ($old_finance) {
             $changes = [];

@@ -261,6 +261,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="btn-submit">ログインリンクを送信</button>
             </form>
             
+            <div style="margin-top: 25px; font-size: 13px; color: var(--text-muted);">
+                初めてご利用される方は <a href="register.php" style="color: var(--primary-color); text-decoration: none; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color='#60a5fa'" onmouseout="this.style.color='#3b82f6'">新規ユーザー登録</a> を行ってください。
+            </div>
+            
             <?php if (!empty($message)): ?>
                 <div class="message-box">
                     <?= htmlspecialchars($message, ENT_QUOTES) ?>
