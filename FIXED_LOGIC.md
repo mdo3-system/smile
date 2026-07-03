@@ -465,11 +465,18 @@
 
 ---
 
-## 28. このドキュメントの所在
+## 28. ロール間チャットメッセージ送信時のメール通知の双方向化とバグ修正 (v1.5.31)
+- **仕様1 (管理者 ➔ 協力業者)**: 管理者が `sub_admin` チャットで発言した際、その案件にアサインされている協力業者メンバー（通知ON）宛てに新着メール通知を自動送信する処理を `api_send_message.php` に実装。
+- **仕様2 (管理者 ➔ 依頼主)**: `actions/action_chat.php` にて存在しない `email_notifications` カラムを参照していたバグを正しい `email_notification_enabled` カラムへ修正。また、代表アドレス1件から同一企業の通知ONスタッフ全員（`getCompanyNotificationEmails`）への一斉送信に改善。
+- **仕様3 (依頼主 ➔ 管理者)**: 依頼主がチャットでメッセージを送信した際、通知ONの全管理者（`role = 'admin'`）宛てに通知メールが送信される処理を `actions/action_chat.php` に実装。
+
+---
+
+## 29. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.30（2026-07-03）
+- **最終バージョン**: v1.5.31（2026-07-03）
 
 
 

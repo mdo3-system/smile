@@ -136,6 +136,45 @@ if ($success) {
                 }
             }
         }
+
+        // 管理者が送信し、スレッドが協力業者向け（sub_admin）の場合、協力業者へメール通知
+        if ($_SESSION['role'] === 'admin' && $threadType === 'sub_admin') {
+            $stmtSubId = $pdo->prepare("SELECT subcontractor_id FROM subcontractor_orders WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+            $stmtSubId->execute(['pid' => (int)$projectId]);
+            $sub_id = $stmtSubId->fetchColumn();
+
+            if ($sub_id) {
+                // 協力業者の通知が有効な全メールアドレスを取得
+                $stmtEmails = $pdo->prepare("
+                    SELECT email FROM users 
+                    WHERE (id = :sid OR parent_id = :sid)
+                    AND role = 'subcontractor'
+                    AND email_notification_enabled = 1
+                    AND email IS NOT NULL AND email != ''
+                ");
+                $stmtEmails->execute(['sid' => (int)$sub_id]);
+                $sub_emails = $stmtEmails->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+                if (!empty($sub_emails)) {
+                    $stmtProj = $pdo->prepare("SELECT project_name FROM projects WHERE id = :pid");
+                    $stmtProj->execute(['pid' => (int)$projectId]);
+                    $project_name = $stmtProj->fetchColumn() ?: '不明';
+
+                    foreach ($sub_emails as $sub_email) {
+                        if ($sub_email && filter_var($sub_email, FILTER_VALIDATE_EMAIL)) {
+                            $subject = "【設計サポート】案件「{$project_name}」に新着メッセージがあります";
+                            $body  = "案件「{$project_name}」にて、管理者から新着メッセージが届きました。\n\n";
+                            $body .= "送信メッセージ:\n{$messageText}\n\n";
+                            $body .= "▼協力業者用ポータルで確認する:\n";
+                            $body .= "https://system.thanks.work/subcontractor_portal.php?id={$projectId}\n\n";
+                            $body .= "------\n";
+                            $body .= "※このメールに返信いただいてもお返事できません。";
+                            sendSystemEmail($sub_email, $subject, $body);
+                        }
+                    }
+                }
+            }
+        }
     } catch (\Exception $e) {
         // ログ出力など必要であれば行うが、メッセージ送信自体は成功しているためスルーでも良い
         error_log("Failed to send chat email notification: " . $e->getMessage());
