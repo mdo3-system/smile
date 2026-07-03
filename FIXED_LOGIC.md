@@ -449,11 +449,16 @@
 
 ---
 
-## 25. このドキュメントの所在
+## 25. グローバル関数側スケジュール定義への中間金マイルストーンの反映 (v1.5.28)
+- **仕様**: `functions.php` に定義されているグローバルスケジュールステップ定義関数 `getScheduleSteps`, `getScheduleStepsWall`, `getScheduleStepsSkin`, `getScheduleStepsSky` に「中間金（50％）のご入金」マイルストーンを追加。これにより、詳細画面やダッシュボード表示上で正常に中間金入金の工程が表示され、既存データの一括同期処理結果もUI上にマッピングされるようになった。
+
+---
+
+## 26. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.27（2026-07-03）
+- **最終バージョン**: v1.5.28（2026-07-03）
 
 
 

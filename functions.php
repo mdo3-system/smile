@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.27');
+define('SYSTEM_VERSION', 'v1.5.28');
 
 
 // ==========================================
@@ -117,7 +117,8 @@ function getScheduleSteps(int $base_days, bool $is_koyou_or_kisohari = false): a
         ['name' => '着手基準日 (一次回答)',           'actor' => 'designer', 'desc' => "{$base_days}営業日程度",    'days' => $base_days,'type' => 'biz'],
         ['name' => '一次回答（構造計算・図面初回提示）', 'actor' => 'designer', 'desc' => '着手から7〜10営業日',       'days' => 10,        'type' => 'biz'],
         ['name' => '一次回答CB',                     'actor' => 'client',   'desc' => '初回提示から4営業日',        'days' => 4,         'type' => 'biz'],
-        ['name' => '構造図UP',                       'actor' => 'designer', 'desc' => "一次回答CBから{$dwg_days}営業日",  'days' => $dwg_days, 'type' => 'biz'],
+        ['name' => '中間金（50％）のご入金',           'actor' => 'client',   'desc' => '一次回答CB確定後',            'days' => 0,         'type' => 'biz'],
+        ['name' => '構造図UP',                       'actor' => 'designer', 'desc' => "中間金確認後から{$dwg_days}営業日", 'days' => $dwg_days, 'type' => 'biz'],
         ['name' => '構造図CB',                       'actor' => 'client',   'desc' => "構造図UPから{$dwg_days}営業日",    'days' => $dwg_days, 'type' => 'biz'],
         ['name' => '修正図面UP',                      'actor' => 'designer', 'desc' => 'CB確認から3営業日',          'days' => 3,         'type' => 'biz'],
         ['name' => '申請図書一式UP',                  'actor' => 'designer', 'desc' => '修正UPから3営業日',          'days' => 3,         'type' => 'biz'],
@@ -133,7 +134,8 @@ function getScheduleStepsWall(int $base_days): array {
         ['name' => '着手基準日 (一次回答)',   'actor' => 'designer', 'desc' => "{$base_days}営業日程度",    'days' => $base_days,'type' => 'biz'],
         ['name' => '壁量計算・図面 初回提示', 'actor' => 'designer', 'desc' => '着手から7〜10営業日',       'days' => 10,        'type' => 'biz'],
         ['name' => '壁量計算図CB (内容確認)', 'actor' => 'client',   'desc' => '初回提示から4営業日',        'days' => 4,         'type' => 'biz'],
-        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '修正UPから3営業日',          'days' => 3,         'type' => 'biz'],
+        ['name' => '中間金（50％）のご入金',   'actor' => 'client',   'desc' => '壁量図CB確定後',             'days' => 0,         'type' => 'biz'],
+        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '中間金確認後から3営業日',    'days' => 3,         'type' => 'biz'],
         ['name' => '質疑・審査待機',          'actor' => 'wait',     'desc' => '確認機関の審査',             'days' => 30,        'type' => 'cal'],
         ['name' => '補正対応',                'actor' => 'designer', 'desc' => '質疑受領から7営業日',        'days' => 7,         'type' => 'biz'],
         ['name' => '残金のご精算',            'actor' => 'client',   'desc' => '完了後7日以内',              'days' => 7,         'type' => 'cal'],
@@ -146,7 +148,8 @@ function getScheduleStepsSkin(int $base_days): array {
         ['name' => '着手基準日 (一次回答)',   'actor' => 'designer', 'desc' => "{$base_days}営業日程度",    'days' => $base_days,'type' => 'biz'],
         ['name' => '外皮計算初回提示',        'actor' => 'designer', 'desc' => '着手から7〜10営業日',       'days' => 10,        'type' => 'biz'],
         ['name' => '外皮計算図CB (内容確認)', 'actor' => 'client',   'desc' => '初回提示から4営業日',        'days' => 4,         'type' => 'biz'],
-        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '修正UPから3営業日',          'days' => 3,         'type' => 'biz'],
+        ['name' => '中間金（50％）のご入金',   'actor' => 'client',   'desc' => '外皮図CB確定後',             'days' => 0,         'type' => 'biz'],
+        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '中間金確認後から3営業日',    'days' => 3,         'type' => 'biz'],
         ['name' => '質疑・審査待機',          'actor' => 'wait',     'desc' => '確認機関の審査',             'days' => 30,        'type' => 'cal'],
         ['name' => '補正対応',                'actor' => 'designer', 'desc' => '質疑受領から7営業日',        'days' => 7,         'type' => 'biz'],
         ['name' => '残金のご精算',            'actor' => 'client',   'desc' => '完了後7日以内',              'days' => 7,         'type' => 'cal'],
@@ -158,7 +161,8 @@ function getScheduleStepsSky(int $base_days): array {
         ['name' => '設計図書の受領',         'actor' => 'client',   'desc' => '開始時',                    'days' => 0,         'type' => 'base'],
         ['name' => '着手基準日 (一次回答)',   'actor' => 'designer', 'desc' => "{$base_days}営業日程度",    'days' => $base_days,'type' => 'biz'],
         ['name' => '天空率初回提示',          'actor' => 'designer', 'desc' => '着手から7〜10営業日',       'days' => 10,        'type' => 'biz'],
-        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '修正UPから3営業日',          'days' => 3,         'type' => 'biz'],
+        ['name' => '中間金（50％）のご入金',   'actor' => 'client',   'desc' => '初回提示確定後',             'days' => 0,         'type' => 'biz'],
+        ['name' => '申請図書一式UP',          'actor' => 'designer', 'desc' => '中間金確認後から3営業日',    'days' => 3,         'type' => 'biz'],
         ['name' => '質疑・審査待機',          'actor' => 'wait',     'desc' => '確認機関の審査',             'days' => 30,        'type' => 'cal'],
         ['name' => '補正対応',                'actor' => 'designer', 'desc' => '質疑受領から7営業日',        'days' => 7,         'type' => 'biz'],
         ['name' => '残金のご精算',            'actor' => 'client',   'desc' => '完了後7日以内',              'days' => 7,         'type' => 'cal'],
