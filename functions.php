@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.39');
+define('SYSTEM_VERSION', 'v1.5.40');
 
 
 // ==========================================
@@ -533,4 +533,68 @@ function getCurrentStepInfo(array $project, PDO $pdo): array {
     // オートローダーがある前提で ScheduleService を呼び出す
     $service = new \App\Services\ScheduleService($pdo);
     return $service->getCurrentStepInfo($project);
+}
+
+function getDynamicStatusLabel(array $project, PDO $pdo): string {
+    $status = $project['status'] ?? '';
+    if ($status === 'quote_req') {
+        return '見積依頼';
+    }
+    if ($status === 'completed') {
+        return '完了';
+    }
+    if ($status === 'submission' || $status === 'submitting') {
+        $base_days = getScheduleBaseDays($project);
+        $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
+        $req_wall = (int)($project['req_wall'] ?? 0);
+        $req_skin = (int)($project['req_skin'] ?? 0);
+        $req_sky = (int)($project['req_sky'] ?? 0);
+        
+        $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+        $actuals_col = 'schedule_actuals';
+        
+        if ($req_wall) {
+            $steps = getScheduleStepsWall($base_days);
+            $actuals_col = 'schedule_actuals_wall';
+        } elseif ($req_skin) {
+            $steps = getScheduleStepsSkin($base_days);
+            $actuals_col = 'schedule_actuals_skin';
+        } elseif ($req_sky) {
+            $steps = getScheduleStepsSky($base_days);
+            $actuals_col = 'schedule_actuals_sky';
+        }
+        
+        $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
+        $first_uncompleted_idx = null;
+        foreach ($steps as $idx => $step) {
+            if ($idx == 0) continue;
+            if (empty($actuals[$idx])) {
+                $first_uncompleted_idx = $idx;
+                break;
+            }
+        }
+        
+        if ($first_uncompleted_idx !== null) {
+            $target_idx = -1;
+            foreach ($steps as $idx => $step) {
+                if ($step['name'] === '質疑・審査待機') {
+                    $target_idx = $idx;
+                    break;
+                }
+            }
+            if ($target_idx !== -1 && $first_uncompleted_idx < $target_idx) {
+                return '設計進行中';
+            }
+        }
+    }
+    
+    $status_labels = [
+        'contracted'     => '受注済',
+        'primary_prep'   => '一次回答準備中',
+        'structural_dwg' => '申請図書作成中',
+        'submission'     => '審査・待機',
+        'submitting'     => '審査・待機',
+        'correction'     => '補正対応中',
+    ];
+    return $status_labels[$status] ?? $status;
 }

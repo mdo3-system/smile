@@ -21,8 +21,7 @@
                     <strong>地盤調査:</strong> <?= htmlspecialchars($project_info['soil_status'] ?? '未定', ENT_QUOTES) ?><br>
                     <?php
                     // ステータス日本語化
-                    global $status_options;
-                    $status_ja = $status_options[$project_info['status']] ?? $project_info['status'];
+                    $status_ja = getDynamicStatusLabel($project_info, $pdo);
                     
                     // 契約状態の判定
                     $has_cad = isset($files_by_cat['cad_design_all']) || isset($files_by_cat['all_in_one_zip']);
@@ -44,7 +43,7 @@
                     if ($project_info['req_opt_kisohari'] == 1) $req_types[] = '基礎・横架材許容応力度';
                     $req_str = empty($req_types) ? '未指定' : implode(' / ', $req_types);
                     $status_bg = '#007bff';
-                    if ($project_info['status'] === 'submitting' || $project_info['status'] === 'submission') {
+                    if ($status_ja === '審査・待機') {
                         $status_bg = '#64748b';
                     }
                     ?>

@@ -237,7 +237,7 @@ $status_labels = [
                         $current_step = getCurrentStepInfo($project, $pdo);
                     ?>
                         <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
-                            <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                            <span class="badge"><?= htmlspecialchars(getDynamicStatusLabel($project, $pdo), ENT_QUOTES) ?></span>
                             <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
                             <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
                                 📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
@@ -276,7 +276,7 @@ $status_labels = [
                         $active_task = $stmtActiveTask->fetch();
                     ?>
                         <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
-                            <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                            <span class="badge"><?= htmlspecialchars(getDynamicStatusLabel($project, $pdo), ENT_QUOTES) ?></span>
                             <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
                             <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold; line-height: 1.4;">
                                 <?php if ($active_task): 
@@ -313,7 +313,7 @@ $status_labels = [
                 $current_step = getCurrentStepInfo($project, $pdo);
             ?>
                 <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
-                    <span class="badge"><?= $status_labels[$project['status']] ?? '不明' ?></span>
+                    <span class="badge"><?= htmlspecialchars(getDynamicStatusLabel($project, $pdo), ENT_QUOTES) ?></span>
                     <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
                     <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
                         📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>

@@ -134,9 +134,9 @@
                             'correction'     => '補正対応中',
                             'completed'      => '完了'
                         ];
-                        $status_ja = $status_labels[$project_info['status']] ?? $project_info['status'];
+                        $status_ja = getDynamicStatusLabel($project_info, $pdo);
                         $status_bg = '#007bff';
-                        if ($project_info['status'] === 'submitting' || $project_info['status'] === 'submission') {
+                        if ($status_ja === '審査・待機') {
                             $status_bg = '#64748b';
                         }
                     ?>
@@ -632,6 +632,13 @@
                             $date_str = '<span style="color:#10b981; font-weight:bold;">' . date('m/d', strtotime($actual_date)) . ' (済)</span>';
                         }
 
+                        $step_name = $step['name'];
+                        if ($step_name === '残金のご精算') {
+                            if (isset($balance) && $balance <= 0) {
+                                $step_name = '審査完了';
+                            }
+                        }
+
                         $is_current = ($idx === $current_step_idx);
                         $row_style = "background:{$bg_color}; border-bottom:1px solid #e2e8f0;";
                         if ($is_current) {
@@ -640,7 +647,7 @@
                         $current_badge = $is_current ? ' <span style="background:#ef4444; color:white; padding:1px 5px; border-radius:3px; font-size:9px; margin-left:5px; font-weight:bold;">👉 現在地</span>' : '';
 
                         echo "<tr style='{$row_style}'>";
-                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
+                        echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step_name}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                         echo "<td style='padding:6px;'>{$badge}</td>";
                         echo "<td style='padding:6px;'>{$date_str}</td>";
                         echo "</tr>";

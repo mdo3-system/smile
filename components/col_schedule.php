@@ -152,6 +152,29 @@
                         $actual_display = $actual_date ? '<strong>' . date('m/d', strtotime($actual_date)) . '</strong>' : '<span style="color:#aaa;">-</span>';
                     }
 
+                    $step_name = $step['name'];
+                    if ($step_name === '残金のご精算') {
+                        $formal = (int)($project_info['formal_est_amount'] ?? 0);
+                        $add_estimates = json_decode($project_info['additional_estimates'] ?? '[]', true) ?: [];
+                        $total_add = 0;
+                        foreach ($add_estimates as $ae) {
+                            $total_add += (int)$ae['amount'];
+                        }
+                        $total_req = $formal + $total_add;
+                        $dep_50 = (int)($project_info['deposit_amount_50'] ?? 0);
+                        $dep_rem = (int)($project_info['deposit_amount_rem'] ?? 0);
+                        $additional_deposits = json_decode($project_info['additional_deposits'] ?? '[]', true) ?: [];
+                        $total_add_dep = 0;
+                        foreach ($additional_deposits as $ad) {
+                            $total_add_dep += (int)$ad['amount'];
+                        }
+                        $total_deposit = $dep_50 + $dep_rem + $total_add_dep;
+                        $balance = $total_req - $total_deposit;
+                        if ($balance <= 0) {
+                            $step_name = '審査完了';
+                        }
+                    }
+
                     $is_current = ($idx === $current_step_idx);
                     $row_style = "background:{$bg_color}; border-bottom:1px solid #e2e8f0;";
                     if ($is_current) {
@@ -160,7 +183,7 @@
                     $current_badge = $is_current ? ' <span style="background:#ef4444; color:white; padding:1px 5px; border-radius:3px; font-size:9px; margin-left:5px; font-weight:bold;">👉 現在地</span>' : '';
 
                     echo "<tr style='{$row_style}'>";
-                    echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step['name']}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
+                    echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step_name}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                     echo "<td style='padding:6px; white-space:nowrap;'>{$badge}</td>";
                     echo "<td style='padding:6px;'>{$plan_display}</td>";
                     echo "<td style='padding:6px;'>{$actual_display}</td>";

@@ -124,6 +124,30 @@ class StatusHelper
                         $actor = $step['actor'];
                         $name = $step['name'];
                         
+                        // 残金0円時の名称変更
+                        if ($name === '残金のご精算') {
+                            $formal = (int)($project['formal_est_amount'] ?? 0);
+                            $add_estimates = json_decode($project['additional_estimates'] ?? '[]', true) ?: [];
+                            $total_add = 0;
+                            foreach ($add_estimates as $ae) {
+                                $total_add += (int)$ae['amount'];
+                            }
+                            $total_req = $formal + $total_add;
+                            $dep_50 = (int)($project['deposit_amount_50'] ?? 0);
+                            $dep_rem = (int)($project['deposit_amount_rem'] ?? 0);
+                            $additional_deposits = json_decode($project['additional_deposits'] ?? '[]', true) ?: [];
+                            $total_add_dep = 0;
+                            foreach ($additional_deposits as $ad) {
+                                $total_add_dep += (int)$ad['amount'];
+                            }
+                            $total_deposit = $dep_50 + $dep_rem + $total_add_dep;
+                            $balance = $total_req - $total_deposit;
+                            
+                            if ($balance <= 0) {
+                                $name = '審査完了';
+                            }
+                        }
+                        
                         if ($actor === 'designer') {
                             $res = [
                                 'ball_owner' => 'admin',
@@ -149,19 +173,68 @@ class StatusHelper
                 
                 // フォールバック
                 if (!$res) {
-                    if ($status === 'submission') {
-                        $res = [
-                            'ball_owner' => 'shared_waiting',
-                            'label' => '審査・待機',
-                            'color' => '#64748b'
-                        ];
-                    }
-                    elseif ($status === 'submitting') {
-                        $res = [
-                            'ball_owner' => 'shared_waiting',
-                            'label' => '審査・待機',
-                            'color' => '#64748b'
-                        ];
+                    if ($status === 'submission' || $status === 'submitting') {
+                        // 審査待機前かどうかをチェック
+                        $base_days = getScheduleBaseDays($project);
+                        $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
+                        $req_wall = (int)($project['req_wall'] ?? 0);
+                        $req_skin = (int)($project['req_skin'] ?? 0);
+                        $req_sky = (int)($project['req_sky'] ?? 0);
+                        
+                        $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+                        $actuals_col = 'schedule_actuals';
+                        
+                        if ($req_wall) {
+                            $steps = getScheduleStepsWall($base_days);
+                            $actuals_col = 'schedule_actuals_wall';
+                        } elseif ($req_skin) {
+                            $steps = getScheduleStepsSkin($base_days);
+                            $actuals_col = 'schedule_actuals_skin';
+                        } elseif ($req_sky) {
+                            $steps = getScheduleStepsSky($base_days);
+                            $actuals_col = 'schedule_actuals_sky';
+                        }
+                        
+                        $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
+                        $first_uncompleted_idx = null;
+                        foreach ($steps as $idx => $step) {
+                            if ($idx == 0) continue;
+                            if (empty($actuals[$idx])) {
+                                $first_uncompleted_idx = $idx;
+                                break;
+                            }
+                        }
+                        
+                        $is_early_stage = true;
+                        if ($first_uncompleted_idx !== null) {
+                            $target_idx = -1;
+                            foreach ($steps as $idx => $step) {
+                                if ($step['name'] === '質疑・審査待機') {
+                                    $target_idx = $idx;
+                                    break;
+                                }
+                            }
+                            if ($target_idx !== -1 && $first_uncompleted_idx >= $target_idx) {
+                                $is_early_stage = false;
+                            }
+                        } else {
+                            // すべて完了しているなら初期段階ではない
+                            $is_early_stage = false;
+                        }
+                        
+                        if ($is_early_stage) {
+                            $res = [
+                                'ball_owner' => 'admin',
+                                'label' => '設計進行中 (管理者ボール)',
+                                'color' => '#3b82f6'
+                            ];
+                        } else {
+                            $res = [
+                                'ball_owner' => 'shared_waiting',
+                                'label' => '審査・待機',
+                                'color' => '#64748b'
+                            ];
+                        }
                     }
                     elseif ($status === 'primary_prep' || $status === 'structural_dwg' || $status === 'correction') {
                         $res = [
