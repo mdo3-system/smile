@@ -112,7 +112,7 @@
                     <div id="disp_add_list" style="margin-left: 10px; font-size:12px; color:#555;">
                         <?php foreach ($add_estimates as $idx => $ae): ?>
                             <div style="display:flex; justify-content:space-between;">
-                                <span>・追加見積 #<?= $idx+1 ?> (<?= htmlspecialchars($ae['date'] ?: '-') ?>):</span>
+                                <span>・追加見積 #<?= $idx+1 ?> (<?= htmlspecialchars($ae['date'] ?: '-') ?>) <?= !empty($ae['note']) ? '['.htmlspecialchars($ae['note']).']' : '' ?>:</span>
                                 <strong>+ <?= number_format($ae['amount']) ?> 円</strong>
                             </div>
                         <?php endforeach; ?>
@@ -323,11 +323,13 @@
                                 <strong style="font-size:11px; color:#c2410c;">➕ 追加見積もり（複数登録可）</strong>
                                 <button type="button" onclick="addEstimateRow()" style="background:#ea580c; color:white; border:none; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; margin-left:auto;">追加</button>
                             </div>
+                            <div style="font-size:10px; color:#c2410c; margin-bottom:5px; line-height:1.3; font-weight:bold;">※不要な行は「✕」で削除後、最下部の「上記金銭データを保存」で確定します。</div>
                             <div id="additional_estimates_container">
                                 <?php foreach ($add_estimates as $idx => $ae): ?>
                                     <div class="add-est-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
                                         <input type="number" name="add_est_amounts[]" value="<?= htmlspecialchars($ae['amount']) ?>" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add">
-                                        <input type="date" name="add_est_dates[]" value="<?= htmlspecialchars($ae['date'] ?: '') ?>" style="flex:1; padding:3px;" class="form-control-fin-add-date">
+                                        <input type="date" name="add_est_dates[]" value="<?= htmlspecialchars($ae['date'] ?: '') ?>" style="width:110px; padding:3px;" class="form-control-fin-add-date">
+                                        <input type="text" name="add_est_notes[]" value="<?= htmlspecialchars($ae['note'] ?? '') ?>" placeholder="摘要" style="flex:1; padding:3px; font-size:11px;">
                                         <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
                                     </div>
                                 <?php endforeach; ?>
@@ -361,6 +363,7 @@
                                 <strong style="font-size:11px; color:#166534;">➕ 追加入金（追加見積等）</strong>
                                 <button type="button" onclick="addDepositRow()" style="background:#166534; color:white; border:none; padding:2px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold; margin-left:auto;">追加</button>
                             </div>
+                            <div style="font-size:10px; color:#166534; margin-bottom:5px; line-height:1.3; font-weight:bold;">※不要な行は「✕」で削除後、最下部の「上記金銭データを保存」で確定します。</div>
                             <div id="additional_deposits_container">
                                 <?php foreach ($additional_deposits as $idx => $ad): ?>
                                     <div class="add-dep-row" style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
@@ -428,7 +431,8 @@
                         row.style.alignItems = 'center';
                         row.innerHTML = `
                             <input type="number" name="add_est_amounts[]" value="" oninput="recalcFinance()" placeholder="金額" style="width:80px; padding:3px;" class="form-control-fin-add">
-                            <input type="date" name="add_est_dates[]" value="" style="flex:1; padding:3px;" class="form-control-fin-add-date">
+                            <input type="date" name="add_est_dates[]" value="" style="width:110px; padding:3px;" class="form-control-fin-add-date">
+                            <input type="text" name="add_est_notes[]" value="" placeholder="摘要" style="flex:1; padding:3px; font-size:11px;">
                             <button type="button" onclick="this.parentElement.remove(); recalcFinance();" style="background:#ef4444; color:white; border:none; padding:2px 5px; border-radius:3px; cursor:pointer;">✕</button>
                         `;
                         container.appendChild(row);

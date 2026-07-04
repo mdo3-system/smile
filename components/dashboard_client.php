@@ -384,7 +384,7 @@
                     <div style="margin-left: 10px; font-size:12px; color:#c0392b;">
                         <?php foreach ($add_estimates as $idx => $ae): ?>
                             <div style="display:flex; justify-content:space-between;">
-                                <span>・追加見積 #<?= $idx+1 ?> (<?= htmlspecialchars($ae['date'] ?: '-') ?>):</span>
+                                <span>・追加見積 #<?= $idx+1 ?> (<?= htmlspecialchars($ae['date'] ?: '-') ?>) <?= !empty($ae['note']) ? '['.htmlspecialchars($ae['note']).']' : '' ?>:</span>
                                 <strong>+ <?= number_format($ae['amount']) ?> 円</strong>
                             </div>
                         <?php endforeach; ?>

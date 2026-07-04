@@ -18,13 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $add_estimates_data = [];
         $add_amounts = $_POST['add_est_amounts'] ?? [];
         $add_dates = $_POST['add_est_dates'] ?? [];
+        $add_notes = $_POST['add_est_notes'] ?? [];
         for ($i = 0; $i < count($add_amounts); $i++) {
             $amt = trim($add_amounts[$i]);
             $dt = trim($add_dates[$i] ?? '');
+            $nt = trim($add_notes[$i] ?? '');
             if ($amt !== '') {
                 $add_estimates_data[] = [
                     'amount' => (int)$amt,
-                    'date' => $dt !== '' ? $dt : null
+                    'date' => $dt !== '' ? $dt : null,
+                    'note' => $nt !== '' ? $nt : null
                 ];
             }
         }
