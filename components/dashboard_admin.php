@@ -31,14 +31,14 @@
         </div>
 
         <!-- カラム2: 進捗スケジュール ＋ 見積シミュレーター ＋ 一次回答後アップロード図書 -->
-        <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
+        <div style="flex:1.4; display:flex; flex-direction:column; gap:15px; min-width:300px;">
             <?php require __DIR__ . '/col_schedule.php'; ?>
             <?php require __DIR__ . '/col_estimator.php'; ?>
             <?php require __DIR__ . '/col_center_post_uploads.php'; ?>
         </div>
 
         <!-- カラム3: 成果物一覧 ＋ 構造仕様 ＋ 依頼主アップロード図書 -->
-        <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
+        <div style="flex:0.6; display:flex; flex-direction:column; gap:15px; min-width:300px;">
             <?php require __DIR__ . '/col_center_deliverables.php'; ?>
             <?php require __DIR__ . '/col_specs.php'; ?>
             <?php require __DIR__ . '/col_center_uploads.php'; ?>
