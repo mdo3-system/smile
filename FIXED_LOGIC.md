@@ -501,11 +501,16 @@
 
 ---
 
-## 34. このドキュメントの所在
+## 34. 操作マニュアル未ログイン時の「戻る」リンク絶対URL化 (v1.5.37)
+- **仕様**: ポータル（`system.thanks.work`）と紹介WEBサイト（`thanks.work`）が別ドメイン（サブドメイン）構成になっていることに対応するため、`manual_client.php` の未ログイン時戻り先リンクを相対パス（`../`）から絶対URL **`https://thanks.work`** へ変更し、確実に紹介WEBサイトのトップへ戻れるように修正。
+
+---
+
+## 35. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.36（2026-07-04）
+- **最終バージョン**: v1.5.37（2026-07-04）
 
 
 

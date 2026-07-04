@@ -237,7 +237,7 @@ $is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
             <?php if (isset($_SESSION['user_id'])): ?>
                 <a href="index.php">➔ ポータルダッシュボードに戻る</a>
             <?php else: ?>
-                <a href="../">➔ WEBサイトに戻る</a>
+                <a href="https://thanks.work">➔ WEBサイトに戻る</a>
             <?php endif; ?>
         </div>
 
