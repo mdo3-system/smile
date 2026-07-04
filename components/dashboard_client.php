@@ -530,6 +530,7 @@
             if ($is_koyou_or_kisohari) {
                 $schedulesToRender[] = [
                     'title' => '許容応力度・基礎横架材計算',
+                    'type' => 'permit',
                     'steps' => getScheduleSteps($base_days, true),
                     'actuals_col' => 'schedule_actuals'
                 ];
@@ -537,6 +538,7 @@
             if (($project_info['req_wall'] ?? 0) == 1) {
                 $schedulesToRender[] = [
                     'title' => '壁量計算',
+                    'type' => 'wall',
                     'steps' => getScheduleStepsWall($base_days),
                     'actuals_col' => 'schedule_actuals_wall'
                 ];
@@ -544,6 +546,7 @@
             if (($project_info['req_skin'] ?? 0) == 1) {
                 $schedulesToRender[] = [
                     'title' => '外皮計算',
+                    'type' => 'skin',
                     'steps' => getScheduleStepsSkin($base_days),
                     'actuals_col' => 'schedule_actuals_skin'
                 ];
@@ -551,6 +554,7 @@
             if (($project_info['req_sky'] ?? 0) == 1) {
                 $schedulesToRender[] = [
                     'title' => '天空率',
+                    'type' => 'sky',
                     'steps' => getScheduleStepsSky($base_days),
                     'actuals_col' => 'schedule_actuals_sky'
                 ];
@@ -559,6 +563,7 @@
             if (empty($schedulesToRender)) {
                 $schedulesToRender[] = [
                     'title' => '構造計算・基本スケジュール',
+                    'type' => 'permit',
                     'steps' => getScheduleSteps($base_days, false),
                     'actuals_col' => 'schedule_actuals'
                 ];
@@ -568,6 +573,8 @@
                 $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
                 $override_col = str_replace('actuals', 'overrides', $scheduleItem['actuals_col']);
                 $schedule_overrides = json_decode($project_info[$override_col] ?? '{}', true) ?: [];
+                $wishes_col = str_replace('actuals', 'wishes', $scheduleItem['actuals_col']);
+                $schedule_wishes = json_decode($project_info[$wishes_col] ?? '{}', true) ?: [];
             ?>
             <div class="box" style="background:#f0f8ff; border-color:#cce5ff;">
                 <h3 style="margin-top:0; font-size:14px; color:#004085; border-bottom:1px solid #cce5ff; padding-bottom:5px;">📅 <?= htmlspecialchars($scheduleItem['title']) ?> スケジュール</h3>
@@ -579,8 +586,14 @@
                         echo '<div style="color:#155724; font-size:12px; margin-bottom:10px; background:#d4edda; border:1px solid #c3e6cb; padding:8px; border-radius:4px;">✅ 一次回答期日：<strong>' . date('Y年m月d日', strtotime($primary_due_date)) . '</strong>（スケジュール確定済み）</div>';
                     }
 
+                    // 警告メッセージの表示
+                    echo '<div style="color:#6d28d9; font-size:11px; margin-bottom:10px; background:#f5f3ff; border:1px solid #ddd6fe; padding:8px; border-radius:4px; line-height:1.4;">';
+                    echo '<strong>⚠️ ご希望日入力についてのお願い</strong><br>';
+                    echo '各工程の「ご希望日」を入力いただけます。ご希望日に収められるようサポート担当者および協力業者一同、善処いたしますが、他案件の進捗や確認機関の審査状況などにより、お約束（保証）するものではございません。予めご承知おき願います。';
+                    echo '</div>';
+
                     echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';
-                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日/実績日</th></tr></thead>';
+                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日/実績日</th><th style="padding:6px; text-align:left; width:220px;">ご希望日</th></tr></thead>';
                     echo '<tbody>';
                     
                     $base_start_date = $primary_due_date ?: ($schedule_actuals[1] ?? $schedule_actuals[0] ?? '');
@@ -639,6 +652,22 @@
                             }
                         }
 
+                        // 依頼主希望日の表示と入力フォーム
+                        $wish_val = $schedule_wishes[$idx] ?? '';
+                        $wish_display = '';
+                        if ($actual_date || $idx === 0 || $idx === 1) {
+                            $wish_display = !empty($wish_val) ? '<span style="color:#6d28d9; font-weight:bold;">' . date('m/d', strtotime($wish_val)) . '</span>' : '<span style="color:#aaa;">-</span>';
+                        } else {
+                            $wish_display = '
+                            <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:3px; align-items:center;">
+                                <input type="hidden" name="action" value="update_schedule_wish">
+                                <input type="hidden" name="schedule_type" value="'.htmlspecialchars($scheduleItem['type'], ENT_QUOTES).'">
+                                <input type="hidden" name="step_idx" value="'.$idx.'">
+                                <input type="date" name="wish_date" value="'.htmlspecialchars($wish_val, ENT_QUOTES).'" style="font-size:10px; padding:2px; width:100px;">
+                                <button type="submit" style="font-size:9px; padding:2px 4px; background:#f5f3ff; border:1px solid #ddd6fe; color:#6d28d9; border-radius:3px; cursor:pointer;">保存</button>
+                            </form>';
+                        }
+
                         $is_current = ($idx === $current_step_idx);
                         $row_style = "background:{$bg_color}; border-bottom:1px solid #e2e8f0;";
                         if ($is_current) {
@@ -650,6 +679,7 @@
                         echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step_name}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                         echo "<td style='padding:6px;'>{$badge}</td>";
                         echo "<td style='padding:6px;'>{$date_str}</td>";
+                        echo "<td style='padding:6px;'>{$wish_display}</td>";
                         echo "</tr>";
                     }
                     echo '</tbody></table>';

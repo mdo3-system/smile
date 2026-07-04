@@ -148,6 +148,66 @@ if ($action === 'update_schedule_override') {
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;
 }
 
+// スケジュール希望日（Wishes）の更新
+if ($action === 'update_schedule_wish') {
+    if ($is_admin || $_SESSION['role'] === 'client') {
+        $step_idx = $_POST['step_idx'] ?? '';
+        $wish_date = $_POST['wish_date'] ?? '';
+        $schedule_type = $_POST['schedule_type'] ?? 'permit';
+        
+        $col_map = [
+            'permit' => 'schedule_wishes',
+            'wall' => 'schedule_wishes_wall',
+            'skin' => 'schedule_wishes_skin',
+            'sky' => 'schedule_wishes_sky',
+        ];
+        $db_col = $col_map[$schedule_type] ?? 'schedule_wishes';
+
+        if ($step_idx !== '') {
+            $stmtCol = $pdo->prepare("SELECT {$db_col} FROM projects WHERE id = :id");
+            $stmtCol->execute(['id' => $project_id]);
+            $current_wishes_json = $stmtCol->fetchColumn();
+            
+            $wishes = json_decode($current_wishes_json ?? '{}', true) ?: [];
+            
+            if (empty($wish_date)) {
+                unset($wishes[$step_idx]);
+            } else {
+                $wishes[$step_idx] = $wish_date;
+            }
+            $stmt = $pdo->prepare("UPDATE projects SET {$db_col} = :act WHERE id = :pid");
+            $stmt->execute(['act' => json_encode($wishes, JSON_FORCE_OBJECT), 'pid' => $project_id]);
+            
+            // チャットへ自動通知メッセージを投稿
+            $base_days = getScheduleBaseDays($project_info);
+            if ($schedule_type === 'permit') {
+                $is_koyou_or_kisohari = (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1);
+                $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+            } elseif ($schedule_type === 'wall') {
+                $steps = getScheduleStepsWall($base_days);
+            } elseif ($schedule_type === 'skin') {
+                $steps = getScheduleStepsSkin($base_days);
+            } else {
+                $steps = getScheduleStepsSky($base_days);
+            }
+            
+            $step_name = $steps[$step_idx]['name'] ?? "工程 #{$step_idx}";
+            $formatted_date = !empty($wish_date) ? date('Y/m/d', strtotime($wish_date)) : '希望なし';
+            $chat_msg = "【スケジュールご希望日登録】\n{$step_name} のご希望日が「{$formatted_date}」に設定されました。";
+
+            $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $project_id,
+                'sid' => $_SESSION['user_id'] ?? 1,
+                'thread' => $thread_type,
+                'msg' => $chat_msg
+            ]);
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;
+}
+
 // スケジュール実施日（実績）の更新
 if ($action === 'update_schedule_actual') {
     if ($is_admin) {

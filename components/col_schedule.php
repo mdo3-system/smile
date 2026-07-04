@@ -49,6 +49,8 @@
         $schedule_actuals = json_decode($project_info[$scheduleItem['actuals_col']] ?? '{}', true) ?: [];
         $override_col = str_replace('actuals', 'overrides', $scheduleItem['actuals_col']);
         $schedule_overrides = json_decode($project_info[$override_col] ?? '{}', true) ?: [];
+        $wishes_col = str_replace('actuals', 'wishes', $scheduleItem['actuals_col']);
+        $schedule_wishes = json_decode($project_info[$wishes_col] ?? '{}', true) ?: [];
     ?>
     <!-- ▼▼▼ 進捗スケジュール可視化 ▼▼▼ -->
     <div class="box" style="background:#fff; border-color:#cbd5e1; margin-top:0;">
@@ -60,10 +62,11 @@
             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                 <thead>
                     <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; position:sticky; top:0;">
-                        <th style="padding:6px; text-align:left; width:30%;">工程</th>
-                        <th style="padding:6px; text-align:left; width:20%; white-space:nowrap;">担当</th>
-                        <th style="padding:6px; text-align:left; width:25%;">予定</th>
-                        <th style="padding:6px; text-align:left; width:25%;">実施日</th>
+                        <th style="padding:6px; text-align:left; width:25%;">工程</th>
+                        <th style="padding:6px; text-align:left; width:15%; white-space:nowrap;">担当</th>
+                        <th style="padding:6px; text-align:left; width:20%;">予定</th>
+                        <th style="padding:6px; text-align:left; width:20%;">依頼主希望日</th>
+                        <th style="padding:6px; text-align:left; width:20%;">実施日</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -175,6 +178,10 @@
                         }
                     }
 
+                    // 希望日の表示
+                    $wish_val = $schedule_wishes[$idx] ?? '';
+                    $wish_display = !empty($wish_val) ? '<span style="color:#6d28d9; font-weight:bold;">' . date('m/d', strtotime($wish_val)) . '</span>' : '<span style="color:#aaa;">-</span>';
+
                     $is_current = ($idx === $current_step_idx);
                     $row_style = "background:{$bg_color}; border-bottom:1px solid #e2e8f0;";
                     if ($is_current) {
@@ -186,6 +193,7 @@
                     echo "<td style='padding:6px; font-weight:bold; color:#334155;'>{$step_name}{$current_badge}<div style='font-size:9px; color:#94a3b8; font-weight:normal;'>{$step['desc']}</div></td>";
                     echo "<td style='padding:6px; white-space:nowrap;'>{$badge}</td>";
                     echo "<td style='padding:6px;'>{$plan_display}</td>";
+                    echo "<td style='padding:6px;'>{$wish_display}</td>";
                     echo "<td style='padding:6px;'>{$actual_display}</td>";
                     echo "</tr>";
                 }

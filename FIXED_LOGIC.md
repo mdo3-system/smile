@@ -524,11 +524,20 @@
 
 ---
 
-## 38. このドキュメントの所在
+## 38. スケジュール工程表への「依頼主ご希望日」入力・共有機能の追加 (v1.5.41)
+- **仕様1 (データベース拡張)**: 依頼主希望日（Wish Dates）を保存するため、`projects` テーブルに `schedule_wishes`, `schedule_wishes_wall`, `schedule_wishes_skin`, `schedule_wishes_sky` の4つの JSON カラムを追加（`scratch/migrate_add_wish_columns.php` にてマイグレーション）。
+- **仕様2 (依頼主入力フォームの追加)**: `components/dashboard_client.php` のスケジュール表に「ご希望日」列を追加し、未完了の各工程に `<input type="date">` と保存ボタンを設けてその場で設定・変更できるように修正。
+- **仕様3 (免責事項の明記)**: 依頼主のスケジュール表の上部に、「ご希望日に収めるよう善処するが、進捗や審査状況等によりお約束（保証）するものではない」旨の免責注意案内テキストを表示。
+- **仕様4 (管理者側での希望日確認)**: 管理者・経理向けスケジュール表 `components/col_schedule.php` にも「依頼主希望日」列を追加し、依頼主が入力した希望日を表示してチーム内でいつでも共有・確認できるよう変更。
+- **仕様5 (保存アクション追加)**: `actions/action_schedule.php` に `action = 'update_schedule_wish'` アクション処理を追加。希望日更新時、自動的にチャットスレッドへ通知メッセージを投稿。
+
+---
+
+## 39. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.40（2026-07-04）
+- **最終バージョン**: v1.5.41（2026-07-04）
 
 
 
