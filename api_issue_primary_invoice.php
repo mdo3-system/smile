@@ -90,6 +90,30 @@ try {
         $file_category = 'sky_calc_doc';
     }
 
+    // 2-2. アップロードした一次回答ファイルを project_files テーブルに登録する
+    // 既存ファイルの最新フラグを解除
+    $stmtUpdateLatest = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+    $stmtUpdateLatest->execute(['pid' => $project_id, 'cat' => $file_category]);
+
+    // 最新のバージョン番号を決定する
+    $stmtVer = $pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+    $stmtVer->execute(['pid' => $project_id, 'cat' => $file_category]);
+    $max_ver = $stmtVer->fetchColumn();
+    $next_ver = $max_ver ? intval($max_ver) + 1 : 1;
+
+    // project_files に新規インサート
+    $stmtInsertFile = $pdo->prepare("
+        INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest)
+        VALUES (:pid, :cat, :fname, :fid, :ver, 1)
+    ");
+    $stmtInsertFile->execute([
+        'pid' => $project_id,
+        'cat' => $file_category,
+        'fname' => $file_name,
+        'fid' => $drive_file_id,
+        'ver' => $next_ver
+    ]);
+
     // 3. ステータスを submission（提出済・確認中）に更新
     require_once __DIR__ . '/Repositories/ProjectRepository.php';
     $projectRepo = new ProjectRepository($pdo);
