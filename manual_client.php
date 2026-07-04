@@ -34,10 +34,12 @@ $is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
             font-size: 24px;
             font-weight: bold;
             letter-spacing: 0.5px;
+            color: #ffffff;
         }
         .header p {
             margin: 10px 0 0 0;
             font-size: 14px;
+            color: #ffffff;
             opacity: 0.9;
         }
         .container {
@@ -235,7 +237,7 @@ $is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
             <?php if (isset($_SESSION['user_id'])): ?>
                 <a href="index.php">➔ ポータルダッシュボードに戻る</a>
             <?php else: ?>
-                <a href="login.php">➔ ポータルログイン画面へ進む</a>
+                <a href="../">➔ WEBサイトに戻る</a>
             <?php endif; ?>
         </div>
 
