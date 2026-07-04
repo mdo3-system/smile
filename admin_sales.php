@@ -83,7 +83,7 @@ $status_labels = [
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>経理・売上・支払い管理 | 構造設計サポート・ポータル</title>
+    <title>経理・売上・支払い管理 | 木造住宅設計サポート・ポータル</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
         .container { max-width: 1800px; margin: 0 auto; }

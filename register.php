@@ -113,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // 本物のメール送信処理 (XServer本番環境用)
             $to = $email;
-            $subject = "【構造設計サポート・ポータル】ご登録完了およびログインのご案内";
-            $body = "いつもお世話になっております。構造設計サポート・ポータルです。\n\n";
+            $subject = "【木造住宅設計サポート・ポータル】ご登録完了およびログインのご案内";
+            $body = "いつもお世話になっております。木造住宅設計サポート・ポータルです。\n\n";
             $body .= "この度はポータルへのご登録、誠にありがとうございます。\n";
             $body .= "登録が完了いたしましたので、以下のログインリンクをクリックしてシステムにアクセスしてください。\n";
             $body .= "（このリンクは送信から24時間有効です）\n\n";
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新規登録 | 構造設計サポート・ポータル</title>
+    <title>新規登録 | 木造住宅設計サポート・ポータル</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -302,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-container">
         <div class="login-card">
             <div class="logo">NEW REGISTRATION</div>
-            <div class="subtitle">構造設計サポート・ポータル 新規登録</div>
+            <div class="subtitle">木造住宅設計サポート・ポータル 新規登録</div>
             
             <?php if (empty($devel_link)): // 登録成功後はフォームを隠す ?>
             <form method="POST">

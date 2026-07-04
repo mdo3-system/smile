@@ -101,7 +101,7 @@ $archived_projects = $stmtArch->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>見積中案件ダッシュボード | 構造設計サポート</title>
+    <title>見積中案件ダッシュボード | 木造住宅設計サポート</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Outfit', 'Noto Sans JP', sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }

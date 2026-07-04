@@ -443,7 +443,7 @@
                 <div style="background:#fff3cd; border:2px solid #ffc107; border-radius:8px; padding:12px; margin-bottom:15px;">
                     <div style="font-size:14px; font-weight:bold; color:#856404; margin-bottom:6px;">⚠️ ご依頼前に必ずお読みください</div>
                     <div style="font-size:13px; color:#664d03; line-height:1.7;">
-                        当サービスは「構造設計サポート業務」として、構造計算書・壁量計算書等の作成をお手伝いするものです。<br>
+                        当サービスは「木造住宅設計サポート業務」として、構造計算書・壁量計算書等の作成をお手伝いするものです。<br>
                         <strong style="color:#b91c1c;">弊社（担当者）は設計者にはなりません。</strong><br>
                         意匠設計・確認申請の代理人業務・設計者欄への記名・押印等は一切行いません。<br>
                         設計者（建築士）の責任のもと、弊社の成果物をご活用ください。

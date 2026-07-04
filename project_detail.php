@@ -174,7 +174,7 @@ $chat_messages = $stmtMsgs->fetchAll();
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>案件詳細 | 構造設計サポート・ポータル</title>
+    <title>案件詳細 | 木造住宅設計サポート・ポータル</title>
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
         .container { display: flex; gap: 20px; width: 98%; max-width: none; margin: 0 auto; align-items: flex-start; }

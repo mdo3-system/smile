@@ -72,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // 本物のメール送信処理 (XServer本番環境用)
             $to = $email;
-            $subject = "【構造設計サポート・ポータル】ログインリンクのご案内";
-            $body = "いつもお世話になっております。構造設計サポート・ポータルです。\n\n";
+            $subject = "【木造住宅設計サポート・ポータル】ログインリンクのご案内";
+            $body = "いつもお世話になっております。木造住宅設計サポート・ポータルです。\n\n";
             $body .= "以下のログインリンクをクリックして、システムにアクセスしてください。\n";
             $body .= "（このリンクは送信から24時間有効です）\n\n";
             $body .= "{$login_url}\n\n";
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ログイン | 構造設計サポート・ポータル</title>
+    <title>ログイン | 木造住宅設計サポート・ポータル</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-container">
         <div class="login-card">
             <div class="logo">PORTAL LOGIN</div>
-            <div class="subtitle">構造設計サポート・ポータル</div>
+            <div class="subtitle">木造住宅設計サポート・ポータル</div>
             
             <form method="POST">
                 <div class="form-group">

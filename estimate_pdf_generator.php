@@ -53,8 +53,8 @@ function generate_estimate_pdf($project_id, $pdo) {
     $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
     
     // ドキュメント情報のメタデータ設定
-    $pdf->SetCreator('構造設計サポート・ポータル');
-    $pdf->SetAuthor('構造設計サポート');
+    $pdf->SetCreator('木造住宅設計サポート・ポータル');
+    $pdf->SetAuthor('木造住宅設計サポート');
     $pdf->SetTitle('御見積書_' . $data['project_name']);
     $pdf->SetSubject('御見積書');
     
@@ -248,8 +248,8 @@ function generate_primary_invoice_pdf($project_id, $pdo) {
     // TCPDFの初期化
     $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
     
-    $pdf->SetCreator('構造設計サポート・ポータル');
-    $pdf->SetAuthor('構造設計サポート');
+    $pdf->SetCreator('木造住宅設計サポート・ポータル');
+    $pdf->SetAuthor('木造住宅設計サポート');
     $pdf->SetTitle('御請求書_' . $data['project_name']);
     $pdf->SetSubject('御請求書');
     
@@ -416,8 +416,8 @@ function generate_final_invoice_pdf($project_id, $pdo) {
     // TCPDFの初期化
     $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
     
-    $pdf->SetCreator('構造設計サポート・ポータル');
-    $pdf->SetAuthor('構造設計サポート');
+    $pdf->SetCreator('木造住宅設計サポート・ポータル');
+    $pdf->SetAuthor('木造住宅設計サポート');
     $pdf->SetTitle('御請求書(残金)_' . $data['project_name']);
     $pdf->SetSubject('御請求書');
     

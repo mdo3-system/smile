@@ -12,7 +12,7 @@ $is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>操作マニュアル（依頼主様向け） | 構造設計サポート・ポータル</title>
+    <title>操作マニュアル（依頼主様向け） | 木造住宅設計サポート・ポータル</title>
     <style>
         body { 
             font-family: 'Helvetica Neue', Arial, 'Noto Sans JP', sans-serif; 
@@ -225,7 +225,7 @@ $is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
 <body>
 
     <div class="header">
-        <h1>📖 構造設計サポート・ポータル 操作マニュアル</h1>
+        <h1>📖 木造住宅設計サポート・ポータル 操作マニュアル</h1>
         <p>〜 依頼主（設計者・施工業者）様向け 〜</p>
     </div>
 
