@@ -63,8 +63,8 @@
                 <thead>
                     <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; position:sticky; top:0;">
                         <th style="padding:6px; text-align:left; width:20%; white-space:nowrap;">工程</th>
-                        <th style="padding:6px; text-align:left; width:25%; white-space:nowrap;">担当</th>
-                        <th style="padding:6px; text-align:left; width:10%; white-space:nowrap;">予定</th>
+                        <th style="padding:6px; text-align:left; width:20%; white-space:nowrap;">担当</th>
+                        <th style="padding:6px; text-align:left; width:15%; white-space:nowrap;">予定</th>
                         <th style="padding:6px; text-align:left; width:25%; white-space:nowrap;">依頼主希望日</th>
                         <th style="padding:6px; text-align:left; width:20%; white-space:nowrap;">実施日</th>
                     </tr>
