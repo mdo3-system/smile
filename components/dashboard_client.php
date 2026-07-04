@@ -593,7 +593,7 @@
                     echo '</div>';
 
                     echo '<table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px;">';
-                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left;">工程</th><th style="padding:6px; text-align:left;">担当</th><th style="padding:6px; text-align:left;">予定日/実績日</th><th style="padding:6px; text-align:left; width:220px;">ご希望日</th></tr></thead>';
+                    echo '<thead><tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;"><th style="padding:6px; text-align:left; width:20%;">工程</th><th style="padding:6px; text-align:left; width:30%;">担当</th><th style="padding:6px; text-align:left; width:20%;">予定日/実績日</th><th style="padding:6px; text-align:left; width:30%;">ご希望日</th></tr></thead>';
                     echo '<tbody>';
                     
                     $base_start_date = $primary_due_date ?: ($schedule_actuals[1] ?? $schedule_actuals[0] ?? '');
