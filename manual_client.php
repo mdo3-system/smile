@@ -3,10 +3,10 @@
 require_once 'auth.php';
 require_once 'functions.php';
 
-// クライアント、管理者、経理が閲覧可能
-check_auth(['admin', 'client', 'accountant']);
+// 外部Webサイト公開のため、ログイン制限を解除
+// check_auth(['admin', 'client', 'accountant']);
 
-$is_admin = ($_SESSION['role'] === 'admin');
+$is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -232,7 +232,11 @@ $is_admin = ($_SESSION['role'] === 'admin');
     <div class="container">
         
         <div class="nav-back">
-            <a href="index.php">➔ ポータルダッシュボードに戻る</a>
+            <?php if (isset($_SESSION['user_id'])): ?>
+                <a href="index.php">➔ ポータルダッシュボードに戻る</a>
+            <?php else: ?>
+                <a href="login.php">➔ ポータルログイン画面へ進む</a>
+            <?php endif; ?>
         </div>
 
         <!-- 1. 業務全体の流れ（タイムライン） -->

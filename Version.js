@@ -129,6 +129,7 @@
 // 1.5.31: 管理者➔協力業者への通知メール実装、管理者➔依頼主通知バグ修正、依頼主➔管理者へのチャット通知追加
 // 1.5.32: チャット通知を共通関数sendChatEmailNotificationへ統合し、Ajax（api_send_message.php）と通常POST（action_chat.php）双方での双方向通知（管理者⇄依頼主・管理者⇄協力業者）を完全網羅
 // 1.5.33: 依頼主向け操作マニュアル（manual_client.php）を最新の金銭報告ボタン・残金0円時自動切り替え・自動メール通知仕様に改編・適合
+// 1.5.34: マニュアル非ログイン閲覧化、管理者ダッシュボード協力業者回答納期表示バグ修正、ログイン/新規登録画面配色をWebサイト調に爽やかスカイブルー化
 
-window.APP_VERSION = "1.5.33";
-const APP_LAST_UPDATED = '2026-07-03';
+window.APP_VERSION = "1.5.34";
+const APP_LAST_UPDATED = '2026-07-04';

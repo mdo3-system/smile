@@ -266,7 +266,7 @@ $status_labels = [
                         
                         // 進行中の協力業者タスクを取得
                         $stmtActiveTask = $pdo->prepare("
-                            SELECT task_title, order_type, due_date, status 
+                            SELECT task_title, order_type, due_date, expected_delivery_date, status 
                             FROM subcontractor_orders 
                             WHERE project_id = :pid 
                             AND status IN ('requested', 'accepted', 'cb_requested')
@@ -281,7 +281,8 @@ $status_labels = [
                             <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold; line-height: 1.4;">
                                 <?php if ($active_task): 
                                     $type_label = ($active_task['order_type'] === 'design') ? '意匠図作図' : '構造図作図';
-                                    $due_disp = !empty($active_task['due_date']) ? date('Y/m/d', strtotime($active_task['due_date'])) : '未定';
+                                    $due_val = !empty($active_task['expected_delivery_date']) ? $active_task['expected_delivery_date'] : $active_task['due_date'];
+                                    $due_disp = !empty($due_val) ? date('Y/m/d', strtotime($due_val)) : '未定';
                                 ?>
                                     <div style="color: #6d28d9; font-size: 11px; margin-bottom: 2px;">
                                         👷 進行タスク: <strong><?= htmlspecialchars($active_task['task_title'], ENT_QUOTES) ?></strong> (<?= $type_label ?>)

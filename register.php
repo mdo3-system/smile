@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtCheck = $pdo->prepare("SELECT id FROM users WHERE email = :email");
         $stmtCheck->execute(['email' => $email]);
         if ($stmtCheck->fetch()) {
-            $message = "指定されたメールアドレスは既に登録されています。<a href='login.php' style='color:#6ee7b7; text-decoration:underline;'>ログイン画面</a>をご利用ください。";
+            $message = "指定されたメールアドレスは既に登録されています。<a href='login.php' style='color:#0284c7; text-decoration:underline; font-weight:bold;'>ログイン画面</a>をご利用ください。";
         } else {
             // 新規ユーザー登録
             $stmtInsert = $pdo->prepare("
@@ -155,12 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --primary-color: #3b82f6;
-            --primary-hover: #2563eb;
-            --text-color: #f1f5f9;
-            --text-muted: #94a3b8;
+            --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --primary-color: #3498db;
+            --primary-hover: #2980b9;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
         }
         
         body {
@@ -183,10 +183,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .login-card {
             background: var(--card-bg);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #cbd5e1;
             padding: 40px 30px;
             border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.1);
             text-align: center;
         }
         
@@ -195,15 +195,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 600;
             margin-bottom: 8px;
             letter-spacing: -0.5px;
-            background: linear-gradient(to right, #3b82f6, #60a5fa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--primary-color);
         }
         
         .subtitle {
             color: var(--text-muted);
             font-size: 14px;
             margin-bottom: 30px;
+            font-weight: bold;
         }
         
         .form-group {
@@ -222,8 +221,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input[type="text"], input[type="email"], input[type="tel"] {
             width: 100%;
             padding: 12px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
             border-radius: 8px;
             color: var(--text-color);
             font-size: 15px;
@@ -234,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
         }
         
         .btn-submit {
@@ -262,9 +261,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 8px;
             font-size: 13px;
             line-height: 1.4;
-            background: rgba(59, 130, 246, 0.15);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            color: #93c5fd;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0369a1;
             text-align: left;
         }
         
@@ -273,15 +272,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 12px;
             border-radius: 8px;
             font-size: 12px;
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #34d399;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #047857;
             word-break: break-all;
             text-align: left;
         }
         
         .devel-link-box a {
-            color: #6ee7b7;
+            color: #065f46;
             text-decoration: underline;
             font-weight: bold;
         }
