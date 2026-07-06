@@ -47,6 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+require_once 'Repositories/ProjectRepository.php';
+$projectRepo = new ProjectRepository($pdo);
+
 require_once __DIR__ . '/actions/project_detail_post.php';
 
 // ==========================================

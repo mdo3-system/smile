@@ -577,8 +577,16 @@
 
 ---
 
-## 46. このドキュメントの所在
+## 46. 協力業者構造図発注時の $projectRepo 未定義バグの修正 (v1.5.49)
+- **仕様**: 協力業者への構造図発注処理を行うアクションファイル（`actions/action_subcontractor.php`）において、`$projectRepo->updateStatus()` 呼び出し時に `$projectRepo` が未定義のため Fatal Error が発生するバグを解消。
+- **対策**:
+  1. `project_detail.php` にて誤って削除されていた `ProjectRepository` の初期化コード（`require_once 'Repositories/ProjectRepository.php'; $projectRepo = new ProjectRepository($pdo);`）を完全に復元。
+  2. 万が一のために `actions/action_subcontractor.php` の先頭にも「`$projectRepo` が存在しない場合に自動的に `ProjectRepository` インスタンスを生成する」フォールバック処理を追記し、二重のセーフティを設置。
+
+---
+
+## 47. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.48（2026-07-06）
+- **最終バージョン**: v1.5.49（2026-07-07）

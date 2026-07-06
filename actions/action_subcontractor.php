@@ -1,6 +1,11 @@
 <?php
 // actions/action_subcontractor.php
 
+if (!isset($projectRepo)) {
+    require_once __DIR__ . '/../Repositories/ProjectRepository.php';
+    $projectRepo = new ProjectRepository($pdo);
+}
+
 // 新規発注依頼の保存
 if ($action === 'order_subcontractor') {
     $pdo->beginTransaction();
