@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($target_month !== '') {
             $stmt = $pdo->prepare("
                 UPDATE subcontractor_payments 
-                SET is_archived = 0 
+                SET is_archived = 0, paid_amount = 0
                 WHERE subcontractor_id = :sub_id AND target_month = :t_month
             ");
             $stmt->execute([
