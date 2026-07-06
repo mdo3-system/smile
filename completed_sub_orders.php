@@ -2,10 +2,10 @@
 // completed_sub_orders.php
 require_once 'auth.php';
 require_once 'functions.php';
-check_auth(['admin', 'subcontractor']);
+check_auth(['admin', 'subcontractor', 'accountant']);
 
 $user_id = $_SESSION['user_id'];
-$is_admin = ($_SESSION['role'] === 'admin');
+$is_admin = ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant');
 
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 

@@ -197,16 +197,22 @@
                 <!-- 請求書発行エリア -->
                 <?php if ($formal > 0): ?>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
-                        <button type="button" id="issue_primary_invoice_btn" onclick="issuePrimaryInvoice()" style="background:#2563eb; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">
-                            <?= isset($files_by_cat['inv_primary'][0]) ? '一次請求書(50%)再発行' : '一次請求(50%)発行' ?>
+                        <button type="button" id="issue_primary_invoice_btn" onclick="issuePrimaryInvoice(0.5)" style="background:#2563eb; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">
+                            <?= (isset($files_by_cat['inv_primary'][0]) && ($project_info['primary_invoice_rate'] ?? 0.5) < 1.0) ? '一次請求書(50%)再発行' : '一次請求(50%)発行' ?>
                         </button>
-                        <button type="button" id="issue_final_invoice_btn" onclick="issueFinalInvoice()" style="background:#dc3545; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">
+                        <button type="button" id="issue_primary_invoice_100_btn" onclick="issuePrimaryInvoice(1.0)" style="background:#8b5cf6; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px;">
+                            <?= (isset($files_by_cat['inv_primary'][0]) && ($project_info['primary_invoice_rate'] ?? 0.5) >= 1.0) ? '全額請求書(100%)再発行' : '全額一括請求(100%)発行' ?>
+                        </button>
+                        <button type="button" id="issue_final_invoice_btn" onclick="issueFinalInvoice()" style="background:#dc3545; color:white; border:none; padding:8px 5px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px; grid-column: span 2;">
                             <?= isset($files_by_cat['inv_final'][0]) ? '最終請求書 再発行' : '最終請求書(残金)発行' ?>
                         </button>
                     </div>
                     
                     <script>
-                    function issuePrimaryInvoice() {
+                    function issuePrimaryInvoice(rate = 0.5) {
+                        const rateLabel = rate >= 1.0 ? '100%全額一括' : '50%分一次';
+                        const btnId = rate >= 1.0 ? 'issue_primary_invoice_100_btn' : 'issue_primary_invoice_btn';
+
                         // 一次回答ファイルの選択ダイアログを動的に作成
                         const fileInput = document.createElement('input');
                         fileInput.type = 'file';
@@ -218,11 +224,11 @@
                                 return;
                             }
                             const file = fileInput.files[0];
-                            if (!confirm(`選択した一次回答ファイル: 「${file.name}」\n\nこのファイルをアップロードし、本見積額の50%分の一次請求書(50%)を発行しますか？\n（Google Driveへアップロードされ、クライアントチャットに自動通知されます）`)) {
+                            if (!confirm(`選択した一次回答ファイル: 「${file.name}」\n\nこのファイルをアップロードし、本見積額の${rateLabel}の請求書を発行しますか？\n（Google Driveへアップロードされ、クライアントチャットに自動通知されます）`)) {
                                 return;
                             }
                             
-                            const btn = document.getElementById('issue_primary_invoice_btn');
+                            const btn = document.getElementById(btnId);
                             if (btn) {
                                 btn.disabled = true;
                                 btn.innerText = '発行中...';
@@ -232,23 +238,28 @@
                             formData.append('project_id', <?= (int)$project_id ?>);
                             formData.append('tab', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>');
                             formData.append('primary_file', file);
+                            formData.append('invoice_rate', rate);
                             
                             fetch('api_issue_primary_invoice.php', { method: 'POST', body: formData })
                                 .then(r => r.json())
                                 .then(data => {
                                     if (data.success && data.drive_file_id) {
-                                        alert('一次回答ファイルをアップロードし、一次請求書(50%)を発行しました。');
+                                        alert(`一次回答ファイルをアップロードし、請求書(${rateLabel})を発行しました。`);
                                         window.open(`https://drive.google.com/file/d/${data.drive_file_id}/view?usp=drivesdk`, '_blank');
                                         location.reload();
                                     } else {
-                                        alert('一次請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                                        alert('請求書の発行に失敗しました: ' + (data.error || '不明なエラー'));
+                                        if (btn) {
+                                            btn.disabled = false;
+                                            btn.innerText = rate >= 1.0 ? '全額一括請求(100%)発行' : '一次請求(50%)発行';
+                                        }
                                     }
                                 })
-                                .catch(e => alert('通信エラー: ' + e))
-                                .finally(() => {
+                                .catch(e => {
+                                    alert('通信エラー: ' + e);
                                     if (btn) {
                                         btn.disabled = false;
-                                        btn.innerText = '一次請求(50%)発行';
+                                        btn.innerText = rate >= 1.0 ? '全額一括請求(100%)発行' : '一次請求(50%)発行';
                                     }
                                 });
                         };

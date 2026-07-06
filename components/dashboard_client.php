@@ -284,12 +284,25 @@
                         ? 'https://drive.google.com/file/d/' . htmlspecialchars($inv['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
                         : htmlspecialchars($inv['drive_file_id'], ENT_QUOTES);
                     $has_invoice = true;
+                    $is_full_invoice = (($project_info['primary_invoice_rate'] ?? 0.5) >= 1.0);
                 ?>
                     <div style="margin-bottom:10px; padding:10px; background:#fff; border:1px solid #cbd5e1; border-radius:6px; text-align:center;">
-                        <div style="font-weight:bold; color:#1e40af; margin-bottom:5px;">一次請求書 (着手金50%分)</div>
+                        <div style="font-weight:bold; color:#1e40af; margin-bottom:5px;">
+                            <?= $is_full_invoice ? 'ご請求書 (100%全額分)' : '一次請求書 (着手金50%分)' ?>
+                        </div>
                         <a href="<?= $inv_url ?>" target="_blank" style="display:inline-block; padding:6px 12px; background:#2563eb; color:white; font-size:12px; font-weight:bold; border-radius:4px; text-decoration:none;">
-                            📄 一次請求書を表示
+                            📄 <?= $is_full_invoice ? '請求書を表示' : '一次請求書を表示' ?>
                         </a>
+                        
+                        <?php if (!$is_full_invoice): ?>
+                            <form method="POST" style="margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px;" onsubmit="return confirm('請求書を【全額一括請求 (100%分)】に変更して再発行しますか？\n（管理者の代わりに100%請求書が自動再発行され、チャットへも自動通知されます）');">
+                                <input type="hidden" name="action" value="request_full_invoice">
+                                <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                                <button type="submit" style="width:100%; background:#8b5cf6; color:white; border:none; padding:6px 8px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                    🔄 100%全額請求書へ差し替える
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 

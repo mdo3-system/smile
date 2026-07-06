@@ -1,7 +1,7 @@
 <?php
 // actions/action_issue_invoice_helper.php
 
-function issuePrimaryInvoiceHelper($pdo, $project_id, $user_id) {
+function issuePrimaryInvoiceHelper($pdo, $project_id, $user_id, $invoice_rate = 0.5) {
     require_once __DIR__ . '/../google_drive_client.php';
     require_once __DIR__ . '/../estimate_pdf_generator.php';
 
@@ -15,14 +15,15 @@ function issuePrimaryInvoiceHelper($pdo, $project_id, $user_id) {
     }
 
     if (empty($proj_info['formal_est_amount']) || intval($proj_info['formal_est_amount']) <= 0) {
-        throw new Exception("本見積額が確定していないため、一次請求書を発行できません。");
+        throw new Exception("本見積額が確定していないため、請求書を発行できません。");
     }
 
     // 2. PDFの生成
-    $temp_pdf_path = generate_primary_invoice_pdf($project_id, $pdo);
+    $temp_pdf_path = generate_primary_invoice_pdf($project_id, $pdo, $invoice_rate);
     
     $proj_name = $proj_info['project_name'];
-    $pdf_filename = '一次請求書_' . $proj_name . '.pdf';
+    $is_full = ($invoice_rate >= 1.0);
+    $pdf_filename = ($is_full ? '全額請求書_' : '一次請求書_') . $proj_name . '.pdf';
     
     $pdfDriveId = null;
     try {
@@ -122,15 +123,24 @@ function issuePrimaryInvoiceHelper($pdo, $project_id, $user_id) {
         // 5. 自動的にチャット通知メッセージを生成し、チャットに送信
         $formal_est_amount = intval($proj_info['formal_est_amount']);
         $base_formal = round($formal_est_amount / 1.1); // 本見積の税抜額
-        $subtotal = round($base_formal * 0.5); // 税抜金額の50%
+        $subtotal = round($base_formal * $invoice_rate); // 税抜金額の指定比率
         $tax = round($subtotal * 0.1); // 消費税10%
         $grand_total = $subtotal + $tax; // 税込合計
 
-        $msg = "【一次請求書(50%)が発行されました】\n";
-        $msg .= "着手金として、本見積額の消費税加算前50%と消費税分を請求させていただきます。\n";
-        $msg .= "請求金額: " . number_format($grand_total) . "円 (税込)\n";
-        $msg .= "（内訳: 税抜 " . number_format($subtotal) . "円、消費税 " . number_format($tax) . "円）\n\n";
-        $msg .= "詳細は左パネルの「一次請求書」からご確認ください。ご入金の確認後、詳細モデル作成業務に着手いたします。";
+        $is_full = ($invoice_rate >= 1.0);
+        if ($is_full) {
+            $msg = "【ご請求書(100%全額)が発行されました】\n";
+            $msg .= "本見積額の100%全額を請求させていただきます。\n";
+            $msg .= "請求金額: " . number_format($grand_total) . "円 (税込)\n";
+            $msg .= "（内訳: 税抜 " . number_format($subtotal) . "円、消費税 " . number_format($tax) . "円）\n\n";
+            $msg .= "詳細は左パネルの「一次請求書（全額）」からご確認ください。ご入金の確認後、詳細モデル作成業務に着手いたします。";
+        } else {
+            $msg = "【一次請求書(50%)が発行されました】\n";
+            $msg .= "着手金として、本見積額の消費税加算前50%と消費税分を請求させていただきます。\n";
+            $msg .= "請求金額: " . number_format($grand_total) . "円 (税込)\n";
+            $msg .= "（内訳: 税抜 " . number_format($subtotal) . "円、消費税 " . number_format($tax) . "円）\n\n";
+            $msg .= "詳細は左パネルの「一次請求書」からご確認ください。ご入金の確認後、詳細モデル作成業務に着手いたします。";
+        }
 
         $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
         $stmtMsg->execute([

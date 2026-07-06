@@ -216,9 +216,10 @@ function generate_estimate_pdf($project_id, $pdo) {
  * 案件の本見積もり額から一次請求書PDFを一時的に生成し、そのローカルパスを返す
  * @param int $project_id 案件ID
  * @param PDO $pdo データベース接続インスタンス
+ * @param float $invoice_rate 請求割合 (デフォルト 0.5)
  * @return string 生成されたPDFファイルの一時ローカル絶対パス
  */
-function generate_primary_invoice_pdf($project_id, $pdo) {
+function generate_primary_invoice_pdf($project_id, $pdo, $invoice_rate = 0.5) {
     // 案件情報と見積もり情報を取得
     $stmt = $pdo->prepare("
         SELECT p.project_name, p.billing_company_name, p.formal_est_amount, u.company_name, u.contact_name 
@@ -239,9 +240,9 @@ function generate_primary_invoice_pdf($project_id, $pdo) {
     
     $formal_est_amount = intval($data['formal_est_amount']);
     
-    // 消費税加算前（税抜）の50％の請求額を計算
+    // 消費税加算前（税抜）の請求額を計算
     $base_formal = round($formal_est_amount / 1.1); // 本見積の税抜額
-    $subtotal = round($base_formal * 0.5); // 税抜金額の50%
+    $subtotal = round($base_formal * $invoice_rate); // 税抜金額の指定割合
     $tax = round($subtotal * 0.1); // 消費税10%
     $grand_total = $subtotal + $tax; // 税込合計
     
@@ -265,10 +266,14 @@ function generate_primary_invoice_pdf($project_id, $pdo) {
     $company_name = htmlspecialchars($billing_name, ENT_QUOTES);
     $contact_name = htmlspecialchars($data['contact_name'] ?? '', ENT_QUOTES);
     $project_name = htmlspecialchars($data['project_name'] ?? '', ENT_QUOTES);
+
+    $is_full = ($invoice_rate >= 1.0);
+    $rate_label = $is_full ? '（全額）' : '（着手金50%）';
+    $rate_subject_label = $is_full ? '（全額）' : '（着手金）';
     
     $table_rows = '
         <tr>
-            <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> ' . $project_name . ' 新築工事 構造設計等業務（着手金50%）</td>
+            <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> ' . $project_name . ' 新築工事 構造設計等業務' . $rate_label . '</td>
             <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
             <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">¥' . number_format($subtotal) . '</td>
             <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">¥' . number_format($subtotal) . '</td>

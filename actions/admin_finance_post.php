@@ -261,10 +261,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        // 一次請求書(50%)の自動発行処理
+        // 一次請求書(50% または 100%全額)の自動発行処理
         if (isset($_POST['issue_primary_invoice']) && $_POST['issue_primary_invoice'] === '1') {
+            $invoice_rate = isset($_POST['invoice_rate']) ? (float)$_POST['invoice_rate'] : 0.5;
+            $stmtRate = $pdo->prepare("UPDATE projects SET primary_invoice_rate = :rate WHERE id = :pid");
+            $stmtRate->execute(['rate' => $invoice_rate, 'pid' => $project_id]);
+
             require_once __DIR__ . '/action_issue_invoice_helper.php';
-            issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id']);
+            issuePrimaryInvoiceHelper($pdo, $project_id, $_SESSION['user_id'], $invoice_rate);
         }
 
         header("Location: ../project_detail.php?id=" . $project_id . "&t=" . time());
