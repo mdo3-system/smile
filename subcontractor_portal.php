@@ -25,6 +25,108 @@ if ($is_admin || $is_accountant) {
     }
 }
 
+// ログインユーザーの専門分野を取得
+$stmtMe = $pdo->prepare("SELECT sub_specialty FROM users WHERE id = :id");
+$stmtMe->execute(['id' => $user_id]);
+$my_specialty = $stmtMe->fetchColumn() ?: 'both';
+
+// 初期表示アクティブタブ決定
+$active_tab = $_GET['tab'] ?? '';
+if ($active_tab === '') {
+    if ($my_specialty === 'structural') {
+        $active_tab = 'structural';
+    } else {
+        $active_tab = 'design';
+    }
+}
+
+$has_parent = !empty($p_id);
+
+// CSVエクスポート処理
+if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
+    $export_type = $_GET['type'] ?? 'design'; // design or structural
+    $sub_view_mode = $_SESSION['sub_view_mode'] ?? 'all';
+    
+    if ($has_parent && $sub_view_mode === 'personal') {
+        $stmtExport = $pdo->prepare("
+            SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, u_std.contact_name as staff_name
+            FROM subcontractor_orders o 
+            JOIN projects p ON o.project_id = p.id 
+            LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
+            WHERE o.subcontractor_id = :user_id
+              AND o.order_type = :otype
+            ORDER BY o.id DESC
+        ");
+        $stmtExport->execute([
+            'user_id' => $user_id,
+            'otype' => $export_type
+        ]);
+    } else {
+        $stmtExport = $pdo->prepare("
+            SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, u_std.contact_name as staff_name
+            FROM subcontractor_orders o 
+            JOIN projects p ON o.project_id = p.id 
+            LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
+            WHERE (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2))
+              AND o.order_type = :otype
+            ORDER BY o.id DESC
+        ");
+        $stmtExport->execute([
+            'sub_id_1' => $target_sub_id,
+            'sub_id_2' => $target_sub_id,
+            'otype' => $export_type
+        ]);
+    }
+    $export_orders = $stmtExport->fetchAll(PDO::FETCH_ASSOC);
+
+    $filename = ($export_type === 'structural' ? 'structural_orders_' : 'design_orders_') . date('YmdHis') . '.csv';
+    header('Content-Type: text/csv; charset=shift_jis');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    
+    $fp = fopen('php://output', 'w');
+    
+    $headers = ['管理番号', '物件名', '受付日', '納期', '納品日', '延床面積(㎡)', '請負金額(円)', '担当者', '現在の状況'];
+    mb_convert_variables('SJIS-win', 'UTF-8', $headers);
+    fputcsv($fp, $headers);
+    
+    $status_labels = [
+        'requested' => '承諾待ち',
+        'accepted' => '進行中',
+        'cb_requested' => '修正対応中',
+        'delivered' => '納品検収中',
+        'completed' => '完了',
+        'cancelled' => 'キャンセル'
+    ];
+
+    foreach ($export_orders as $o) {
+        $date_str = $o['completed_at'] ?? $o['updated_at'] ?? $o['created_at'];
+        $ts = strtotime($date_str);
+        $y = (int)date('Y', $ts);
+        $m = (int)date('m', $ts);
+        if ((int)date('d', $ts) >= 26) {
+            $m++;
+            if ($m > 12) { $m = 1; $y++; }
+        }
+
+        $row = [
+            'S' . sprintf('%04d', $o['id']),
+            $o['project_name'],
+            !empty($o['created_at']) ? date('m/d', strtotime($o['created_at'])) : '',
+            !empty($o['due_date']) ? date('m/d', strtotime($o['due_date'])) : '',
+            ($o['status'] === 'completed' && !empty($o['completed_at'])) ? date('m/d', strtotime($o['completed_at'])) : (($o['status'] === 'delivered' && !empty($o['updated_at'])) ? date('m/d', strtotime($o['updated_at'])) : ''),
+            $o['floor_area'],
+            $o['order_amount'],
+            $o['staff_name'] ?: '未指定',
+            $status_labels[$o['status']] ?? $o['status']
+        ];
+        mb_convert_variables('SJIS-win', 'UTF-8', $row);
+        fputcsv($fp, $row);
+    }
+    
+    fclose($fp);
+    exit;
+}
+
 // 業者情報を取得
 $stmtSub = $pdo->prepare("SELECT * FROM users WHERE id = :id AND role = 'subcontractor'");
 $stmtSub->execute(['id' => $target_sub_id]);
@@ -325,20 +427,22 @@ $has_parent = (bool)$stmtUserParent->fetchColumn();
 
 if ($has_parent && $sub_view_mode === 'personal') {
     $stmtTasks = $pdo->prepare("
-        SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari 
+        SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari, u_std.contact_name as staff_name
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        WHERE o.subcontractor_id = :user_id AND o.payment_status != 'paid'
+        LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
+        WHERE o.subcontractor_id = :user_id
         ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
     ");
     $stmtTasks->execute(['user_id' => $user_id]);
 } else {
     // 業者全体（本アカウント宛て ＋ スタッフ宛て）またはメインアカウントの場合
     $stmtTasks = $pdo->prepare("
-        SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari 
+        SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari, u_std.contact_name as staff_name
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
-        WHERE (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)) AND o.payment_status != 'paid'
+        LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
+        WHERE (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2))
         ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
     ");
     $stmtTasks->execute([
@@ -347,6 +451,43 @@ if ($has_parent && $sub_view_mode === 'personal') {
     ]);
 }
 $tasks = $stmtTasks->fetchAll();
+
+// 意匠図 (design) と 構造図 (structural) へのタブ別データ分類
+$design_tasks = [];
+$structural_tasks = [];
+
+foreach ($tasks as $t) {
+    if (($t['order_type'] ?? 'design') === 'structural') {
+        $structural_tasks[] = $t;
+    } else {
+        $design_tasks[] = $t;
+    }
+}
+
+// それぞれを 3つのステータス層に分類するヘルパー
+if (!function_exists('categorizeTasks')) {
+    function categorizeTasks(array $tasks): array {
+        $cat = [
+            'requested' => [],
+            'active' => [],
+            'done' => []
+        ];
+        foreach ($tasks as $t) {
+            $st = $t['status'] ?? '';
+            if ($st === 'requested') {
+                $cat['requested'][] = $t;
+            } elseif ($st === 'accepted' || $st === 'cb_requested') {
+                $cat['active'][] = $t;
+            } elseif ($st === 'delivered' || $st === 'completed') {
+                $cat['done'][] = $t;
+            }
+        }
+        return $cat;
+    }
+}
+
+$design_cat = categorizeTasks($design_tasks);
+$structural_cat = categorizeTasks($structural_tasks);
 
 // 案件（物件）ごとのグルーピング
 $project_tasks = [];
@@ -515,88 +656,116 @@ $global_messages = $stmtChat->fetchAll();
     </div>
 
     <div class="container">
-        <!-- 左カラム：案件スケジュール -->
-        <div class="col-main box">
-            <h3>📋 担当案件・スケジュール</h3>
-            <?php if ($has_parent): ?>
-                <div style="margin-bottom: 15px; display: flex; gap: 10px; font-size: 13px;">
-                    <span style="font-weight: bold; align-self: center;">表示範囲:</span>
-                    <a href="subcontractor_portal.php?sub_view_mode=all" style="padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; <?= $sub_view_mode === 'all' ? 'background:#3b82f6; color:white;' : 'background:#e2e8f0; color:#333;' ?>">業者全体 (すべての案件)</a>
-                    <a href="subcontractor_portal.php?sub_view_mode=personal" style="padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; <?= $sub_view_mode === 'personal' ? 'background:#3b82f6; color:white;' : 'background:#e2e8f0; color:#333;' ?>">担当者ベース (自分の案件のみ)</a>
-                </div>
-            <?php endif; ?>
-            <?php if (count($project_tasks) > 0): ?>
-                <div class="grid">
-                    <?php foreach ($project_tasks as $pid => $proj): 
-                        $project_dummy = [
-                            'id' => $proj['project_id'],
-                            'status' => $proj['project_status'],
-                            'primary_due_date' => $proj['primary_due_date'],
-                            'schedule_actuals' => $proj['schedule_actuals'],
-                            'req_permit' => $proj['req_permit'],
-                            'req_wall' => $proj['req_wall'],
-                            'req_skin' => $proj['req_skin'],
-                            'req_sky' => $proj['req_sky'],
-                            'req_opt_kisohari' => $proj['req_opt_kisohari']
-                        ];
-                        $ball = \App\Helpers\StatusHelper::getBallStatus($project_dummy, $pdo, 'subcontractor');
-                    ?>
-                        <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
-                            <div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:5px;">
-                                    <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold; margin:0;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
-                                </div>
-                                <h3 style="font-size:15px; color:#1e3a8a; margin:0 0 12px 0;">🏠 <?= htmlspecialchars($proj['project_name']) ?></h3>
-                                
-                                <div style="display:flex; flex-direction:column; gap:8px;">
-                                    <?php foreach ($proj['items'] as $t): ?>
-                                        <?php if ($t['status'] === 'cancelled'): ?>
-                                            <div style="font-size:11px; color:#94a3b8; text-decoration:line-through;">
-                                                ❌ <?= htmlspecialchars($t['task_title']) ?> (キャンセル済)
-                                            </div>
-                                        <?php else: ?>
-                                            <div style="font-size:12px; background:#f8fafc; border:1px solid #e2e8f0; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;">
-                                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                                    <span style="font-weight:bold; color:#334155;"><?= htmlspecialchars($t['task_title']) ?></span>
-                                                    <?php 
-                                                        if ($t['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b; padding:2px 5px; font-size:10px; margin:0;">承諾待ち</span>';
-                                                        elseif ($t['status'] === 'accepted' || $t['status'] === 'in_progress') echo '<span class="badge" style="background:#3b82f6; padding:2px 5px; font-size:10px; margin:0;">作業中</span>';
-                                                        elseif ($t['status'] === 'delivered') echo '<span class="badge" style="background:#fd7e14; padding:2px 5px; font-size:10px; margin:0;">一次納品</span>';
-                                                        elseif ($t['status'] === 'cb_requested') echo '<span class="badge" style="background:#ef4444; padding:2px 5px; font-size:10px; margin:0;">修正依頼</span>';
-                                                        elseif ($t['status'] === 'completed') echo '<span class="badge" style="background:#059669; padding:2px 5px; font-size:10px; margin:0;">完了</span>';
-                                                        elseif ($t['status'] === 'rejected') echo '<span class="badge" style="background:#ef4444; padding:2px 5px; font-size:10px; margin:0;">辞退済</span>';
-                                                    ?>
-                                                </div>
-                                                <div style="display:flex; justify-content:space-between; font-size:11px; color:#64748b;">
-                                                    <span>発注額: <?= number_format($t['order_amount']) ?>円</span>
-                                                    <span>希望納期: <?= !empty($t['due_date']) ? date('m/d', strtotime($t['due_date'])) : '-' ?></span>
-                                                </div>
-                                                
-                                                <?php if ($t['status'] === 'requested' && !$is_admin): ?>
-                                                    <div style="margin-top:5px; display:flex; gap:5px; align-items:center;">
-                                                        <form method="POST" action="project_subcontractor.php" style="background:#fff3cd; padding:5px; border-radius:4px; border:1px solid #ffeeba; display:flex; gap:5px; align-items:center; margin:0; flex-wrap:wrap; width:100%; justify-content:space-between;">
-                                                            <input type="hidden" name="order_id" value="<?= $t['id'] ?>">
-                                                            <span style="font-size:10px; font-weight:bold; color:#856404;">予定日:</span>
-                                                            <input type="date" name="expected_delivery_date" required style="padding:2px; font-size:10px;">
-                                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:3px 6px; border-radius:3px; font-size:10px; cursor:pointer; font-weight:bold;">承諾</button>
-                                                        </form>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                            
-                            <div style="margin-top:12px;">
-                                <a href="project_subcontractor.php?id=<?= $proj['project_id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>; color:#fff; text-decoration:none; font-size:12px; font-weight:bold; display:block; text-align:center; padding:8px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">詳細・DL・納品 ➔</a>
-                            </div>
+        <!-- 左カラム：案件スケジュール (エクセル風タブ＆テーブルアコーディオン) -->
+        <div class="col-main box" style="flex:2.0;">
+            <!-- タブメニュー -->
+            <div class="tab-menu" style="display:flex; border-bottom:2px solid #cbd5e1; margin-bottom:15px; gap:5px;">
+                <a href="subcontractor_portal.php?tab=design<?= $target_sub_id ? '&sub_id=' . $target_sub_id : '' ?>" class="tab-item" style="padding:10px 20px; font-weight:bold; text-decoration:none; font-size:13px; border-top-left-radius:6px; border-top-right-radius:6px; <?= $active_tab === 'design' ? 'background:#3b82f6; color:white;' : 'background:#e2e8f0; color:#475569;' ?>">✍️ 意匠図（トレース）案件一覧</a>
+                <a href="subcontractor_portal.php?tab=structural<?= $target_sub_id ? '&sub_id=' . $target_sub_id : '' ?>" class="tab-item" style="padding:10px 20px; font-weight:bold; text-decoration:none; font-size:13px; border-top-left-radius:6px; border-top-right-radius:6px; <?= $active_tab === 'structural' ? 'background:#8b5cf6; color:white;' : 'background:#e2e8f0; color:#475569;' ?>">🏗️ 構造図案件一覧</a>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <h3 style="margin:0; font-size:16px; color:#1e293b;">
+                        <?= $active_tab === 'structural' ? '🏗️ 構造図 案件管理スケジュール' : '✍️ 意匠図（トレース）案件管理スケジュール' ?>
+                    </h3>
+                    <?php if ($has_parent): ?>
+                        <div style="display: flex; gap: 5px; font-size: 12px; background:#f1f5f9; padding:3px; border-radius:4px; border:1px solid #e2e8f0;">
+                            <a href="subcontractor_portal.php?tab=<?= $active_tab ?>&sub_view_mode=all<?= $target_sub_id ? '&sub_id=' . $target_sub_id : '' ?>" style="padding: 3px 8px; border-radius: 3px; text-decoration: none; font-weight: bold; <?= $sub_view_mode === 'all' ? 'background:#fff; color:#0f172a; box-shadow:0 1px 2px rgba(0,0,0,0.05);' : 'color:#64748b;' ?>">全体</a>
+                            <a href="subcontractor_portal.php?tab=<?= $active_tab ?>&sub_view_mode=personal<?= $target_sub_id ? '&sub_id=' . $target_sub_id : '' ?>" style="padding: 3px 8px; border-radius: 3px; text-decoration: none; font-weight: bold; <?= $sub_view_mode === 'personal' ? 'background:#fff; color:#0f172a; box-shadow:0 1px 2px rgba(0,0,0,0.05);' : 'color:#64748b;' ?>">マイ案件</a>
                         </div>
-                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
-            <?php else: ?>
-                <p style="color:#777; font-size:14px;">現在担当している案件はありません。</p>
-            <?php endif; ?>
+                <a href="subcontractor_portal.php?action=export_csv&type=<?= $active_tab ?><?= $target_sub_id ? '&sub_id=' . $target_sub_id : '' ?>" class="btn-download" style="background:#059669; color:white; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(5,150,105,0.3); border:none; cursor:pointer;">
+                    📥 エクセル用CSVダウンロード
+                </a>
+            </div>
+
+            <?php
+            $current_cat = ($active_tab === 'structural') ? $structural_cat : $design_cat;
+            $section_titles = [
+                'requested' => ['title' => '📥 ① 依頼の承認待ち (承諾する)', 'badge_color' => '#d97706', 'open' => true],
+                'active'    => ['title' => '⚡ ② 依頼案件進行中', 'badge_color' => '#2563eb', 'open' => true],
+                'done'      => ['title' => '💮 ③ 納品済みの案件', 'badge_color' => '#059669', 'open' => false]
+            ];
+
+            foreach ($section_titles as $key => $info):
+                $items = $current_cat[$key];
+            ?>
+                <details style="border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; padding: 12px; margin-bottom:15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" <?= $info['open'] ? 'open' : '' ?>>
+                    <summary style="cursor: pointer; font-size: 13px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center; user-select:none;">
+                        <span><?= $info['title'] ?> <span class="badge" style="background: <?= $info['badge_color'] ?>; color: white; margin-left: 5px;"><?= count($items) ?> 件</span></span>
+                    </summary>
+                    <div style="margin-top: 12px; overflow-x: auto;">
+                        <?php if (empty($items)): ?>
+                            <p style="color:#64748b; font-size:12px; margin: 10px 0 0 0;">該当する案件はありません。</p>
+                        <?php else: ?>
+                            <table style="width:100%; border-collapse:collapse; font-size:11px; text-align:left; border:1px solid #cbd5e1; min-width:850px;">
+                                <thead>
+                                    <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; color:#475569;">
+                                        <th style="padding:6px; border:1px solid #cbd5e1; width:70px; text-align:center;">管理番号</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1;">物件名</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:center; width:65px;">受付日</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:center; width:65px;">納期</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:center; width:65px;">納品日</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:right; width:90px;">延床面積(㎡)</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:right; width:95px;">請負金額(円)</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; width:80px;">担当者</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:center; width:75px;">状況</th>
+                                        <th style="padding:6px; border:1px solid #cbd5e1; text-align:center; width:130px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($items as $o): 
+                                        $date_str = $o['completed_at'] ?? $o['updated_at'] ?? $o['created_at'];
+                                        $ts = strtotime($date_str);
+                                        $y = (int)date('Y', $ts);
+                                        $m = (int)date('m', $ts);
+                                        if ((int)date('d', $ts) >= 26) {
+                                            $m++;
+                                            if ($m > 12) { $m = 1; $y++; }
+                                        }
+                                    ?>
+                                        <tr style="border-bottom:1px solid #cbd5e1; hover:background:#f8fafc;">
+                                            <td style="padding:6px; border:1px solid #cbd5e1; font-weight:bold; color:#475569; text-align:center;">S<?= sprintf('%04d', $o['id']) ?></td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; font-weight:bold; color:#1e3b8a; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:220px;">
+                                                <a href="project_subcontractor.php?id=<?= $o['project_id'] ?>" style="text-decoration:none; color:#1e3b8a;">🏠 <?= htmlspecialchars($o['project_name']) ?></a>
+                                            </td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;"><?= !empty($o['created_at']) ? date('m/d', strtotime($o['created_at'])) : '-' ?></td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:center; color:#ef4444; font-weight:bold;"><?= !empty($o['due_date']) ? date('m/d', strtotime($o['due_date'])) : '-' ?></td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;"><?= ($o['status'] === 'completed' && !empty($o['completed_at'])) ? date('m/d', strtotime($o['completed_at'])) : (($o['status'] === 'delivered' && !empty($o['updated_at'])) ? date('m/d', strtotime($o['updated_at'])) : '-') ?></td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:right; font-weight:bold;"><?= number_format($o['floor_area'], 1) ?> ㎡</td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:right; font-weight:bold; color:#10b981;"><?= number_format($o['order_amount']) ?> 円</td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; color:#334155; font-weight:bold;"><?= htmlspecialchars($o['staff_name'] ?: '未指定') ?></td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;">
+                                                <?php 
+                                                    if ($o['status'] === 'requested') echo '<span class="badge" style="background:#f59e0b; padding:1px 4px; font-size:9px; border-radius:3px;">承諾待ち</span>';
+                                                    elseif ($o['status'] === 'accepted') echo '<span class="badge" style="background:#3b82f6; padding:1px 4px; font-size:9px; border-radius:3px;">作業中</span>';
+                                                    elseif ($o['status'] === 'delivered') echo '<span class="badge" style="background:#fd7e14; padding:1px 4px; font-size:9px; border-radius:3px;">検収中</span>';
+                                                    elseif ($o['status'] === 'cb_requested') echo '<span class="badge" style="background:#ef4444; padding:1px 4px; font-size:9px; border-radius:3px;">修正対応</span>';
+                                                    elseif ($o['status'] === 'completed') echo '<span class="badge" style="background:#059669; padding:1px 4px; font-size:9px; border-radius:3px;">完了</span>';
+                                                ?>
+                                            </td>
+                                            <td style="padding:6px; border:1px solid #cbd5e1; text-align:center;">
+                                                <div style="display:flex; justify-content:center; gap:3px; align-items:center; flex-wrap:wrap;">
+                                                    <?php if ($o['status'] === 'requested' && !$is_admin): ?>
+                                                        <form method="POST" action="project_subcontractor.php" style="margin:0; display:flex; gap:2px; align-items:center; background:#fef3c7; padding:2px; border:1px solid #fde68a; border-radius:3px;">
+                                                            <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
+                                                            <input type="date" name="expected_delivery_date" required style="padding:1px; font-size:9px; width:75px;">
+                                                            <button type="submit" style="background:#10b981; color:white; border:none; padding:2px 4px; border-radius:2px; font-size:9px; cursor:pointer; font-weight:bold;">承諾</button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                    <a href="project_subcontractor.php?id=<?= $o['project_id'] ?>" style="background:#3b82f6; color:white; padding:3px 6px; border-radius:3px; text-decoration:none; font-size:9px; font-weight:bold; white-space:nowrap;">詳細・納品</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            <?php endforeach; ?>
         </div>
 
         <!-- 右カラム：グローバルチャット & 月次請求 -->
