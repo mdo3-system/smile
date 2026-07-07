@@ -676,8 +676,14 @@
 
 ---
 
-## 56. このドキュメントの所在
+## 56. バージョン定数 SYSTEM_VERSION と APP_VERSION の同期修正 (v1.5.59)
+- **仕様1 (SYSTEM_VERSION 定数の同期)**:
+  - PHP側で出力されるバージョン表示である `functions.php` の定数 `SYSTEM_VERSION` が `'v1.5.56'` のまま更新されておらず、ブラウザ上の表示と実アプリバージョンが不一致になっていた同期漏れバグを修正。`Version.js` の `window.APP_VERSION`（`1.5.59`）と完全に同期するように定数を更新。
+
+---
+
+## 57. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.58（2026-07-07）
+- **最終バージョン**: v1.5.59（2026-07-07）

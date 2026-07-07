@@ -154,6 +154,7 @@
 // 1.5.56: 依頼主詳細画面の右上ヘッダーメニューへ「🔔 メール通知設定」リンクとポップアップを移設し、マニュアル（依頼主・協力業者双方）を通知追加機能に合わせて改編
 // 1.5.57: 協力業者子アカウント（スタッフ）が承諾した後に詳細画面（project_subcontractor.php）や納品処理でアクセス権エラー（die）になるバグを親子判定クエリに修正して解消
 // 1.5.58: 協力業者ポータル（subcontractor_portal.php）を開いた際に、全体業務連絡チャットエリアが自動的に最下部（最新メッセージ）までスクロールする処理をJavaScriptで実装
+// 1.5.59: functions.php の定数 SYSTEM_VERSION と Version.js のバージョン表記の同期漏れを修正
 
-window.APP_VERSION = "1.5.58";
+window.APP_VERSION = "1.5.59";
 const APP_LAST_UPDATED = '2026-07-07';
