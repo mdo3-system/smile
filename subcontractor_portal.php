@@ -48,18 +48,37 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
     $sub_view_mode = $_SESSION['sub_view_mode'] ?? 'all';
     
     if ($has_parent && $sub_view_mode === 'personal') {
+        $parent_id = $target_sub_id;
         $stmtExport = $pdo->prepare("
             SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, u_std.contact_name as staff_name
             FROM subcontractor_orders o 
             JOIN projects p ON o.project_id = p.id 
             LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
-            WHERE o.subcontractor_id = :user_id
-              AND o.order_type = :otype
+            WHERE (
+                o.subcontractor_id = :user_id 
+                AND (
+                    (:otype = 'design' AND o.order_type = 'design')
+                    OR (:otype = 'structural' AND o.order_type IN ('struct', 'structural'))
+                )
+            ) OR (
+                o.status = 'requested'
+                AND o.subcontractor_id = :parent_id
+                AND (
+                    (:specialty = 'design' AND :otype = 'design' AND o.order_type = 'design')
+                    OR (:specialty = 'structural' AND :otype = 'structural' AND o.order_type IN ('struct', 'structural'))
+                    OR (:specialty = 'both' AND (
+                        (:otype = 'design' AND o.order_type = 'design')
+                        OR (:otype = 'structural' AND o.order_type IN ('struct', 'structural'))
+                    ))
+                )
+            )
             ORDER BY o.id DESC
         ");
         $stmtExport->execute([
             'user_id' => $user_id,
-            'otype' => $export_type
+            'parent_id' => $parent_id,
+            'otype' => $export_type,
+            'specialty' => $my_specialty
         ]);
     } else {
         $stmtExport = $pdo->prepare("
@@ -68,7 +87,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
             JOIN projects p ON o.project_id = p.id 
             LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
             WHERE (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2))
-              AND o.order_type = :otype
+              AND (
+                  (:otype = 'design' AND o.order_type = 'design')
+                  OR (:otype = 'structural' AND o.order_type IN ('struct', 'structural'))
+              )
             ORDER BY o.id DESC
         ");
         $stmtExport->execute([
@@ -427,15 +449,30 @@ $stmtUserParent->execute(['id' => $user_id]);
 $has_parent = (bool)$stmtUserParent->fetchColumn();
 
 if ($has_parent && $sub_view_mode === 'personal') {
+    // 親ID（代表ID）を取得
+    $parent_id = $target_sub_id;
     $stmtTasks = $pdo->prepare("
         SELECT o.*, p.project_name, p.status as project_status, p.primary_due_date, p.schedule_actuals, p.req_permit, p.req_wall, p.req_skin, p.req_sky, p.req_opt_kisohari, u_std.contact_name as staff_name
         FROM subcontractor_orders o 
         JOIN projects p ON o.project_id = p.id 
         LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
         WHERE o.subcontractor_id = :user_id
+           OR (
+               o.status = 'requested' 
+               AND o.subcontractor_id = :parent_id 
+               AND (
+                   (:specialty = 'design' AND o.order_type = 'design')
+                   OR (:specialty = 'structural' AND o.order_type IN ('struct', 'structural'))
+                   OR (:specialty = 'both')
+               )
+           )
         ORDER BY ISNULL(p.last_manual_chat_at) ASC, p.last_manual_chat_at DESC, ISNULL(p.primary_due_date) ASC, p.primary_due_date ASC, FIELD(p.status, 'quote_req', 'doc_submitted', 'primary_prep', 'contracted', 'structural_dwg', 'submission', 'submitting', 'correction', 'completed') ASC, p.project_name ASC
     ");
-    $stmtTasks->execute(['user_id' => $user_id]);
+    $stmtTasks->execute([
+        'user_id' => $user_id,
+        'parent_id' => $parent_id,
+        'specialty' => $my_specialty
+    ]);
 } else {
     // 業者全体（本アカウント宛て ＋ スタッフ宛て）またはメインアカウントの場合
     $stmtTasks = $pdo->prepare("
@@ -453,12 +490,12 @@ if ($has_parent && $sub_view_mode === 'personal') {
 }
 $tasks = $stmtTasks->fetchAll();
 
-// 意匠図 (design) と 構造図 (structural) へのタブ別データ分類
+// 意匠図 (design) と 構造図 (structural) へのタブ別 data 分類
 $design_tasks = [];
 $structural_tasks = [];
 
 foreach ($tasks as $t) {
-    if (($t['order_type'] ?? 'design') === 'structural') {
+    if (in_array($t['order_type'], ['struct', 'structural'])) {
         $structural_tasks[] = $t;
     } else {
         $design_tasks[] = $t;

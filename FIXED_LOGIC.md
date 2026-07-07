@@ -621,8 +621,20 @@
 
 ---
 
-## 50. このドキュメントの所在
+## 50. 協力業者ポータルの意匠/構造判定バグ修正、承諾時スタッフID自動割当、およびマイ案件クエリ拡張 (v1.5.53)
+- **仕様1 (意匠図・構造図のタブ分割バグ修正)**:
+  - データベース（`subcontractor_orders`）の構造図発注データの `order_type` 実値が `'struct'` であることを見落とし前リリースで `'structural'` のみを対象としていたバグを解消。
+  - `in_array($t['order_type'], ['struct', 'structural'])` にて「構造図」を正確にタブ・カテゴリー分割描画し、残りを「意匠図」とするようポータル（`subcontractor_portal.php`）の判定を修正。
+- **仕様2 (承諾時に承諾スタッフIDを自動割当)**:
+  - `project_subcontractor.php` での承諾処理（`acceptOrder`）実行時の引数を、親ID（代表者ID）からログイン中の「スタッフ本人のユーザーID（`$user_id`）」へ変更。
+  - `SubcontractorOrderService::acceptOrder` 内で、業者グループ（親IDが一致する）宛ての発注に対するスタッフの承諾を許可し、かつ承諾した瞬間に `subcontractor_orders.subcontractor_id` をそのスタッフIDへ自動更新・上書きする仕様を実装。これにより管理者が手動で担当を割り当てることなく、承諾者が自動で担当として確定する。
+- **仕様3 (「マイ案件（個人）」表示時における親宛て新規依頼の自動抽出)**:
+  - スタッフアカウント（ID 15: 意匠図, ID 17: 構造図）がポータルを「個人担当案件のみ」に絞り込んでいる（`sub_view_mode = 'personal'`）状態であっても、親宛てに届いた未承諾の新規依頼（`status = 'requested'`）で、かつ本人の専門業務（`sub_specialty` = `'design'` または `'structural'`）に一致する種別のタスクが自動で画面に「承諾待ち」として表示されるように、メインダッシュボードクエリおよびCSVエクスポート用クエリを拡張。
+
+---
+
+## 51. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.52（2026-07-07）
+- **最終バージョン**: v1.5.53（2026-07-07）

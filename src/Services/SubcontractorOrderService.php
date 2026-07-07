@@ -26,16 +26,53 @@ class SubcontractorOrderService
     {
         $this->pdo->beginTransaction();
         try {
-            // ステータスと完了納期予定日を更新
+            // 現在の発注レコードの subcontractor_id を取得
+            $stmtGet = $this->pdo->prepare("SELECT subcontractor_id FROM subcontractor_orders WHERE id = :id");
+            $stmtGet->execute(['id' => $orderId]);
+            $assignedSubId = $stmtGet->fetchColumn();
+
+            if (!$assignedSubId) {
+                throw new Exception("発注レコードが見つかりません。");
+            }
+
+            // 承諾者の親IDを取得 (グループ確認用)
+            $stmtParent = $this->pdo->prepare("SELECT parent_id FROM users WHERE id = :id");
+            $stmtParent->execute(['id' => $subcontractorId]);
+            $subParentId = $stmtParent->fetchColumn();
+
+            // 承諾権限の確認
+            $isAuthorized = false;
+            if ($assignedSubId == $subcontractorId) {
+                $isAuthorized = true;
+            } elseif ($subParentId && $assignedSubId == $subParentId) {
+                $isAuthorized = true;
+            } else {
+                // 親が承諾者で、スタッフに発注されている場合も許可
+                $stmtCheckParent = $this->pdo->prepare("SELECT parent_id FROM users WHERE id = :assigned_id");
+                $stmtCheckParent->execute(['assigned_id' => $assignedSubId]);
+                $assignedParentId = $stmtCheckParent->fetchColumn();
+                if ($assignedParentId == $subcontractorId) {
+                    $isAuthorized = true;
+                }
+            }
+
+            if (!$isAuthorized) {
+                throw new Exception("この発注を承諾する権限がありません。");
+            }
+
+            // ステータス、完了納期予定日を更新。さらに担当者を承諾した本人に自動更新
             $stmt = $this->pdo->prepare("
                 UPDATE subcontractor_orders 
-                SET status = 'accepted', expected_delivery_date = :edate, updated_at = NOW() 
-                WHERE id = :id AND subcontractor_id = :sub_id
+                SET status = 'accepted', 
+                    subcontractor_id = :sub_id, 
+                    expected_delivery_date = :edate, 
+                    updated_at = NOW() 
+                WHERE id = :id
             ");
             $stmt->execute([
                 'edate' => $expectedDeliveryDate,
-                'id' => $orderId,
-                'sub_id' => $subcontractorId
+                'sub_id' => $subcontractorId,
+                'id' => $orderId
             ]);
 
             // 案件IDを取得
@@ -77,15 +114,47 @@ class SubcontractorOrderService
     {
         $this->pdo->beginTransaction();
         try {
+            // 現在の発注レコードの subcontractor_id を取得
+            $stmtGet = $this->pdo->prepare("SELECT subcontractor_id FROM subcontractor_orders WHERE id = :id");
+            $stmtGet->execute(['id' => $orderId]);
+            $assignedSubId = $stmtGet->fetchColumn();
+
+            if (!$assignedSubId) {
+                throw new Exception("発注レコードが見つかりません。");
+            }
+
+            // 承諾者の親IDを取得
+            $stmtParent = $this->pdo->prepare("SELECT parent_id FROM users WHERE id = :id");
+            $stmtParent->execute(['id' => $subcontractorId]);
+            $subParentId = $stmtParent->fetchColumn();
+
+            // 辞退権限の確認
+            $isAuthorized = false;
+            if ($assignedSubId == $subcontractorId) {
+                $isAuthorized = true;
+            } elseif ($subParentId && $assignedSubId == $subParentId) {
+                $isAuthorized = true;
+            } else {
+                $stmtCheckParent = $this->pdo->prepare("SELECT parent_id FROM users WHERE id = :assigned_id");
+                $stmtCheckParent->execute(['assigned_id' => $assignedSubId]);
+                $assignedParentId = $stmtCheckParent->fetchColumn();
+                if ($assignedParentId == $subcontractorId) {
+                    $isAuthorized = true;
+                }
+            }
+
+            if (!$isAuthorized) {
+                throw new Exception("この発注を辞退する権限がありません。");
+            }
+
             // ステータスを rejected に更新
             $stmt = $this->pdo->prepare("
                 UPDATE subcontractor_orders 
                 SET status = 'rejected', updated_at = NOW() 
-                WHERE id = :id AND subcontractor_id = :sub_id
+                WHERE id = :id
             ");
             $stmt->execute([
-                'id' => $orderId,
-                'sub_id' => $subcontractorId
+                'id' => $orderId
             ]);
 
             // 案件IDを取得

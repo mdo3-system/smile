@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
     $order_id = intval($_POST['order_id']);
     $expected_delivery_date = $_POST['expected_delivery_date'];
     
-    $subcontractorOrderService->acceptOrder($order_id, $sub_company_id, $expected_delivery_date);
+    $subcontractorOrderService->acceptOrder($order_id, $user_id, $expected_delivery_date);
 
     $stmtP = $pdo->prepare("SELECT project_id FROM subcontractor_orders WHERE id = :id");
     $stmtP->execute(['id' => $order_id]);
@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && !isset
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['action']) && $_POST['action'] === 'reject_order') {
     $order_id = intval($_POST['order_id']);
     
-    $subcontractorOrderService->rejectOrder($order_id, $sub_company_id);
+    $subcontractorOrderService->rejectOrder($order_id, $user_id);
 
     header("Location: subcontractor_portal.php");
     exit;

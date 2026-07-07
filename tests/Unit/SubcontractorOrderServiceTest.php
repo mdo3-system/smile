@@ -24,6 +24,16 @@ class SubcontractorOrderServiceTest extends TestCase
 
         // テスト用のテーブル作成
         $this->pdo->exec("
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parent_id INTEGER NULL,
+                company_name TEXT NOT NULL,
+                contact_name TEXT NOT NULL,
+                role TEXT NOT NULL
+            );
+        ");
+
+        $this->pdo->exec("
             CREATE TABLE subcontractor_orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
@@ -49,6 +59,11 @@ class SubcontractorOrderServiceTest extends TestCase
         ");
 
         // テスト用データ追加
+        $this->pdo->exec("
+            INSERT INTO users (id, parent_id, company_name, contact_name, role) 
+            VALUES (3, NULL, 'テスト会社', 'テスト担当者', 'subcontractor')
+        ");
+
         $stmt = $this->pdo->prepare("
             INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount, status) 
             VALUES (10, 3, 'テスト発注', 50000, 'requested')
