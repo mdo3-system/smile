@@ -119,6 +119,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'note_update' => $note
                 ]);
 
+                // === [連動処理] 該当月の完了発注タスクを「支払済」に更新 ===
+                $stmtOrders = $pdo->prepare("
+                    SELECT id, completed_at, updated_at, created_at 
+                    FROM subcontractor_orders 
+                    WHERE (subcontractor_id = :sub_id_1 OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)) 
+                      AND status = 'completed' 
+                      AND payment_status != 'paid'
+                ");
+                $stmtOrders->execute([
+                    'sub_id_1' => $target_sub_id,
+                    'sub_id_2' => $target_sub_id
+                ]);
+                $candidate_orders = $stmtOrders->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($candidate_orders as $co) {
+                    $date_str = $co['completed_at'] ?? $co['updated_at'] ?? $co['created_at'];
+                    $ts = strtotime($date_str);
+                    
+                    $y = (int)date('Y', $ts);
+                    $m = (int)date('m', $ts);
+                    $d = (int)date('d', $ts);
+                    
+                    // 25日締めルール
+                    if ($d >= 26) {
+                        $m++;
+                        if ($m > 12) {
+                            $m = 1;
+                            $y++;
+                        }
+                    }
+                    $co_month = sprintf("%04d-%02d", $y, $m);
+                    
+                    if ($co_month === $target_month) {
+                        $stmtUp = $pdo->prepare("
+                            UPDATE subcontractor_orders 
+                            SET payment_status = 'paid', payment_date = :p_date 
+                            WHERE id = :id
+                        ");
+                        $stmtUp->execute([
+                            'p_date' => date('Y-m-d'),
+                            'id' => $co['id']
+                        ]);
+                    }
+                }
+
                 // 協力業者チャット（global_messages）へ自動通知メッセージを投稿
                 $payment_msg = "【お支払い完了のお知らせ】\n";
                 $payment_msg .= "{$target_month} 納品完了分につきまして、お支払いが完了いたしました。\n\n";
@@ -153,15 +198,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'unarchive_sub_payment' && $has_finance_access) {
         $target_month = $_POST['target_month'] ?? '';
         if ($target_month !== '') {
-            $stmt = $pdo->prepare("
-                UPDATE subcontractor_payments 
-                SET is_archived = 0, paid_amount = 0
-                WHERE subcontractor_id = :sub_id AND target_month = :t_month
-            ");
-            $stmt->execute([
-                'sub_id' => $target_sub_id,
-                't_month' => $target_month
-            ]);
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("
+                    UPDATE subcontractor_payments 
+                    SET is_archived = 0, paid_amount = 0
+                    WHERE subcontractor_id = :sub_id AND target_month = :t_month
+                ");
+                $stmt->execute([
+                    'sub_id' => $target_sub_id,
+                    't_month' => $target_month
+                ]);
+
+                // === [連動処理] 該当月の支払済発注タスクを「未払い」に戻す ===
+                $stmtPaidOrders = $pdo->prepare("
+                    SELECT id, completed_at, updated_at, created_at 
+                    FROM subcontractor_orders 
+                    WHERE (subcontractor_id = :sub_id_1 OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)) 
+                      AND status = 'completed' 
+                      AND payment_status = 'paid'
+                ");
+                $stmtPaidOrders->execute([
+                    'sub_id_1' => $target_sub_id,
+                    'sub_id_2' => $target_sub_id
+                ]);
+                $paid_candidate_orders = $stmtPaidOrders->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($paid_candidate_orders as $pco) {
+                    $date_str = $pco['completed_at'] ?? $pco['updated_at'] ?? $pco['created_at'];
+                    $ts = strtotime($date_str);
+                    
+                    $y = (int)date('Y', $ts);
+                    $m = (int)date('m', $ts);
+                    $d = (int)date('d', $ts);
+                    
+                    // 25日締めルール
+                    if ($d >= 26) {
+                        $m++;
+                        if ($m > 12) {
+                            $m = 1;
+                            $y++;
+                        }
+                    }
+                    $co_month = sprintf("%04d-%02d", $y, $m);
+                    
+                    if ($co_month === $target_month) {
+                        $stmtUp = $pdo->prepare("
+                            UPDATE subcontractor_orders 
+                            SET payment_status = 'unpaid', payment_date = NULL 
+                            WHERE id = :id
+                        ");
+                        $stmtUp->execute([
+                            'id' => $pco['id']
+                        ]);
+                    }
+                }
+
+                $pdo->commit();
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                die("支払記録の戻し処理に失敗しました: " . $e->getMessage());
+            }
         }
         header("Location: subcontractor_portal.php?sub_id=" . $target_sub_id);
         exit;
