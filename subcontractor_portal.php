@@ -3,6 +3,12 @@ require_once 'auth.php';
 require_once 'functions.php';
 check_auth(['admin', 'subcontractor', 'accountant']);
 
+// 追加メールアドレスの取得
+$stmtAddEmails = $pdo->prepare("SELECT email FROM user_notification_emails WHERE user_id = :uid ORDER BY id ASC");
+$stmtAddEmails->execute(['uid' => $_SESSION['user_id']]);
+$additional_emails_list = $stmtAddEmails->fetchAll(PDO::FETCH_COLUMN) ?: [];
+$additional_emails_str = implode("\n", $additional_emails_list);
+
 $user_id = $_SESSION['user_id'];
 $is_admin = ($_SESSION['role'] === 'admin');
 $is_accountant = ($_SESSION['role'] === 'accountant');
@@ -615,6 +621,13 @@ $global_messages = $stmtChat->fetchAll();
         .task-card { border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; margin-bottom: 10px; }
         .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; }
         
+        /* トグルスイッチ用スタイル */
+        .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 18px; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #10b981; }
+        input:checked + .slider:before { transform: translateX(16px); }
+        
         /* 招待リンク用ツールチップ */
         .tooltip-btn-container {
             position: relative;
@@ -681,6 +694,40 @@ $global_messages = $stmtChat->fetchAll();
                         このボタンを押すとこのダッシュボードへの招待リンクをコピーします。<br>
                         招待者へメールを作成し、本文に招待リンクを貼り付けてアクセスしてもらってください。
                     </span>
+                </div>
+            <?php endif; ?>
+            <?php if (!$is_admin && !empty($_SESSION['user_id'])): ?>
+                <div style="position:relative; display:inline-block;">
+                    <a href="#" class="notif-setting-link" onclick="toggleNotificationPopup(event); return false;" style="font-size:12px; color:#2563eb; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:2px; margin-right:10px;" title="クリックしてメール通知の受信設定を変更します">
+                        🔔 メール通知設定
+                    </a>
+                    
+                    <!-- 通知設定ポップアップ (協力業者用) -->
+                    <div id="myAccountPopup" style="display:none; position:absolute; background:white; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1px solid #cbd5e1; padding:12px; z-index:1000; width:220px; font-size:11px; top:25px; right:0; text-align:left;">
+                        <div style="font-weight:bold; border-bottom:1px solid #edf2f7; padding-bottom:5px; margin-bottom:8px; color:#1e293b; display:flex; justify-content:space-between; align-items:center;">
+                            <span>⚙️ 通知設定</span>
+                            <span style="cursor:pointer; color:#94a3b8; font-size:12px;" onclick="closeMyAccountPopup()">✕</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-weight:600; color:#475569;">メール通知の受け取り</span>
+                            <label class="switch" style="position:relative; display:inline-block; width:34px; height:18px;">
+                                 <input type="checkbox" id="user_notification_toggle" style="opacity:0; width:0; height:0;" 
+                                       <?= ($_SESSION['email_notification_enabled'] ?? 1) ? 'checked' : '' ?>
+                                       onchange="updateNotificationSetting(this.checked, document.getElementById('additional_emails_input').value, false)">
+                                <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.3s; border-radius:18px;"></span>
+                            </label>
+                        </div>
+                        <div style="margin-top:10px; margin-bottom:8px;">
+                            <span style="font-weight:600; color:#475569; display:block; margin-bottom:4px;">追加の通知メールアドレス:</span>
+                            <textarea id="additional_emails_input" style="width:100%; height:60px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:10px; resize:vertical; box-sizing:border-box;" placeholder="example@test.com&#10;another@test.com&#10;(改行またはカンマ区切り)"><?= htmlspecialchars($additional_emails_str, ENT_QUOTES) ?></textarea>
+                        </div>
+                        <div style="text-align:right; margin-bottom:8px;">
+                            <button onclick="updateNotificationSetting(document.getElementById('user_notification_toggle').checked, document.getElementById('additional_emails_input').value, true)" style="background:#10b981; border:none; padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; color:white; font-weight:bold;">設定を保存</button>
+                        </div>
+                        <div style="font-size:9px; color:#94a3b8; line-height:1.3; font-weight:normal;">
+                            ※新規発注や修正依頼メッセージが入った際の通知メールを制御します。
+                        </div>
+                    </div>
                 </div>
             <?php endif; ?>
             <div style="font-size:12px; color:#aaa; font-weight:bold;">Ver: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : '' ?></div>
@@ -1029,5 +1076,47 @@ $global_messages = $stmtChat->fetchAll();
             </div>
         </div>
     </div>
+    <script>
+    function toggleNotificationPopup(event) {
+        event.stopPropagation();
+        const popup = document.getElementById('myAccountPopup');
+        popup.style.display = (popup.style.display === 'none' || popup.style.display === '') ? 'block' : 'none';
+    }
+
+    function closeMyAccountPopup() {
+        document.getElementById('myAccountPopup').style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+        const popup = document.getElementById('myAccountPopup');
+        if (popup && !popup.contains(e.target) && !e.target.closest('.notif-setting-link') && !e.target.closest('#myAccountPopup')) {
+            popup.style.display = 'none';
+        }
+    });
+
+    function updateNotificationSetting(checked, additionalEmails, showAlert) {
+        fetch('api_update_notification.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                enabled: checked ? 1 : 0,
+                additional_emails: additionalEmails
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Notification setting updated:", data.enabled, data.emails);
+                if (showAlert) {
+                    alert("通知設定を保存しました。");
+                }
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("設定の更新に失敗しました。");
+        });
+    }
+    </script>
 </body>
 </html>

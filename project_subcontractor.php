@@ -196,6 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'msg' => $notify_msg
             ]);
 
+            sendChatEmailNotification($project_id, $user_id, $_SESSION['role'], 'sub_admin', $notify_msg, $pdo);
+
             $pdo->commit();
         } else {
             $pdo->rollBack();

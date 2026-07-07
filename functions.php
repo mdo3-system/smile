@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.53');
+define('SYSTEM_VERSION', 'v1.5.54');
 
 
 // ==========================================
@@ -229,14 +229,37 @@ function getCompanyNotificationEmails($userId, $pdo) {
         
         $parentId = $row['parent_id'] ?: $row['id'];
         
+        // 1. 同一会社内の登録ユーザーメール（通知ON）を取得
         $stmtEmails = $pdo->prepare("
             SELECT email FROM users 
-            WHERE (id = :pid OR parent_id = :pid)
+            WHERE (id = :pid_1 OR parent_id = :pid_2)
             AND email_notification_enabled = 1
             AND email IS NOT NULL AND email != ''
         ");
-        $stmtEmails->execute(['pid' => $parentId]);
-        return $stmtEmails->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $stmtEmails->execute([
+            'pid_1' => $parentId,
+            'pid_2' => $parentId
+        ]);
+        $emails = $stmtEmails->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        
+        // 2. 追加の通知先メールアドレス（通知ONのユーザーに紐づくもの）を取得
+        $stmtAdd = $pdo->prepare("
+            SELECT email FROM user_notification_emails 
+            WHERE user_id IN (
+                SELECT id FROM users 
+                WHERE (id = :pid_1 OR parent_id = :pid_2)
+                AND email_notification_enabled = 1
+            )
+            AND email IS NOT NULL AND email != ''
+        ");
+        $stmtAdd->execute([
+            'pid_1' => $parentId,
+            'pid_2' => $parentId
+        ]);
+        $add_emails = $stmtAdd->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        
+        $result = array_unique(array_merge($emails, $add_emails));
+        return array_values($result);
     } catch (Exception $e) {
         return [];
     }
@@ -248,13 +271,29 @@ function getCompanyNotificationEmails($userId, $pdo) {
 function getAdminNotificationEmails($pdo) {
     if (!$pdo) return [];
     try {
+        // 1. 通知ONの管理者の登録メールを取得
         $stmt = $pdo->query("
             SELECT email FROM users 
             WHERE role = 'admin'
             AND email_notification_enabled = 1
             AND email IS NOT NULL AND email != ''
         ");
-        return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $emails = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        
+        // 2. 追加の通知先メールアドレスを取得
+        $stmtAdd = $pdo->query("
+            SELECT email FROM user_notification_emails 
+            WHERE user_id IN (
+                SELECT id FROM users 
+                WHERE role = 'admin'
+                AND email_notification_enabled = 1
+            )
+            AND email IS NOT NULL AND email != ''
+        ");
+        $add_emails = $stmtAdd->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        
+        $result = array_unique(array_merge($emails, $add_emails));
+        return array_values($result);
     } catch (Exception $e) {
         return [];
     }

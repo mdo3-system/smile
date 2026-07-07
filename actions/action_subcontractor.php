@@ -76,6 +76,8 @@ if ($action === 'order_subcontractor') {
             'msg' => $msg
         ]);
 
+        sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'sub_admin', $msg, $pdo);
+
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -104,6 +106,8 @@ if ($action === 'approve_delivery') {
                 'sid' => $_SESSION['user_id'],
                 'msg' => $msg
             ]);
+            
+            sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'sub_admin', $msg, $pdo);
             
             $pdo->commit();
         } catch (Exception $e) {
@@ -195,6 +199,7 @@ if ($action === 'approve_delivery') {
             'sid' => $_SESSION['user_id'],
             'msg' => $notify_sub_msg
         ]);
+        sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'sub_admin', $notify_sub_msg, $pdo);
 
         if ($order_type === 'struct') {
             $notify_client_msg = "【自動通知】成果物（構造図）の納品が完了いたしました。成果物パネルよりご確認ください。";
@@ -207,6 +212,7 @@ if ($action === 'approve_delivery') {
                 'sid' => $_SESSION['user_id'],
                 'msg' => $notify_client_msg
             ]);
+            sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'client_admin', $notify_client_msg, $pdo);
         }
 
         $pdo->commit();
@@ -299,6 +305,8 @@ if ($action === 'submit_checkback') {
                     'msg' => $msg
                 ]);
             }
+
+            sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'sub_admin', $msg, $pdo);
 
             $pdo->commit();
         } catch (Exception $e) {

@@ -38,6 +38,15 @@ class ChatNotificationTest extends TestCase {
             )
         ");
 
+        $this->pdo->exec("
+            CREATE TABLE user_notification_emails (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                email TEXT NOT NULL,
+                created_at TEXT
+            )
+        ");
+
         require_once __DIR__ . '/../../functions.php';
     }
 
@@ -47,12 +56,20 @@ class ChatNotificationTest extends TestCase {
         $this->pdo->exec("INSERT INTO users (id, email, role, parent_id, email_notification_enabled) VALUES (11, 'child1@client.com', 'client', 10, 1)");
         $this->pdo->exec("INSERT INTO users (id, email, role, parent_id, email_notification_enabled) VALUES (12, 'child2@client.com', 'client', 10, 0)"); // 通知オフ
 
+        // 追加メールアドレスの挿入
+        $this->pdo->exec("INSERT INTO user_notification_emails (user_id, email) VALUES (10, 'parent_add1@client.com')");
+        $this->pdo->exec("INSERT INTO user_notification_emails (user_id, email) VALUES (11, 'child1_add1@client.com')");
+        $this->pdo->exec("INSERT INTO user_notification_emails (user_id, email) VALUES (12, 'child2_add1@client.com')"); // 通知OFFユーザーの追加アドレスは抽出されないはず
+
         $emails = getCompanyNotificationEmails(11, $this->pdo);
 
-        $this->assertCount(2, $emails);
+        $this->assertCount(4, $emails);
         $this->assertContains('parent@client.com', $emails);
         $this->assertContains('child1@client.com', $emails);
+        $this->assertContains('parent_add1@client.com', $emails);
+        $this->assertContains('child1_add1@client.com', $emails);
         $this->assertNotContains('child2@client.com', $emails);
+        $this->assertNotContains('child2_add1@client.com', $emails);
     }
 
     public function testGetAdminNotificationEmails() {

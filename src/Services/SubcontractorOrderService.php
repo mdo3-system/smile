@@ -92,6 +92,15 @@ class SubcontractorOrderService
                     'sid' => $subcontractorId,
                     'msg' => $msg
                 ]);
+
+                // メール通知
+                if (function_exists('sendChatEmailNotification')) {
+                    $stmtRole = $this->pdo->prepare("SELECT role FROM users WHERE id = :uid");
+                    $stmtRole->execute(['uid' => $subcontractorId]);
+                    $senderRole = $stmtRole->fetchColumn() ?: 'subcontractor';
+                    
+                    sendChatEmailNotification($projectId, $subcontractorId, $senderRole, 'sub_admin', $msg, $this->pdo);
+                }
             }
 
             $this->pdo->commit();
@@ -174,6 +183,15 @@ class SubcontractorOrderService
                     'sid' => $subcontractorId,
                     'msg' => $msg
                 ]);
+
+                // メール通知
+                if (function_exists('sendChatEmailNotification')) {
+                    $stmtRole = $this->pdo->prepare("SELECT role FROM users WHERE id = :uid");
+                    $stmtRole->execute(['uid' => $subcontractorId]);
+                    $senderRole = $stmtRole->fetchColumn() ?: 'subcontractor';
+                    
+                    sendChatEmailNotification($projectId, $subcontractorId, $senderRole, 'sub_admin', $msg, $this->pdo);
+                }
             }
 
             $this->pdo->commit();

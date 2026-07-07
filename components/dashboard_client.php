@@ -1,6 +1,12 @@
 <?php
 // components/dashboard_client.php
 // 依頼主用ダッシュボード
+
+// 追加メールアドレスの取得
+$stmtAddEmails = $pdo->prepare("SELECT email FROM user_notification_emails WHERE user_id = :uid ORDER BY id ASC");
+$stmtAddEmails->execute(['uid' => $_SESSION['user_id']]);
+$additional_emails_list = $stmtAddEmails->fetchAll(PDO::FETCH_COLUMN) ?: [];
+$additional_emails_str = implode("\n", $additional_emails_list);
 ?>
 <div class="container" style="flex-direction: column;">
     <div style="display:flex; gap:20px; width:100%;">
@@ -55,7 +61,7 @@
                 </div>
 
                 <!-- 通知設定ポップアップ -->
-                <div id="myAccountPopup" style="display:none; position:absolute; background:white; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1px solid #cbd5e1; padding:12px; z-index:1000; width:180px; font-size:11px; top:35px; right:60px;">
+                <div id="myAccountPopup" style="display:none; position:absolute; background:white; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1px solid #cbd5e1; padding:12px; z-index:1000; width:220px; font-size:11px; top:35px; right:60px;">
                     <div style="font-weight:bold; border-bottom:1px solid #edf2f7; padding-bottom:5px; margin-bottom:8px; color:#1e293b; display:flex; justify-content:space-between; align-items:center;">
                         <span>⚙️ 通知設定</span>
                         <span style="cursor:pointer; color:#94a3b8; font-size:12px;" onclick="closeMyAccountPopup()">✕</span>
@@ -65,9 +71,16 @@
                         <label class="switch" style="position:relative; display:inline-block; width:34px; height:18px;">
                              <input type="checkbox" id="user_notification_toggle" style="opacity:0; width:0; height:0;" 
                                    <?= ($_SESSION['email_notification_enabled'] ?? 1) ? 'checked' : '' ?>
-                                   onchange="updateNotificationSetting(this.checked)">
+                                   onchange="updateNotificationSetting(this.checked, document.getElementById('additional_emails_input').value, false)">
                             <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.3s; border-radius:18px;"></span>
                         </label>
+                    </div>
+                    <div style="margin-top:10px; margin-bottom:8px;">
+                        <span style="font-weight:600; color:#475569; display:block; margin-bottom:4px;">追加の通知メールアドレス:</span>
+                        <textarea id="additional_emails_input" style="width:100%; height:60px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:10px; resize:vertical; box-sizing:border-box;" placeholder="example@test.com&#10;another@test.com&#10;(改行またはカンマ区切り)"><?= htmlspecialchars($additional_emails_str, ENT_QUOTES) ?></textarea>
+                    </div>
+                    <div style="text-align:right; margin-bottom:8px;">
+                        <button onclick="updateNotificationSetting(document.getElementById('user_notification_toggle').checked, document.getElementById('additional_emails_input').value, true)" style="background:#10b981; border:none; padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; color:white; font-weight:bold;">設定を保存</button>
                     </div>
                     <div style="font-size:9px; color:#94a3b8; line-height:1.3;">
                         ※新着メッセージや設計成果物アップロード時の通知メールを制御します。
@@ -96,28 +109,33 @@
 
                 document.addEventListener('click', function(e) {
                     const popup = document.getElementById('myAccountPopup');
-                    if (popup && !popup.contains(e.target) && !e.target.closest('.staff-avatar-wrapper') && !e.target.closest('.notif-setting-link')) {
+                    if (popup && !popup.contains(e.target) && !e.target.closest('.staff-avatar-wrapper') && !e.target.closest('.notif-setting-link') && !e.target.closest('#myAccountPopup')) {
                         popup.style.display = 'none';
                     }
                 });
 
-                function updateNotificationSetting(checked) {
+                function updateNotificationSetting(checked, additionalEmails, showAlert) {
                     fetch('api_update_notification.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ enabled: checked ? 1 : 0 })
+                        body: JSON.stringify({ 
+                            enabled: checked ? 1 : 0,
+                            additional_emails: additionalEmails
+                        })
                     })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            console.log("Notification setting updated:", data.enabled);
+                            console.log("Notification setting updated:", data.enabled, data.emails);
+                            if (showAlert) {
+                                alert("通知設定を保存しました。");
+                            }
                         }
                     })
                     .catch(err => {
                         console.error(err);
                         alert("設定の更新に失敗しました。");
                     });
-                }
                 </script>
                 <div style="font-size:13px; line-height:1.6;">
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
