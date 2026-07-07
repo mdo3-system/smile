@@ -50,7 +50,7 @@ class StatusHelper
             }
         }
         else {
-            // 1. スケジュール工程の現在地（未完了の最初のステップ）を走査して判定する
+            // 1. スケジュール工程の現在地（未完了の最初のステップ）を走査して状態をロードしておく
             require_once __DIR__ . '/../../functions.php';
             $base_days = getScheduleBaseDays($project);
             
@@ -84,7 +84,8 @@ class StatusHelper
                 }
             }
 
-            // 2. スケジュール工程の現在地が「依頼主ボール (actor === 'client')」の場合、最優先で依頼主ボールとする！
+            $actor = null;
+            $name = null;
             if ($first_uncompleted_idx !== null) {
                 $step = $steps[$first_uncompleted_idx];
                 $actor = $step['actor'];
@@ -113,51 +114,50 @@ class StatusHelper
                         $name = '審査完了';
                     }
                 }
-                
-                if ($actor === 'client') {
+            }
+
+            // 2. 【最優先判定】進行中の協力業者タスク（外注）がある場合は、それを最優先でボールとする！
+            $stmtTasks = $pdo->prepare("SELECT * FROM subcontractor_orders WHERE project_id = :pid AND status != 'cancelled'");
+            $stmtTasks->execute(['pid' => $project['id']]);
+            $tasks = $stmtTasks->fetchAll();
+
+            if (count($tasks) > 0) {
+                $has_sub_ball = false;
+                $has_delivered_task = false;
+                foreach ($tasks as $task) {
+                    if ($task['status'] === 'requested' || $task['status'] === 'accepted' || $task['status'] === 'cb_requested') {
+                        $has_sub_ball = true;
+                    } elseif ($task['status'] === 'delivered') {
+                        $has_delivered_task = true;
+                    }
+                }
+
+                if ($has_sub_ball) {
                     $res = [
-                        'ball_owner' => 'client',
-                        'label' => $name . ' (依頼主ボール)',
-                        'color' => '#e67e22'
+                        'ball_owner' => 'subcontractor',
+                        'label' => '作成中 (協力業者ボール)',
+                        'color' => '#8b5cf6' // Purple
+                    ];
+                }
+                elseif ($has_delivered_task) {
+                    $res = [
+                        'ball_owner' => 'admin',
+                        'label' => '納品検収中 (管理者ボール)',
+                        'color' => '#3b82f6' // Blue
                     ];
                 }
             }
 
-            // 3. 依頼主ボールではない場合、進行中の協力業者タスク（外注）があるかチェックする
-            if (!$res) {
-                $stmtTasks = $pdo->prepare("SELECT * FROM subcontractor_orders WHERE project_id = :pid AND status != 'cancelled'");
-                $stmtTasks->execute(['pid' => $project['id']]);
-                $tasks = $stmtTasks->fetchAll();
-
-                if (count($tasks) > 0) {
-                    $has_sub_ball = false;
-                    $has_delivered_task = false;
-                    foreach ($tasks as $task) {
-                        if ($task['status'] === 'requested' || $task['status'] === 'accepted' || $task['status'] === 'cb_requested') {
-                            $has_sub_ball = true;
-                        } elseif ($task['status'] === 'delivered') {
-                            $has_delivered_task = true;
-                        }
-                    }
-
-                    if ($has_sub_ball) {
-                        $res = [
-                            'ball_owner' => 'subcontractor',
-                            'label' => '作成中 (協力業者ボール)',
-                            'color' => '#8b5cf6' // Purple
-                        ];
-                    }
-                    elseif ($has_delivered_task) {
-                        $res = [
-                            'ball_owner' => 'admin',
-                            'label' => '納品検収中 (管理者ボール)',
-                            'color' => '#3b82f6' // Blue
-                        ];
-                    }
-                }
+            // 3. 協力業者ボールではない場合、スケジュール工程の現在地が「依頼主ボール (actor === 'client')」であれば依頼主ボールとする
+            if (!$res && $first_uncompleted_idx !== null && $actor === 'client') {
+                $res = [
+                    'ball_owner' => 'client',
+                    'label' => $name . ' (依頼主ボール)',
+                    'color' => '#e67e22'
+                ];
             }
 
-            // 4. それでも決定しなかった場合、スケジュール現在地のactorに基づいて判定する
+            // 4. それでも決定しなかった場合、スケジュール現在地の actor に基づいて判定する
             if (!$res && $first_uncompleted_idx !== null) {
                 if ($actor === 'designer') {
                     $res = [
