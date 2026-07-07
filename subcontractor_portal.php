@@ -85,7 +85,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
     
     $fp = fopen('php://output', 'w');
     
-    $headers = ['管理番号', '物件名', '受付日', '納期', '納品日', '延床面積(㎡)', '請負金額(円)', '担当者', '現在の状況'];
+    $headers = ['管理番号', '物件名', '受付日', '納期', '納品日', '延床面積(㎡)', '請負金額(円)', '担当者', '請求月', '現在の状況'];
     mb_convert_variables('SJIS-win', 'UTF-8', $headers);
     fputcsv($fp, $headers);
     
@@ -117,6 +117,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
             $o['floor_area'],
             $o['order_amount'],
             $o['staff_name'] ?: '未指定',
+            sprintf('%04d年%02d月', $y, $m),
             $status_labels[$o['status']] ?? $o['status']
         ];
         mb_convert_variables('SJIS-win', 'UTF-8', $row);

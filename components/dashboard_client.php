@@ -44,6 +44,11 @@
                                     <div style="position:absolute; bottom:-1px; right:-1px; width:7px; height:7px; border-radius:50%; background:<?= $indicator_color ?>; border:1.5px solid #fff; <?= $is_online ? 'box-shadow: 0 0 6px #10b981;' : '' ?>"></div>
                                 </div>
                             <?php endforeach; ?>
+                            
+                            <!-- メール通知設定の明示的なテキストリンク -->
+                            <a href="#" class="notif-setting-link" onclick="toggleNotificationPopup(event); return false;" style="font-size:11px; color:#2563eb; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:2px; margin-left:6px;" title="クリックしてメール通知の受信設定を変更します">
+                                🔔 メール通知設定
+                            </a>
                         </div>
                         <button onclick="document.getElementById('editInfoModal').classList.add('active')" style="background:#e2e8f0; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; color:#475569; font-weight:bold;">編集</button>
                     </div>
@@ -58,7 +63,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <span style="font-weight:600; color:#475569;">メール通知の受け取り</span>
                         <label class="switch" style="position:relative; display:inline-block; width:34px; height:18px;">
-                            <input type="checkbox" id="user_notification_toggle" style="opacity:0; width:0; height:0;" 
+                             <input type="checkbox" id="user_notification_toggle" style="opacity:0; width:0; height:0;" 
                                    <?= ($_SESSION['email_notification_enabled'] ?? 1) ? 'checked' : '' ?>
                                    onchange="updateNotificationSetting(this.checked)">
                             <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.3s; border-radius:18px;"></span>
@@ -91,7 +96,7 @@
 
                 document.addEventListener('click', function(e) {
                     const popup = document.getElementById('myAccountPopup');
-                    if (popup && !popup.contains(e.target) && !e.target.closest('.staff-avatar-wrapper')) {
+                    if (popup && !popup.contains(e.target) && !e.target.closest('.staff-avatar-wrapper') && !e.target.closest('.notif-setting-link')) {
                         popup.style.display = 'none';
                     }
                 });

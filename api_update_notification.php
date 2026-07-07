@@ -26,6 +26,8 @@ try {
         'uid' => $_SESSION['user_id']
     ]);
     
+    $_SESSION['email_notification_enabled'] = $enabled;
+    
     echo json_encode(['success' => true, 'enabled' => $enabled]);
 } catch (Exception $e) {
     http_response_code(500);
