@@ -860,7 +860,7 @@ $global_messages = $stmtChat->fetchAll();
                 <h3>💬 業務連絡チャット <span style="font-size:10px; font-weight:normal; margin-left:10px; color:#c0392b;">※チェックバックは添付ファイルを添えてチャットにUPして下さい。</span></h3>
                 <p style="font-size:12px; color:#666; margin-top:0;">案件に紐付かない、一般的な業務連絡や支払いに関するやり取りを行います。</p>
                 
-                <div style="flex:1; overflow-y:auto; background:#f8f9fa; border:1px solid #ddd; border-radius:4px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:10px;">
+                <div id="globalChatList" style="flex:1; overflow-y:auto; background:#f8f9fa; border:1px solid #ddd; border-radius:4px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:10px;">
                     <?php if (count($global_messages) > 0): ?>
                         <?php foreach ($global_messages as $msg): 
                             $is_mine = ($msg['sender_id'] == $user_id);
@@ -1117,6 +1117,14 @@ $global_messages = $stmtChat->fetchAll();
             alert("設定の更新に失敗しました。");
         });
     }
+
+    // ページ読み込み完了時にチャットのスクロールを最下部に移動
+    document.addEventListener('DOMContentLoaded', () => {
+        const el = document.getElementById('globalChatList');
+        if (el) {
+            el.scrollTop = el.scrollHeight;
+        }
+    });
     </script>
 </body>
 </html>

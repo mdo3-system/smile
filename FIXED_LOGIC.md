@@ -670,8 +670,14 @@
 
 ---
 
-## 55. このドキュメントの所在
+## 55. 協力業者ポータル全体業務連絡チャット自動スクロール対応 (v1.5.58)
+- **仕様1 (全体業務連絡チャットエリアの自動最下部スクロール)**:
+  - 協力業者ポータル（`subcontractor_portal.php`）の全体業務連絡チャット履歴（`#globalChatList`）について、ページ読み込み（`DOMContentLoaded`）時に自動的に最下部（最新のメッセージ）までスクロールするようにJavaScriptを実装。
+
+---
+
+## 56. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.57（2026-07-07）
+- **最終バージョン**: v1.5.58（2026-07-07）
