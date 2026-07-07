@@ -663,8 +663,15 @@
 
 ---
 
-## 54. このドキュメントの所在
+## 54. 協力業者スタッフ承諾後の詳細・納品画面アクセス権バグ修正 (v1.5.57)
+- **仕様1 (詳細画面アクセスおよび納品ステータス更新時の親子判定導入)**:
+  - 協力業者のスタッフ（子アカウント）がタスクを承諾した際、担当者（`subcontractor_id`）がそのスタッフID（子ID）に更新される仕様（v1.5.53）に伴い、詳細画面（`project_subcontractor.php`）のアクセスチェックおよび納品時のステータス更新処理で、親IDとスタッフIDの不整合によって「アクセス権限がありません」エラーになる不具合を解消。
+  - 発注情報を取得するクエリ（GET）およびステータスを `delivered` に更新するクエリ（POST）に、`subcontractor_orders.subcontractor_id = :sub_id`（親ID）との完全一致判定に加えて、`subcontractor_orders.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :parent_id)` の子ID親子判定を導入。これにより、スタッフが承諾したタスクでも、親（代表者）および同グループの他のスタッフ（子アカウント）から問題なくアクセスと納品ができるよう修正。
+
+---
+
+## 55. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\512b86dc-9f28-471d-8567-535aee35248c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.5.56（2026-07-07）
+- **最終バージョン**: v1.5.57（2026-07-07）

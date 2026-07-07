@@ -162,8 +162,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         if ($uploaded_any || $via_archiserver) {
             // 発注ステータスを delivered (納品済) に更新
-            $stmtOrder = $pdo->prepare("UPDATE subcontractor_orders SET status = 'delivered', updated_at = NOW() WHERE id = :id AND subcontractor_id = :sub_id");
-            $stmtOrder->execute(['id' => $order_id, 'sub_id' => $sub_company_id]);
+            $stmtOrder = $pdo->prepare("
+                UPDATE subcontractor_orders 
+                SET status = 'delivered', updated_at = NOW() 
+                WHERE id = :id 
+                  AND (subcontractor_id = :sub_id OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :parent_id))
+            ");
+            $stmtOrder->execute([
+                'id' => $order_id,
+                'sub_id' => $sub_company_id,
+                'parent_id' => $sub_company_id
+            ]);
 
             // 協力業者から管理者への納品報告チャットを自動登録
             $stmtGetSubName = $pdo->prepare("SELECT contact_name FROM users WHERE id = :uid");
@@ -261,10 +270,15 @@ if (!$is_admin) {
             FROM project_files 
             WHERE file_category = 'sub_architrend_struct' AND is_latest = 1
         ) f3 ON (f3.subcontractor_order_id = o.id OR (f3.subcontractor_order_id IS NULL AND f3.project_id = o.project_id AND o.order_type = 'struct'))
-        WHERE o.subcontractor_id = :sub_id AND o.project_id = :pid
+        WHERE (o.subcontractor_id = :sub_id OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :parent_id))
+          AND o.project_id = :pid
         ORDER BY o.created_at DESC
     ");
-    $stmt->execute(['sub_id' => $sub_company_id, 'pid' => $project_id]);
+    $stmt->execute([
+        'sub_id' => $sub_company_id,
+        'parent_id' => $sub_company_id,
+        'pid' => $project_id
+    ]);
     $orders = $stmt->fetchAll();
     
     if (empty($orders)) {
