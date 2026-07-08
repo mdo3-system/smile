@@ -188,37 +188,39 @@ class UploadService
                 if ($updatedAny) {
                     // チャット通知
                     $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+                    $msgText = "【自動通知】{$msgTitle}が提出されました。該当スケジュールの実施日が自動設定されました。";
                     $stmtNotify = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
                     $stmtNotify->execute([
                         'pid' => $projectId,
                         'sid' => $userId,
                         'thread' => $threadType,
-                        'msg' => "【自動通知】{$msgTitle}が提出されました。該当スケジュールの実施日が自動設定されました。"
+                        'msg' => $msgText
                     ]);
+                    
+                    // メール通知のトリガー
+                    require_once __DIR__ . '/../../functions.php';
+                    sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgText, $this->pdo);
                 }
             }
 
             $this->pdo->commit();
             
-            // 依頼主へのメール通知
+            // 成果物アップロード完了時の全体通知
             try {
-                $stmtClientEmail = $this->pdo->prepare("
-                    SELECT u.email, u.email_notifications FROM projects p JOIN users u ON p.client_id = u.id WHERE p.id = :pid
-                ");
-                $stmtClientEmail->execute(['pid' => $projectId]);
-                $user_info = $stmtClientEmail->fetch();
-                
-                $clientEmail = $user_info['email'] ?? '';
-                $notifications_enabled = (int)($user_info['email_notifications'] ?? 1);
-                
-                if ($notifications_enabled === 1 && $clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
-                    $pname = $project['project_name'] ?? 'your project';
-                    $subj = "【設計サポート】案件「{$pname}」に新しい成果物が登録されました";
-                    $body  = "案件「{$pname}」に完成成果物・図書が登録されました。\n\n";
-                    $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
-                    $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";
-                    $body .= "※このメールに返信いただいてもお返事できません。ご不明な点は担当まで直接お問い合わせください。";
-                    sendSystemEmail($clientEmail, $subj, $body);
+                $pname = $project['project_name'] ?? 'your project';
+                $subj = "【設計サポート】案件「{$pname}」に新しい成果物が登録されました";
+                $body  = "案件「{$pname}」に完成成果物・図書（{$this->getFileCategoryLabel($fileCategory)}）が登録されました。\n\n";
+                $body .= "以下のURLよりダッシュボードにログインしてご確認ください。\n";
+                $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";
+                $body .= "------\n";
+                $body .= "※このメールに返信いただいてもお返事できません。ご不明な点は担当まで直接お問い合わせください。";
+
+                require_once __DIR__ . '/../../functions.php';
+                $emails = getCompanyNotificationEmails($project['client_id'], $this->pdo);
+                foreach ($emails as $email) {
+                    if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        sendSystemEmail($email, $subj, $body);
+                    }
                 }
             } catch (Exception $e) { /* メール送信エラーは無視 */ }
 
@@ -348,6 +350,9 @@ class UploadService
                 'msg' => $msg
             ]);
 
+            require_once __DIR__ . '/../../functions.php';
+            sendChatEmailNotification($projectId, $userId, $role, $threadType, $msg, $this->pdo);
+
             // ============================
             // 後出し図書充足トリガー：一次回答日の自動起算
             // ============================
@@ -400,6 +405,9 @@ class UploadService
                                 'thread' => $threadType,
                                 'msg' => "【自動通知】必要図書がすべて揃いました。本日（{$today2}）が一次回答の起算日となりました。図書の内容を確認の上、一次回答期日の設定をお願いします。"
                             ]);
+
+                            require_once __DIR__ . '/../../functions.php';
+                            sendChatEmailNotification($projectId, $userId, $role, $threadType, "【自動通知】必要図書がすべて揃いました。本日（{$today2}）が一次回答の起算日となりました。図書の内容を確認の上、一次回答期日の設定をお願いします。", $this->pdo);
                         }
                     }
                 }
@@ -423,6 +431,9 @@ class UploadService
                         'thread' => $threadType,
                         'msg' => $msgSubmittingCorrection
                     ]);
+
+                    require_once __DIR__ . '/../../functions.php';
+                    sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgSubmittingCorrection, $this->pdo);
                 }
             }
 
@@ -550,6 +561,9 @@ class UploadService
 
                 $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)")
                     ->execute(['pid' => $projectId, 'sid' => $userId, 'thread' => $threadType, 'msg' => $chatMsg]);
+
+                require_once __DIR__ . '/../../functions.php';
+                sendChatEmailNotification($projectId, $userId, $role, $threadType, $chatMsg, $this->pdo);
             }
 
             // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
@@ -570,6 +584,9 @@ class UploadService
                         'thread' => $threadType,
                         'msg' => $msgSubmittingCorrection
                     ]);
+
+                    require_once __DIR__ . '/../../functions.php';
+                    sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgSubmittingCorrection, $this->pdo);
                 }
             }
 
@@ -632,6 +649,9 @@ class UploadService
                     'thread' => $threadType,
                     'msg' => $chatMsg
                 ]);
+                require_once __DIR__ . '/../../functions.php';
+                sendChatEmailNotification($projectId, $userId, 'client', $threadType, $chatMsg, $this->pdo);
+
 
                 $this->pdo->commit();
                 return true;
@@ -689,6 +709,8 @@ class UploadService
                     'thread' => $threadType,
                     'msg' => $chatMsg
                 ]);
+                require_once __DIR__ . '/../../functions.php';
+                sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
 
                 $this->pdo->commit();
                 return true;
@@ -754,6 +776,8 @@ class UploadService
                 'thread' => $threadType,
                 'msg' => $chatMsg
             ]);
+            require_once __DIR__ . '/../../functions.php';
+            sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
 
             $this->pdo->commit();
             return true;
@@ -824,6 +848,8 @@ class UploadService
                 'thread' => $threadType,
                 'msg' => $chatMsg
             ]);
+            require_once __DIR__ . '/../../functions.php';
+            sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
 
             $this->pdo->commit();
             return true;

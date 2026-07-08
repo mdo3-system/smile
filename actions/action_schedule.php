@@ -70,6 +70,7 @@ if ($action === 'set_primary_due_date') {
                 'sid' => $_SESSION['user_id'],
                 'msg' => $msg
             ]);
+            sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', 'client_admin', $msg, $pdo);
         }
     }
     try {
@@ -139,6 +140,7 @@ if ($action === 'update_schedule_override') {
                 'thread' => $thread_type,
                 'msg' => $chat_msg
             ]);
+            sendChatEmailNotification($project_id, $_SESSION['user_id'] ?? 1, 'admin', $thread_type, $chat_msg, $pdo);
         }
     }
     try {
@@ -292,6 +294,7 @@ if ($action === 'update_schedule_actual') {
                     'thread' => $thread_type,
                     'msg' => $chat_msg
                 ]);
+                sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', $thread_type, $chat_msg, $pdo);
             }
         }
     }
@@ -318,6 +321,7 @@ if ($action === 'start_design') {
             'sid' => $_SESSION['user_id'],
             'msg' => $msg
         ]);
+        sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', 'client_admin', $msg, $pdo);
     }
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
@@ -399,6 +403,7 @@ if ($action === 'submit_primary_response') {
                 'msg' => $msg,
                 'fpath' => $drive_file_id
             ]);
+            sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', 'client_admin', $msg, $pdo);
 
             $pdo->commit();
         } catch (Exception $e) {
@@ -449,6 +454,7 @@ if ($action === 'complete_review') {
         'sid' => $_SESSION['user_id'],
         'msg' => $msg
     ]);
+    sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'client_admin', $msg, $pdo);
 
     // 経理へ通知メール送信
     $stmtAcc = $pdo->query("SELECT email FROM users WHERE role = 'accountant' AND email_notification_enabled = 1");
@@ -510,6 +516,7 @@ if ($action === 'pay_intermediate') {
         'sid' => $_SESSION['user_id'],
         'msg' => $msg
     ]);
+    sendChatEmailNotification($project_id, $_SESSION['user_id'], 'client', 'client_admin', $msg, $pdo);
 
     // 経理へ通知メール送信
     $stmtAcc = $pdo->query("SELECT email FROM users WHERE role = 'accountant' AND email_notification_enabled = 1");

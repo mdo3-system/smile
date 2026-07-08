@@ -593,6 +593,54 @@ foreach ($stmtPayments->fetchAll() as $p) {
     $payments[$p['target_month']] = $p;
 }
 
+// === [自己修復ロジック] アーカイブ済みの月または残高0以下の月のタスクステータスを自動的に「支払済（paid）」へ同期 ===
+foreach ($monthly_totals as $month => $total) {
+    $payment = $payments[$month] ?? null;
+    $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
+    $balance = $total - $paid_amount;
+    $is_archived = $payment ? intval($payment['is_archived']) : 0;
+    
+    if ($is_archived || $balance <= 0) {
+        $stmtOrdersToFix = $pdo->prepare("
+            SELECT id, completed_at, updated_at, created_at 
+            FROM subcontractor_orders 
+            WHERE (subcontractor_id = :sub_id_1 OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2)) 
+              AND status = 'completed' 
+              AND payment_status != 'paid'
+        ");
+        $stmtOrdersToFix->execute([
+            'sub_id_1' => $target_sub_id,
+            'sub_id_2' => $target_sub_id
+        ]);
+        $orders_to_fix = $stmtOrdersToFix->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($orders_to_fix as $co) {
+            $date_str = $co['completed_at'] ?? $co['updated_at'] ?? $co['created_at'];
+            $ts = strtotime($date_str);
+            $y = (int)date('Y', $ts);
+            $m = (int)date('m', $ts);
+            $d = (int)date('d', $ts);
+            if ($d >= 26) {
+                $m++;
+                if ($m > 12) { $m = 1; $y++; }
+            }
+            $co_month = sprintf("%04d-%02d", $y, $m);
+            
+            if ($co_month === $month) {
+                $stmtFix = $pdo->prepare("
+                    UPDATE subcontractor_orders 
+                    SET payment_status = 'paid', payment_date = :p_date 
+                    WHERE id = :id
+                ");
+                $stmtFix->execute([
+                    'p_date' => ($payment && !empty($payment['paid_at'])) ? date('Y-m-d', strtotime($payment['paid_at'])) : date('Y-m-d'),
+                    'id' => $co['id']
+                ]);
+            }
+        }
+    }
+}
+
 // グローバルチャット履歴の取得
 $stmtChat = $pdo->prepare("
     SELECT m.*, u.contact_name, u.role 

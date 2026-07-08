@@ -155,6 +155,7 @@
 // 1.5.57: 協力業者子アカウント（スタッフ）が承諾した後に詳細画面（project_subcontractor.php）や納品処理でアクセス権エラー（die）になるバグを親子判定クエリに修正して解消
 // 1.5.58: 協力業者ポータル（subcontractor_portal.php）を開いた際に、全体業務連絡チャットエリアが自動的に最下部（最新メッセージ）までスクロールする処理をJavaScriptで実装
 // 1.5.59: functions.php の定数 SYSTEM_VERSION と Version.js のバージョン表記の同期漏れを修正
+// 1.5.60: ボール移行（実績更新・着手・一次回答等）および成果物UP時のチャット自動通知のメール送信漏れ修正、UploadService内バグ修正、協力業者ポータル月次支払アーカイブ自己修復同期、および依頼主マニュアル更新
 
-window.APP_VERSION = "1.5.59";
-const APP_LAST_UPDATED = '2026-07-07';
+window.APP_VERSION = "1.5.60";
+const APP_LAST_UPDATED = '2026-07-08';
