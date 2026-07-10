@@ -118,16 +118,16 @@ class UploadService
             }
 
             // 2. 申請図書一式UPの自動入力
-            // 許容応力度 (Index 4)
+            // 許容応力度 (Index 5)
             if ($fileCategory === 'structural_dwg' && ($project['req_permit'] == 1 || $project['req_opt_kisohari'] == 1)) {
                 $colsToUpdate[] = 'schedule_actuals';
-                $targetIndex = 4;
+                $targetIndex = 5;
                 $msgTitle = "構造図UP";
             }
-            // 壁量計算 (Index 4)
+            // 壁量計算 (Index 5)
             if (($fileCategory === 'wall_calc_doc' || $fileCategory === 'wall_spreadsheet') && $project['req_wall'] == 1) {
                 $colsToUpdate[] = 'schedule_actuals_wall';
-                $targetIndex = 4;
+                $targetIndex = 5;
                 $msgTitle = "壁量計算書";
             }
             // 外皮計算 (Index 4) - 外皮計算書、WEBプログラム、外皮計算資料が全て揃っている場合のみ
@@ -152,7 +152,7 @@ class UploadService
 
                 if ($hasAll) {
                     $colsToUpdate[] = 'schedule_actuals_skin';
-                    $targetIndex = 4;
+                    $targetIndex = 5;
                     $msgTitle = "外皮計算書";
                 }
             }
@@ -162,10 +162,10 @@ class UploadService
                 $targetIndex = 2;
                 $msgTitle = "外皮計算・初回提示（WEBプログラム計算書）";
             }
-            // 天空率 (Index 3)
+            // 天空率 (Index 4)
             if ($fileCategory === 'sky_dwg' && $project['req_sky'] == 1) {
                 $colsToUpdate[] = 'schedule_actuals_sky';
-                $targetIndex = 3;
+                $targetIndex = 4;
                 $msgTitle = "天空率図面";
             }
 

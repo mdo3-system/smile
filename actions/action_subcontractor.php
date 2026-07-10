@@ -163,8 +163,8 @@ if ($action === 'approve_delivery') {
                 $current_actuals_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
                 if ($current_actuals_row) {
                     $actuals = json_decode($current_actuals_row['schedule_actuals'] ?? '{}', true) ?: [];
-                    if (empty($actuals[4])) { // 4: 構造図UP
-                        $actuals[4] = $today;
+                    if (empty($actuals[5])) { // 5: 構造図UP
+                        $actuals[5] = $today;
                         $stmtUpdateSchedule = $pdo->prepare("UPDATE projects SET schedule_actuals = :act WHERE id = :pid");
                         $stmtUpdateSchedule->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
                     }

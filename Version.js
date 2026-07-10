@@ -156,6 +156,7 @@
 // 1.5.58: 協力業者ポータル（subcontractor_portal.php）を開いた際に、全体業務連絡チャットエリアが自動的に最下部（最新メッセージ）までスクロールする処理をJavaScriptで実装
 // 1.5.59: functions.php の定数 SYSTEM_VERSION と Version.js のバージョン表記の同期漏れを修正
 // 1.5.60: ボール移行（実績更新・着手・一次回答等）および成果物UP時のチャット自動通知のメール送信漏れ修正、UploadService内バグ修正、協力業者ポータル月次支払アーカイブ自己修復同期、および依頼主マニュアル更新
+// 1.5.61: 成果物UP・納品承認時のスケジュール実績インデックスのズレバグ修正、StatusHelperでの協力業者ボール判定条件の修正、案件ステータス自己修復同期処理（syncProjectStatusWithSchedule）の新設、および管理者ダッシュボードの3段構成（管理者/依頼主/協力者別）化
 
-window.APP_VERSION = "1.5.60";
-const APP_LAST_UPDATED = '2026-07-08';
+window.APP_VERSION = "1.5.61";
+const APP_LAST_UPDATED = '2026-07-10';

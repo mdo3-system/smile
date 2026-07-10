@@ -77,6 +77,9 @@ if ($is_admin) {
 // ==========================================
 // データ取得
 // ==========================================
+// 画面表示前にスケジュール実績とステータスを自己修復同期
+syncProjectStatusWithSchedule($project_id, $pdo);
+
 // 案件と仕様情報を取得
 $stmtProj = $pdo->prepare("
     SELECT p.*, s.*, u.company_name, u.company_kana, u.zip_code, u.address, u.contact_name as client_name, u.contact_kana, u.phone_number as client_phone, u.mobile_number

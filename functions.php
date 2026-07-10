@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.5.60');
+define('SYSTEM_VERSION', 'v1.5.61');
 
 
 // ==========================================
@@ -636,4 +636,88 @@ function getDynamicStatusLabel(array $project, PDO $pdo): string {
         'correction'     => '補正対応中',
     ];
     return $status_labels[$status] ?? $status;
+}
+
+/**
+ * 案件スケジュール実績日の入力状況と projects.status を同期（自己修復）する
+ */
+function syncProjectStatusWithSchedule(int $projectId, PDO $pdo) {
+    // 案件の基本情報を取得
+    $stmt = $pdo->prepare("SELECT * FROM projects WHERE id = :pid");
+    $stmt->execute(['pid' => $projectId]);
+    $project = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$project || $project['status'] === 'quote_req' || $project['status'] === 'quote_sent' || $project['status'] === 'completed') {
+        return; // 見積もり中・完了案件は同期対象外
+    }
+
+    $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
+    $req_wall = (int)($project['req_wall'] ?? 0);
+    $req_skin = (int)($project['req_skin'] ?? 0);
+    $req_sky = (int)($project['req_sky'] ?? 0);
+
+    // 代表となるスケジュール実績カラムとステップ配列を選択
+    $base_days = getScheduleBaseDays($project);
+    $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+    $actuals_col = 'schedule_actuals';
+
+    if ($req_wall) {
+        $steps = getScheduleStepsWall($base_days);
+        $actuals_col = 'schedule_actuals_wall';
+    } elseif ($req_skin) {
+        $steps = getScheduleStepsSkin($base_days);
+        $actuals_col = 'schedule_actuals_skin';
+    } elseif ($req_sky) {
+        $steps = getScheduleStepsSky($base_days);
+        $actuals_col = 'schedule_actuals_sky';
+    }
+
+    $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
+
+    // ステップインデックスの特定
+    $submission_idx = -1; // 申請図書一式UP
+    $correction_idx = -1; // 補正対応
+    $completed_idx = count($steps) - 1; // 最終ステップ (残金のご精算 または 審査完了)
+
+    foreach ($steps as $idx => $step) {
+        if ($step['name'] === '申請図書一式UP') {
+            $submission_idx = $idx;
+        } elseif ($step['name'] === '補正対応') {
+            $correction_idx = $idx;
+        }
+    }
+
+    $new_status = $project['status'];
+
+    // 1. 完了チェック
+    if (!empty($actuals[$completed_idx])) {
+        $new_status = 'completed';
+    }
+    // 2. 補正対応中チェック
+    elseif ($correction_idx !== -1 && !empty($actuals[$correction_idx - 1]) && empty($actuals[$correction_idx])) {
+        // 補正対応の前のステップ（質疑・審査待機）が完了しており、補正対応が未完了の場合
+        $new_status = 'correction';
+    }
+    // 3. 審査・待機 (submission/submitting) チェック
+    elseif ($submission_idx !== -1 && !empty($actuals[$submission_idx]) && empty($actuals[$submission_idx + 1])) {
+        // 申請図書一式UPが完了しており、その次の「質疑・審査待機」が未完了の場合
+        $new_status = 'submitting';
+    }
+    // 4. 申請図書作成中 (structural_dwg)
+    elseif (!empty($actuals[2]) && ($submission_idx !== -1 && empty($actuals[$submission_idx]))) {
+        // 一次回答（初回提示）が終わっており、申請図書一式UPがまだの場合
+        $new_status = 'structural_dwg';
+    }
+    // 5. 一次回答準備中 (primary_prep) / スケジュール確定 (contracted)
+    elseif (empty($actuals[2])) {
+        if (!empty($project['primary_due_date'])) {
+            $new_status = 'contracted';
+        } else {
+            $new_status = 'primary_prep';
+        }
+    }
+
+    if ($new_status !== $project['status']) {
+        $stmtUpd = $pdo->prepare("UPDATE projects SET status = :status WHERE id = :pid");
+        $stmtUpd->execute(['status' => $new_status, 'pid' => $projectId]);
+    }
 }

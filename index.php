@@ -58,6 +58,18 @@ if ($_SESSION['role'] === 'client') {
     $projects = $projectRepo->findAllWithClientInfo();
 }
 
+// 各案件のステータスをスケジュール実績に基づいて自己修復同期
+foreach ($projects as $pj) {
+    syncProjectStatusWithSchedule($pj['id'], $pdo);
+}
+
+// 同期後に最新のデータを再フェッチ
+if ($_SESSION['role'] === 'client') {
+    $projects = $projectRepo->findByClientIdWithClientInfo($client_id_to_fetch);
+} else {
+    $projects = $projectRepo->findAllWithClientInfo();
+}
+
 // ステータスを日本語表示に変換する用の配列
 $status_labels = [
                 'quote_req'      => '見積依頼',
@@ -210,29 +222,34 @@ $status_labels = [
     $isAdminOrAccountant = ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'accountant');
 
     if ($isAdminOrAccountant) {
+        $admin_ball_projects = [];
+        $client_ball_projects = [];
         $subcontractor_ball_projects = [];
-        $admin_client_ball_projects = [];
 
         foreach ($projects as $project) {
             $ball = \App\Helpers\StatusHelper::getBallStatus($project, $pdo, $_SESSION['role'] ?? null);
             $project['_ball_info'] = $ball;
             
-            if ($ball['ball_owner'] === 'subcontractor') {
-                $subcontractor_ball_projects[] = $project;
+            if ($ball['ball_owner'] === 'admin') {
+                $admin_ball_projects[] = $project;
+            } elseif ($ball['ball_owner'] === 'client') {
+                $client_ball_projects[] = $project;
             } else {
-                $admin_client_ball_projects[] = $project;
+                // subcontractor or shared_waiting or others
+                $subcontractor_ball_projects[] = $project;
             }
         }
     ?>
+        <!-- 1段目：管理者ボール -->
         <div style="margin-bottom: 40px;">
-            <h2 style="font-size: 18px; border-bottom: 2px solid #0056b3; padding-bottom: 8px; margin-bottom: 15px; color: #0056b3; display: flex; align-items: center; gap: 8px;">
-                👤 依頼主＆管理者ボールの案件 (<?= count($admin_client_ball_projects) ?>件)
+            <h2 style="font-size: 18px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px; color: #3b82f6; display: flex; align-items: center; gap: 8px;">
+                👤 管理者ボールの案件 (<?= count($admin_ball_projects) ?>件)
             </h2>
-            <?php if (empty($admin_client_ball_projects)): ?>
+            <?php if (empty($admin_ball_projects)): ?>
                 <p style="color: #666; font-size: 14px;">該当する案件はありません。</p>
             <?php else: ?>
                 <div class="grid">
-                    <?php foreach ($admin_client_ball_projects as $project): 
+                    <?php foreach ($admin_ball_projects as $project): 
                         $ball = $project['_ball_info'];
                         $current_step = getCurrentStepInfo($project, $pdo);
                     ?>
@@ -252,9 +269,39 @@ $status_labels = [
             <?php endif; ?>
         </div>
 
+        <!-- 2段目：依頼主ボール -->
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 18px; border-bottom: 2px solid #e67e22; padding-bottom: 8px; margin-bottom: 15px; color: #e67e22; display: flex; align-items: center; gap: 8px;">
+                👤 依頼主ボールの案件 (<?= count($client_ball_projects) ?>件)
+            </h2>
+            <?php if (empty($client_ball_projects)): ?>
+                <p style="color: #666; font-size: 14px;">該当する案件はありません。</p>
+            <?php else: ?>
+                <div class="grid">
+                    <?php foreach ($client_ball_projects as $project): 
+                        $ball = $project['_ball_info'];
+                        $current_step = getCurrentStepInfo($project, $pdo);
+                    ?>
+                        <div class="card" style="border-left: 5px solid <?= $ball['color'] ?>;">
+                            <span class="badge"><?= htmlspecialchars(getDynamicStatusLabel($project, $pdo), ENT_QUOTES) ?></span>
+                            <span class="badge" style="background-color: <?= $ball['color'] ?>; color: white; font-weight: bold;"><?= htmlspecialchars($ball['label'], ENT_QUOTES) ?></span>
+                            <div style="font-size: 11px; color: #475569; margin: 5px 0 8px 0; font-weight: bold;">
+                                📅 予定日: <?= !empty($current_step['plan_date']) ? date('Y/m/d', strtotime($current_step['plan_date'])) : '<span style="color:#94a3b8; font-weight:normal;">未設定</span>' ?>
+                                <span style="font-size: 10px; color: #64748b; font-weight: normal; display: block; margin-top: 2px;">現在の工程: <?= htmlspecialchars($current_step['step_name'], ENT_QUOTES) ?></span>
+                            </div>
+                            <h3><?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?></h3>
+                            <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
+                            <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn" style="background-color: <?= $ball['color'] ?>;">詳細を開く</a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- 3段目：協力業者・確認機関ボール -->
         <div style="margin-bottom: 40px;">
             <h2 style="font-size: 18px; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px; margin-bottom: 15px; color: #8b5cf6; display: flex; align-items: center; gap: 8px;">
-                👷 協力業者ボールの案件 (<?= count($subcontractor_ball_projects) ?>件)
+                👷 協力者（協力業者・確認機関）ボールの案件 (<?= count($subcontractor_ball_projects) ?>件)
             </h2>
             <?php if (empty($subcontractor_ball_projects)): ?>
                 <p style="color: #666; font-size: 14px;">該当する案件はありません。</p>

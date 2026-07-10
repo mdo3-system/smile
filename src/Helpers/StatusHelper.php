@@ -117,11 +117,24 @@ class StatusHelper
             }
 
             // 2. 【最優先判定】進行中の協力業者タスク（外注）がある場合は、それを最優先でボールとする！
+            // ただし、すでにスケジュール上で構造図UPや申請図書一式UP（成果物の提出）の実績日が入っている場合は、
+            // 業者タスクが承認待ち等で残っていても、すでに依頼主や申請手番に進んでいるため、スケジュール現在地のボール判定を優先する。
+            $submission_idx = -1;
+            foreach ($steps as $idx => $step) {
+                if ($step['name'] === '構造図UP' || $step['name'] === '申請図書一式UP') {
+                    $submission_idx = $idx;
+                }
+            }
+            $is_sub_task_effectively_done = false;
+            if ($submission_idx !== -1 && !empty($actuals[$submission_idx])) {
+                $is_sub_task_effectively_done = true;
+            }
+
             $stmtTasks = $pdo->prepare("SELECT * FROM subcontractor_orders WHERE project_id = :pid AND status != 'cancelled'");
             $stmtTasks->execute(['pid' => $project['id']]);
             $tasks = $stmtTasks->fetchAll();
 
-            if (count($tasks) > 0) {
+            if (count($tasks) > 0 && !$is_sub_task_effectively_done) {
                 $has_sub_ball = false;
                 $has_delivered_task = false;
                 foreach ($tasks as $task) {
