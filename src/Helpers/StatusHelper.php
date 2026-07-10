@@ -120,47 +120,88 @@ class StatusHelper
             }
 
             // 2. 【最優先判定】進行中の協力業者タスク（外注）がある場合は、それを最優先でボールとする！
-            // ただし、すでにスケジュール上で構造図UPや申請図書一式UP（成果物の提出）の実績日が入っている場合は、
+            // ただし、すでにスケジュール上で該当工程の実績日が入っている場合は、
             // 業者タスクが承認待ち等で残っていても、すでに依頼主や申請手番に進んでいるため、スケジュール現在地のボール判定を優先する。
-            $submission_idx = -1;
-            foreach ($steps as $idx => $step) {
-                if ($step['name'] === '構造図UP' || $step['name'] === '申請図書一式UP') {
-                    $submission_idx = $idx;
-                }
-            }
-            $is_sub_task_effectively_done = false;
-            if ($submission_idx !== -1 && !empty($actuals[$submission_idx])) {
-                $is_sub_task_effectively_done = true;
-            }
-
             $stmtTasks = $pdo->prepare("SELECT * FROM subcontractor_orders WHERE project_id = :pid AND status != 'cancelled'");
             $stmtTasks->execute(['pid' => $project['id']]);
             $tasks = $stmtTasks->fetchAll();
 
-            if (count($tasks) > 0 && !$is_sub_task_effectively_done) {
+            if (count($tasks) > 0) {
                 $has_sub_ball = false;
                 $has_delivered_task = false;
+                
+                $has_active_design_task = false;
+                $has_active_struct_task = false;
+                
                 foreach ($tasks as $task) {
+                    if ($task['status'] !== 'completed') {
+                        if ($task['order_type'] === 'design') {
+                            $has_active_design_task = true;
+                        } else {
+                            $has_active_struct_task = true;
+                        }
+                    }
                     if ($task['status'] === 'requested' || $task['status'] === 'accepted' || $task['status'] === 'cb_requested') {
                         $has_sub_ball = true;
                     } elseif ($task['status'] === 'delivered') {
                         $has_delivered_task = true;
                     }
                 }
-
-                if ($has_sub_ball) {
-                    $res = [
-                        'ball_owner' => 'subcontractor',
-                        'label' => '作成中 (協力業者ボール)',
-                        'color' => '#8b5cf6' // Purple
-                    ];
+                
+                $is_design_effectively_done = false;
+                $is_struct_effectively_done = false;
+                
+                // 一次回答 (初回提示) のインデックス
+                $primary_idx = 2; 
+                if (!empty($actuals[$primary_idx])) {
+                    $is_design_effectively_done = true;
                 }
-                elseif ($has_delivered_task) {
-                    $res = [
-                        'ball_owner' => 'admin',
-                        'label' => '納品検収中 (管理者ボール)',
-                        'color' => '#3b82f6' // Blue
-                    ];
+                
+                // 構造図 / 申請図書一式 のインデックス
+                $struct_up_idx = -1;
+                foreach ($steps as $idx => $step) {
+                    if ($is_koyou_or_kisohari) {
+                        if ($step['name'] === '構造図UP') {
+                            $struct_up_idx = $idx;
+                            break;
+                        }
+                    } else {
+                        if ($step['name'] === '申請図書一式UP') {
+                            $struct_up_idx = $idx;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($struct_up_idx !== -1 && !empty($actuals[$struct_up_idx])) {
+                    $is_struct_effectively_done = true;
+                }
+                
+                // スキップ判定
+                $skip_sub_ball = false;
+                if ($has_active_design_task && !$has_active_struct_task && $is_design_effectively_done) {
+                    $skip_sub_ball = true;
+                } elseif (!$has_active_design_task && $has_active_struct_task && $is_struct_effectively_done) {
+                    $skip_sub_ball = true;
+                } elseif ($has_active_design_task && $has_active_struct_task && $is_design_effectively_done && $is_struct_effectively_done) {
+                    $skip_sub_ball = true;
+                }
+                
+                if (!$skip_sub_ball) {
+                    if ($has_sub_ball) {
+                        $res = [
+                            'ball_owner' => 'subcontractor',
+                            'label' => '作成中 (協力業者ボール)',
+                            'color' => '#8b5cf6' // Purple
+                        ];
+                    }
+                    elseif ($has_delivered_task) {
+                        $res = [
+                            'ball_owner' => 'admin',
+                            'label' => '納品検収中 (管理者ボール)',
+                            'color' => '#3b82f6' // Blue
+                        ];
+                    }
                 }
             }
 
