@@ -589,10 +589,10 @@ function getDynamicStatusLabel(array $project, PDO $pdo): string {
         $req_skin = (int)($project['req_skin'] ?? 0);
         $req_sky = (int)($project['req_sky'] ?? 0);
         
-        $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
-        $actuals_col = 'schedule_actuals';
-        
-        if ($req_wall) {
+        if ($is_koyou_or_kisohari) {
+            $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+            $actuals_col = 'schedule_actuals';
+        } elseif ($req_wall) {
             $steps = getScheduleStepsWall($base_days);
             $actuals_col = 'schedule_actuals_wall';
         } elseif ($req_skin) {
@@ -601,6 +601,9 @@ function getDynamicStatusLabel(array $project, PDO $pdo): string {
         } elseif ($req_sky) {
             $steps = getScheduleStepsSky($base_days);
             $actuals_col = 'schedule_actuals_sky';
+        } else {
+            $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+            $actuals_col = 'schedule_actuals';
         }
         
         $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
@@ -657,10 +660,13 @@ function syncProjectStatusWithSchedule(int $projectId, PDO $pdo) {
 
     // 代表となるスケジュール実績カラムとステップ配列を選択
     $base_days = getScheduleBaseDays($project);
-    $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+    $steps = [];
     $actuals_col = 'schedule_actuals';
 
-    if ($req_wall) {
+    if ($is_koyou_or_kisohari) {
+        $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+        $actuals_col = 'schedule_actuals';
+    } elseif ($req_wall) {
         $steps = getScheduleStepsWall($base_days);
         $actuals_col = 'schedule_actuals_wall';
     } elseif ($req_skin) {
@@ -669,6 +675,9 @@ function syncProjectStatusWithSchedule(int $projectId, PDO $pdo) {
     } elseif ($req_sky) {
         $steps = getScheduleStepsSky($base_days);
         $actuals_col = 'schedule_actuals_sky';
+    } else {
+        $steps = getScheduleSteps($base_days, $is_koyou_or_kisohari);
+        $actuals_col = 'schedule_actuals';
     }
 
     $actuals = json_decode($project[$actuals_col] ?? '{}', true) ?: [];
