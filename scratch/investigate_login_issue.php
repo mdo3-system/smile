@@ -1,6 +1,10 @@
 <?php
 // scratch/investigate_login_issue.php
 require_once __DIR__ . '/../db_connect.php';
+require_once __DIR__ . '/../functions.php';
+
+echo "=== Running syncProjectStatusWithSchedule for Project ID 10 ===\n";
+syncProjectStatusWithSchedule(10, $pdo);
 
 $stmtProj = $pdo->prepare("
     SELECT id, project_name, status, schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky 
