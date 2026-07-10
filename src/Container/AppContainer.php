@@ -17,6 +17,11 @@ class AppContainer
 
     private function __construct()
     {
+        if (defined('PHPUNIT_RUNNING')) {
+            $this->pdo = new \PDO('sqlite::memory:');
+            $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            return;
+        }
         // Require the existing db_connect.php which defines $pdo
         require __DIR__ . '/../../db_connect.php';
         /** @var PDO $pdo */
