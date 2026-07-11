@@ -132,6 +132,7 @@ class StatusHelper
                 
                 $has_active_design_task = false;
                 $has_active_struct_task = false;
+                $has_cb_requested = false;
                 
                 foreach ($tasks as $task) {
                     if ($task['status'] !== 'completed') {
@@ -143,6 +144,9 @@ class StatusHelper
                     }
                     if ($task['status'] === 'requested' || $task['status'] === 'accepted' || $task['status'] === 'cb_requested') {
                         $has_sub_ball = true;
+                        if ($task['status'] === 'cb_requested') {
+                            $has_cb_requested = true;
+                        }
                     } elseif ($task['status'] === 'delivered') {
                         $has_delivered_task = true;
                     }
@@ -179,12 +183,16 @@ class StatusHelper
                 
                 // スキップ判定
                 $skip_sub_ball = false;
-                if ($has_active_design_task && !$has_active_struct_task && $is_design_effectively_done) {
-                    $skip_sub_ball = true;
-                } elseif (!$has_active_design_task && $has_active_struct_task && $is_struct_effectively_done) {
-                    $skip_sub_ball = true;
-                } elseif ($has_active_design_task && $has_active_struct_task && $is_design_effectively_done && $is_struct_effectively_done) {
-                    $skip_sub_ball = true;
+                if ($has_cb_requested) {
+                    $skip_sub_ball = false; // 修正依頼中がある場合は強制的にスキップしない
+                } else {
+                    if ($has_active_design_task && !$has_active_struct_task && $is_design_effectively_done) {
+                        $skip_sub_ball = true;
+                    } elseif (!$has_active_design_task && $has_active_struct_task && $is_struct_effectively_done) {
+                        $skip_sub_ball = true;
+                    } elseif ($has_active_design_task && $has_active_struct_task && $is_design_effectively_done && $is_struct_effectively_done) {
+                        $skip_sub_ball = true;
+                    }
                 }
                 
                 if (!$skip_sub_ball) {
