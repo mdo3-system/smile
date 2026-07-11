@@ -232,10 +232,10 @@ $status_labels = [
             
             if ($ball['ball_owner'] === 'admin') {
                 $admin_ball_projects[] = $project;
-            } elseif ($ball['ball_owner'] === 'client') {
+            } elseif ($ball['ball_owner'] === 'client' || $ball['ball_owner'] === 'shared_waiting') {
                 $client_ball_projects[] = $project;
             } else {
-                // subcontractor or shared_waiting or others
+                // subcontractor or others
                 $subcontractor_ball_projects[] = $project;
             }
         }
