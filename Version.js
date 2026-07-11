@@ -161,6 +161,7 @@
 // 1.6.0: レイヤードアーキテクチャ設計に基づく協力業者ポータル（project_subcontractor.php）のコントローラー（SubcontractorController）およびドメインサービス（SubcontractorOrderService）への大リファクタリング、および自動テストの追加
 // 1.6.1: 協力業者発注ステータス（subcontractor_orders.status）の ENUM 制限を VARCHAR(20) に変更し、チェックバック送信および発注キャンセルによるステータス空化バグを解消
 // 1.6.2: functions.phpの定数SYSTEM_VERSIONを同期し、ダッシュボードの案件分類ロジックで「審査・待機（shared_waiting）」の案件を依頼主ボールの案件エリアへ表示するように修正
+// 1.6.3: ポップアップ内メール通知設定トグルのCSS詳細度競合バグおよび一部ブラウザでのクリックイベント伝播不具合をインラインスタイル修正により解消
 
-window.APP_VERSION = "1.6.2";
+window.APP_VERSION = "1.6.3";
 const APP_LAST_UPDATED = '2026-07-11';

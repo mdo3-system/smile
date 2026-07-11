@@ -384,10 +384,10 @@ $chat_messages = $stmtMsgs->fetchAll();
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                             <span style="font-weight:600; color:#475569;">メール通知の受け取り</span>
                             <label class="switch" style="position:relative; display:inline-block; width:34px; height:18px;">
-                                 <input type="checkbox" id="user_notification_toggle" style="opacity:0; width:0; height:0;" 
+                                 <input type="checkbox" id="user_notification_toggle" style="position:absolute; opacity:0; z-index:-1;" 
                                        <?= ($_SESSION['email_notification_enabled'] ?? 1) ? 'checked' : '' ?>
                                        onchange="updateNotificationSetting(this.checked, document.getElementById('additional_emails_input').value, false)">
-                                <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.3s; border-radius:18px;"></span>
+                                <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; transition:.3s; border-radius:18px;"></span>
                             </label>
                         </div>
                         <div style="margin-top:10px; margin-bottom:8px;">
