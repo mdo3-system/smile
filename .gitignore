@@ -3,4 +3,6 @@
 /.env
 /credentials.json
 /token.json
+/scratch/
+/uploads/
 
