@@ -861,6 +861,10 @@ if (!$is_admin) {
                                                             </label>
                                                             <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
                                                                 <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
+                                                                <span>立面図への高さの記載（設計GL・平均GL・最高高さ・軒高など）</span>
+                                                            </label>
+                                                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                                                                <input type="checkbox" class="design-deliver-check" style="margin-top: 2px;">
                                                                 <span>車庫・吹き抜け・階段 of 部屋属性、室内の部屋を外部部屋としない</span>
                                                             </label>
                                                             <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
@@ -1277,6 +1281,7 @@ if (!$is_admin) {
                         <li>新規ﾃﾞｰﾀ作成からの作図</li>
                         <li>ｸﾞﾘｯﾄﾞ、ﾓｼﾞｭｰﾙの設定は意匠図に合わせる</li>
                         <li>高さの設定（平均GLからの高さとする、構造は基礎高さで調整）</li>
+                        <li>立面図への高さの記載（設計GL・平均GL・最高高さ・軒高など）</li>
                         <li>車庫・吹き抜け・階段 of 部屋属性（室内の部屋を外部部屋としない）</li>
                         <li>最高（屋根）の高さは軒高での調整はNG、屋根属性・屋根厚で調整</li>
                         <li>屋根仕上げが矩計で読めたら屋根材は図面通りとする</li>
