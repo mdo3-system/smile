@@ -133,6 +133,47 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
         $stmtSpecs = $pdo->prepare("INSERT INTO project_specs (project_id) VALUES (:pid)");
         $stmtSpecs->execute(['pid' => $new_project_id]);
 
+        // C-2. Save estimate data to estimates table
+        $base_price = (int)($data['base_price'] ?? 0);
+        $area = (float)($data['area'] ?? 0.0);
+        $grade_price = (int)($data['grade_price'] ?? 0);
+        $total_price = (int)($data['total_price'] ?? 0);
+        
+        $note = $data['note'] ?? '[]';
+        if (is_array($note)) {
+            $note = json_encode($note, JSON_UNESCAPED_UNICODE);
+        }
+        $inputs_json_val = $data['inputs_json'] ?? '{}';
+        if (is_array($inputs_json_val)) {
+            $inputs_json_val = json_encode($inputs_json_val, JSON_UNESCAPED_UNICODE);
+        }
+
+        $stmtEst = $pdo->prepare("
+            INSERT INTO estimates (project_id, base_price, area, grade_price, total_price, note, pdf_drive_file_id, req_permit, req_wall, req_skin, req_sky, inputs_json)
+            VALUES (:pid, :base, :area, :grade, :total, :note, NULL, :permit, :wall, :skin, :sky, :inputs_json)
+        ");
+        $stmtEst->execute([
+            'pid' => $new_project_id,
+            'base' => $base_price,
+            'area' => $area,
+            'grade' => $grade_price,
+            'total' => $total_price,
+            'note' => $note,
+            'permit' => $req_permit,
+            'wall' => $req_wall,
+            'skin' => $req_skin,
+            'sky' => $req_sky,
+            'inputs_json' => $inputs_json_val
+        ]);
+
+        // C-3. Automatically set initial_est_amount (total + 10% tax) and initial_est_date
+        if ($total_price > 0) {
+            $tax = round($total_price * 0.1);
+            $grandTotal = $total_price + $tax;
+            $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid");
+            $stmtInit->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $new_project_id]);
+        }
+
         // D. Insert chat message
         if (!empty($estimate_details)) {
             $msg_body = "【自動登録】セルフ見積もり内容:\n\n" . $estimate_details;
@@ -169,6 +210,100 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
             $pdo->rollBack();
         }
         return ['success' => false, 'message' => 'Database error: ' . $e->getMessage(), 'code' => 500];
+    }
+
+    // F. PDF Generation & Upload (skips in unit tests)
+    if (!$isTest) {
+        require_once __DIR__ . '/google_drive_client.php';
+        require_once __DIR__ . '/estimate_pdf_generator.php';
+        
+        $temp_pdf_path = null;
+        try {
+            $temp_pdf_path = generate_estimate_pdf($new_project_id, $pdo);
+            $pdf_filename = '御見積書_' . $project_name . '.pdf';
+            $pdfDriveId = null;
+            
+            try {
+                $project_folder_id = get_or_create_project_drive_folder($pdo, $new_project_id);
+                $pdfDriveId = upload_to_google_drive_folder($temp_pdf_path, $pdf_filename, 'application/pdf', $project_folder_id);
+                if ($temp_pdf_path && file_exists($temp_pdf_path)) {
+                    unlink($temp_pdf_path);
+                }
+            } catch (Exception $driveEx) {
+                error_log("Google Driveへの自動見積書保存に失敗しました。ローカル保存にフォールバックします: " . $driveEx->getMessage());
+                
+                $c_folder = '';
+                $p_folder = '';
+                $sub_dir = '';
+                
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT p.project_name, u.id as client_id, u.company_name, u.contact_name
+                        FROM projects p
+                        JOIN users u ON p.client_id = u.id
+                        WHERE p.id = :pid
+                    ");
+                    $stmt->execute(['pid' => $new_project_id]);
+                    $fallback_data = $stmt->fetch();
+                    
+                    if ($fallback_data) {
+                        $client_folder_name = !empty($fallback_data['company_name']) ? trim($fallback_data['company_name']) : trim($fallback_data['contact_name']);
+                        if (empty($client_folder_name)) {
+                            $client_folder_name = "依頼主_ID_" . $fallback_data['client_id'];
+                        }
+                        $project_folder_name = !empty($fallback_data['project_name']) ? trim($fallback_data['project_name']) : "案件_ID_" . $new_project_id;
+                        
+                        $c_folder = sanitize_local_folder_name($client_folder_name);
+                        $p_folder = sanitize_local_folder_name($project_folder_name);
+                        
+                        if ($c_folder !== '' && $p_folder !== '') {
+                            $sub_dir = '/' . $c_folder . '/' . $p_folder;
+                        }
+                    }
+                } catch (Exception $db_ex) {
+                    error_log("Failed to fetch project info for estimate local fallback path: " . $db_ex->getMessage());
+                }
+
+                $upload_dir = __DIR__ . '/uploads' . $sub_dir;
+                if (!file_exists($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+                
+                $unique_name = time() . '_' . uniqid() . '_' . $pdf_filename;
+                $dest_path = $upload_dir . '/' . $unique_name;
+                $relative_path = 'uploads' . $sub_dir . '/' . $unique_name;
+                
+                if ($temp_pdf_path && copy($temp_pdf_path, $dest_path)) {
+                    $pdfDriveId = $relative_path;
+                    try {
+                        $stmtFile = $pdo->prepare("
+                            INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+                            VALUES (:pid, 'pdf_estimate', :name, :drive_id, 1, 1)
+                        ");
+                        $stmtFile->execute([
+                            'pid'      => $new_project_id,
+                            'name'     => $pdf_filename,
+                            'drive_id' => $pdfDriveId
+                        ]);
+                    } catch (Exception $fe) {
+                        error_log("Failed to insert local estimate file metadata: " . $fe->getMessage());
+                    }
+                }
+                
+                if ($temp_pdf_path && file_exists($temp_pdf_path)) {
+                    unlink($temp_pdf_path);
+                }
+            }
+            
+            // estimates に pdf_drive_file_id を更新
+            if ($pdfDriveId) {
+                $stmtUpdateEst = $pdo->prepare("UPDATE estimates SET pdf_drive_file_id = :did WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+                $stmtUpdateEst->execute(['did' => $pdfDriveId, 'pid' => $new_project_id]);
+            }
+            
+        } catch (Exception $pdfEx) {
+            error_log("PDF generation or sync completely failed: " . $pdfEx->getMessage());
+        }
     }
 
     // 4. Send Emails (skips if in unit test environment)
@@ -220,7 +355,7 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
             $body .= "------\n";
             $body .= "木造住宅設計サポート 事務局\n";
             $body .= "URL: https://thanks.work\n";
-            $body .= "Email: support@thanks.work\n";
+            $body .= "Email: info@thanks.work\n";
             
             sendSystemEmail($email, $subject, $body);
         } else {
@@ -247,7 +382,7 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
             $body .= "------\n";
             $body .= "木造住宅設計サポート 事務局\n";
             $body .= "URL: https://thanks.work\n";
-            $body .= "Email: support@thanks.work\n";
+            $body .= "Email: info@thanks.work\n";
             
             sendSystemEmail($email, $subject, $body);
         }

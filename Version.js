@@ -166,7 +166,8 @@
 // 1.6.5: 外部セルフ見積もりフォームからの自動ユーザー登録・案件作成 API (api_self_estimate.php) を新設
 // 1.6.6: 自動登録完了メール文面のカスタマイズ（次のステップ、ポータル取引、マニュアルURL等の案内追記）
 // 1.6.7: WordPress AForms 自動返信メール用テンプレートの追記
+// 1.6.8: AFormsセルフ見積りデータのシミュレータ自動連携、初期見積額及びPDFの自動生成対応、およびメールアドレスの info@thanks.work への統一
 
-window.APP_VERSION = "1.6.7";
+window.APP_VERSION = "1.6.8";
 const APP_LAST_UPDATED = '2026-07-15';
 

@@ -47,13 +47,33 @@ class SelfEstimateTest extends TestCase {
                 req_wall INTEGER DEFAULT 0,
                 req_skin INTEGER DEFAULT 0,
                 req_sky INTEGER DEFAULT 0,
-                req_opt_kisohari INTEGER DEFAULT 0
+                req_opt_kisohari INTEGER DEFAULT 0,
+                initial_est_amount INTEGER,
+                initial_est_date TEXT
             )
         ");
 
         $this->pdo->exec("
             CREATE TABLE project_specs (
                 project_id INTEGER PRIMARY KEY
+            )
+        ");
+
+        $this->pdo->exec("
+            CREATE TABLE estimates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
+                base_price INTEGER,
+                area REAL,
+                grade_price INTEGER,
+                total_price INTEGER,
+                note TEXT,
+                pdf_drive_file_id TEXT,
+                req_permit INTEGER,
+                req_wall INTEGER,
+                req_skin INTEGER,
+                req_sky INTEGER,
+                inputs_json TEXT
             )
         ");
 
@@ -237,5 +257,56 @@ class SelfEstimateTest extends TestCase {
         $user = $stmtCheckUser->fetch(PDO::FETCH_ASSOC);
         $this->assertEquals('Original Name', $user['contact_name']);
         $this->assertEquals('03-9999-9999', $user['phone_number']);
+    }
+
+    public function testEstimateDataAndInitialPricingAreSavedCorrectly() {
+        $data = [
+            'api_token' => $this->test_token,
+            'email' => 'est@example.com',
+            'company_name' => 'Est Co',
+            'contact_name' => 'Est Name',
+            'phone_number' => '03-1234-5678',
+            'project_name' => 'Est Project',
+            'base_price' => 100000,
+            'area' => 120.5,
+            'grade_price' => 50000,
+            'total_price' => 150000,
+            'note' => [
+                ['name' => '基本料金', 'price' => 100000],
+                ['name' => '仕様加算', 'price' => 50000]
+            ],
+            'inputs_json' => [
+                'req_permit' => 1,
+                'area' => 120.5
+            ],
+            'req_permit' => 1,
+            'req_skin' => 1
+        ];
+
+        $result = handleSelfEstimate($data, $this->pdo, true);
+
+        $this->assertTrue($result['success']);
+
+        // Verify estimates record was created
+        $stmtEst = $this->pdo->query("SELECT * FROM estimates WHERE project_id = " . $result['project_id']);
+        $est = $stmtEst->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($est);
+        $this->assertEquals(100000, $est['base_price']);
+        $this->assertEquals(120.5, $est['area']);
+        $this->assertEquals(50000, $est['grade_price']);
+        $this->assertEquals(150000, $est['total_price']);
+        
+        $noteDecoded = json_decode($est['note'], true);
+        $this->assertCount(2, $noteDecoded);
+        $this->assertEquals('基本料金', $noteDecoded[0]['name']);
+        
+        $inputsDecoded = json_decode($est['inputs_json'], true);
+        $this->assertEquals(1, $inputsDecoded['req_permit']);
+
+        // Verify project.initial_est_amount was set to tax included (150,000 * 1.1 = 165,000)
+        $stmtProj = $this->pdo->query("SELECT initial_est_amount, initial_est_date FROM projects WHERE id = " . $result['project_id']);
+        $project = $stmtProj->fetch(PDO::FETCH_ASSOC);
+        $this->assertEquals(165000, $project['initial_est_amount']);
+        $this->assertEquals(date('Y-m-d'), $project['initial_est_date']);
     }
 }

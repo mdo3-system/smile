@@ -79,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $body .= "{$login_url}\n\n";
             $body .= "※本メールに心当たりがない場合は、破棄してください。\n";
             
-            $headers = "From: support@thanks.work\r\n";
-            $headers .= "Reply-To: support@thanks.work\r\n";
+            $headers = "From: info@thanks.work\r\n";
+            $headers .= "Reply-To: info@thanks.work\r\n";
             $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
             
             mb_language("uni");
