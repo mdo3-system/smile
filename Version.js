@@ -167,7 +167,8 @@
 // 1.6.6: 自動登録完了メール文面のカスタマイズ（次のステップ、ポータル取引、マニュアルURL等の案内追記）
 // 1.6.7: WordPress AForms 自動返信メール用テンプレートの追記
 // 1.6.8: AFormsセルフ見積りデータのシミュレータ自動連携、初期見積額及びPDFの自動生成対応、およびメールアドレスの info@thanks.work への統一
+// 1.6.9: WordPress AForms 連携用 PHP コード内のカスタム属性をキーIDに依存せずラベル表示名で動的自動マッピングするように改定
 
-window.APP_VERSION = "1.6.8";
+window.APP_VERSION = "1.6.9";
 const APP_LAST_UPDATED = '2026-07-15';
 
