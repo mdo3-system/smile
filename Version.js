@@ -168,7 +168,8 @@
 // 1.6.7: WordPress AForms 自動返信メール用テンプレートの追記
 // 1.6.8: AFormsセルフ見積りデータのシミュレータ自動連携、初期見積額及びPDFの自動生成対応、およびメールアドレスの info@thanks.work への統一
 // 1.6.9: WordPress AForms 連携用 PHP コード内のカスタム属性をキーIDに依存せずラベル表示名で動的自動マッピングするように改定
+// 1.6.10: 追加されたカスタム成果物スロットが未アップロード状態のとき「最新版ダウンロード」ボタンを表示せず「未提出」とするように修正
 
-window.APP_VERSION = "1.6.9";
-const APP_LAST_UPDATED = '2026-07-15';
+window.APP_VERSION = "1.6.10";
+const APP_LAST_UPDATED = '2026-07-16';
 
