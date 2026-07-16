@@ -66,7 +66,7 @@
                             <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:8px;">
                                 <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px;"><?= $label ?></div>
                                 
-                                <?php if (!empty($history)): 
+                                <?php if (!empty($history) && !empty($history[0]['drive_file_id'])): 
                                     $latest = $history[0]; 
                                     $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
                                         ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'

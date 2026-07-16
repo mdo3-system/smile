@@ -105,7 +105,7 @@
                                     <?php endif; ?>
                                 </div>
                                 
-                                <?php if (!empty($history)): 
+                                <?php if (!empty($history) && !empty($history[0]['drive_file_id'])): 
                                     $latest = $history[0]; 
                                     $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
                                         ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
