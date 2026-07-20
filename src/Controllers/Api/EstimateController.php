@@ -43,20 +43,45 @@ class EstimateController
             $inputs_json = $_POST['inputs_json'] ?? '{}';
             $inputs = json_decode($inputs_json, true) ?: [];
 
-            $_POST['req_permit'] = !empty($inputs['est_active_permit']) ? 1 : 0;
-            $_POST['req_wall']   = !empty($inputs['est_active_wall']) ? 1 : 0;
-            $_POST['req_skin']   = !empty($inputs['est_active_skin']) ? 1 : 0;
-            $_POST['req_sky']    = !empty($inputs['est_active_sky']) ? 1 : 0;
+            $new_permit = !empty($inputs['est_active_permit']) ? 1 : 0;
+            $new_wall   = !empty($inputs['est_active_wall']) ? 1 : 0;
+            $new_skin   = !empty($inputs['est_active_skin']) ? 1 : 0;
+            $new_sky    = !empty($inputs['est_active_sky']) ? 1 : 0;
             
-            $req_opt_kisohari = 0;
-            if (!empty($inputs['est_active_permit'])) {
-                $req_opt_kisohari = 1;
-            } elseif (!empty($inputs['est_kisohari_wall'])) {
-                $req_opt_kisohari = 1;
-            } elseif (!empty($inputs['est_opt_kisohari_calc'])) {
-                $req_opt_kisohari = 1;
+            $new_kisohari = 0;
+            if (!empty($inputs['est_active_permit']) || !empty($inputs['est_kisohari_wall']) || !empty($inputs['est_opt_kisohari_calc'])) {
+                $new_kisohari = 1;
             }
-            $_POST['req_opt_kisohari'] = $req_opt_kisohari;
+
+            // 現在の案件の仕様フラグを取得して保護する
+            $stmtCurrentReq = $pdo->prepare("SELECT req_permit, req_wall, req_skin, req_sky, req_opt_kisohari FROM projects WHERE id = :pid");
+            $stmtCurrentReq->execute(['pid' => $projectId]);
+            $currentReq = $stmtCurrentReq->fetch(\PDO::FETCH_ASSOC);
+
+            $isAdditional = isset($_POST['is_additional']) && $_POST['is_additional'] === '1';
+
+            if ($currentReq) {
+                // 追加見積の場合、または既存の仕様フラグが存在する場合は、既存のフラグ(1)を勝手に消去(0)しない
+                if ($isAdditional || ($currentReq['req_permit'] || $currentReq['req_wall'] || $currentReq['req_skin'] || $currentReq['req_sky'] || $currentReq['req_opt_kisohari'])) {
+                    $_POST['req_permit']       = ($currentReq['req_permit'] == 1 || $new_permit == 1) ? 1 : 0;
+                    $_POST['req_wall']         = ($currentReq['req_wall'] == 1 || $new_wall == 1) ? 1 : 0;
+                    $_POST['req_skin']         = ($currentReq['req_skin'] == 1 || $new_skin == 1) ? 1 : 0;
+                    $_POST['req_sky']          = ($currentReq['req_sky'] == 1 || $new_sky == 1) ? 1 : 0;
+                    $_POST['req_opt_kisohari'] = ($currentReq['req_opt_kisohari'] == 1 || $new_kisohari == 1) ? 1 : 0;
+                } else {
+                    $_POST['req_permit']       = $new_permit;
+                    $_POST['req_wall']         = $new_wall;
+                    $_POST['req_skin']         = $new_skin;
+                    $_POST['req_sky']          = $new_sky;
+                    $_POST['req_opt_kisohari'] = $new_kisohari;
+                }
+            } else {
+                $_POST['req_permit']       = $new_permit;
+                $_POST['req_wall']         = $new_wall;
+                $_POST['req_skin']         = $new_skin;
+                $_POST['req_sky']          = $new_sky;
+                $_POST['req_opt_kisohari'] = $new_kisohari;
+            }
 
             // projects テーブルの仕様フラグを更新
             $stmtProjUpdate = $pdo->prepare("

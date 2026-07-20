@@ -717,9 +717,15 @@
 
 ---
 
-## 62. このドキュメントの所在
+## 63. 見積保存時の案件仕様フラグ (req_*) 保護および成果物スロット消失防止 (v1.6.12)
+- **仕様**: 自動見積もりシミュレーター保存時（特に追加見積 `is_additional = 1` や既存案件の見積更新時）において、シミュレーター入力値 (`inputs_json`) に含まれない選択項目であっても、案件テーブル (`projects`) 上で既に有効化（`1`）されている計算種別フラグ (`req_permit`, `req_wall`, `req_skin`, `req_sky`, `req_opt_kisohari`) を勝手に消去（`0` に縮小上書き）しない保護ロジックを `EstimateController::save()` に実装。
+- **データ修復**: `fix_project_req_flags.php` を作成・実行し、過去の見積履歴 (`estimates.inputs_json`) や登録済み成果物ファイル (`project_files`) の存在から原本の計算フラグを自動復元・修復し、画面上から失われた成果物スロットを再描画・修復した。
+
+---
+
+## 64. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\77ae2bea-d618-4766-95f1-682f0ba9df0e\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.11（2026-07-17）
+- **最終バージョン**: v1.6.12（2026-07-20）
 
