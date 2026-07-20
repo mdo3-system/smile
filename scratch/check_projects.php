@@ -1,12 +1,9 @@
 <?php
-// scratch/check_projects.php
 require_once __DIR__ . '/../db_connect.php';
 
-$stmt = $pdo->query("SELECT id, project_name, status, primary_due_date, req_wall, schedule_actuals, schedule_actuals_wall FROM projects");
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->query("SELECT id, project_name, status, req_permit, req_wall, req_skin, req_sky, req_opt_kisohari FROM projects ORDER BY id DESC LIMIT 15");
+$projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($rows as $row) {
-    echo "ID: {$row['id']} | Name: {$row['project_name']} | Status: {$row['status']} | Due: {$row['primary_due_date']} | req_wall: {$row['req_wall']}\n";
-    echo "  Actuals: {$row['schedule_actuals']}\n";
-    echo "  Actuals Wall: {$row['schedule_actuals_wall']}\n\n";
+foreach ($projects as $p) {
+    echo "ID: {$p['id']} | Name: {$p['project_name']} | Status: {$p['status']} | Permit: {$p['req_permit']} | Wall: {$p['req_wall']} | Skin: {$p['req_skin']} | Sky: {$p['req_sky']} | Kisohari: {$p['req_opt_kisohari']}\n";
 }
