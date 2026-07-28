@@ -9,14 +9,10 @@ window.addEventListener('DOMContentLoaded', () => {
     scrollToBottom();
     if (typeof toggleEstContainers === 'function') {
         toggleEstContainers();
-        calcClientEstimate();
-    }
-});
-
-// ===== メッセージバブルHTML生成 =====
+        calcClientEstimate// ===== メッセージバブルHTML生成 =====
 function buildBubble(msg) {
     const isMe = (msg.sender_id == window.APP_CURRENT_USER_ID);
-    const isAdminMsg = (msg.sender_id == 1);
+    const isAdminMsg = (msg.sender_id == 1 || msg.sender_role === 'admin' || msg.sender_role === 'accountant');
     const rowClass = isMe ? 'from-me' : '';
     const bubbleClass = isAdminMsg ? 'bubble-admin' : 'bubble-client';
     const avatarClass = isAdminMsg ? 'admin-avatar' : 'client-avatar';
@@ -26,12 +22,13 @@ function buildBubble(msg) {
 
     let fileHtml = '';
     if (msg.file_path) {
-        const isGdrive = msg.file_path.length > 15 && !msg.file_path.includes('/');
+        const isGdrive = msg.file_path.length > 15 && !msg.file_path.includes('/') && !msg.file_path.startsWith('uploads/');
         const furl = isGdrive ? `https://drive.google.com/file/d/${msg.file_path}/view?usp=drivesdk` : msg.file_path;
-        if (msg.file_type === 'image' && isGdrive) {
-            const thumb = `https://drive.google.com/thumbnail?id=${msg.file_path}&sz=w200`;
-            fileHtml = `<a href="${furl}" target="_blank"><img src="${thumb}" class="chat-image-thumb" alt="添付画像"></a>`;
-        } else if (msg.file_path) {
+        const isImage = (msg.file_type === 'image') || /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.file_path);
+        if (isImage) {
+            const thumb = isGdrive ? `https://drive.google.com/thumbnail?id=${msg.file_path}&sz=w400` : msg.file_path;
+            fileHtml = `<div style="margin-top:4px;"><a href="${furl}" target="_blank" style="display:block; margin-bottom:4px;"><img src="${thumb}" class="chat-image-thumb" style="max-width:220px; max-height:220px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像"></a><a href="${furl}" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a></div>`;
+        } else {
             fileHtml = `<a href="${furl}" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>`;
         }
     }
@@ -41,8 +38,8 @@ function buildBubble(msg) {
     const textHtml = msg.message_text ? `<div class="chat-bubble ${bubbleClass}">${msg.message_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>` : '';
 
     let deleteBtnHtml = '';
-    if (isMe || window.APP_USER_ROLE === 'admin') {
-        deleteBtnHtml = `<span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px;" onclick="deleteChatMessage(${msg.id})">取り消し</span>`;
+    if (isMe || window.APP_USER_ROLE === 'admin' || window.APP_USER_ROLE === 'accountant') {
+        deleteBtnHtml = `<span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(${msg.id})">取り消し</span>`;
     }
 
     return `<div class="chat-bubble-row ${rowClass}" data-msg-id="${msg.id}">
@@ -64,10 +61,10 @@ function pollMessages() {
         .then(msgs => {
             if (msgs && msgs.length > 0) {
                 const container = document.getElementById('chatMessages');
-                const empty = container.querySelector('[data-empty]');
+                const empty = container ? container.querySelector('[data-empty]') : null;
                 if (empty) empty.remove();
                 msgs.forEach(msg => {
-                    container.insertAdjacentHTML('beforeend', buildBubble(msg));
+                    if (container) container.insertAdjacentHTML('beforeend', buildBubble(msg));
                     window.APP_LAST_MSG_ID = msg.id;
                 });
                 scrollToBottom();
@@ -111,9 +108,11 @@ function sendMessage(text) {
         .then(data => {
             if(data.success) {
                 if (textarea) textarea.value = '';
+                if (fileInput) fileInput.value = '';
                 chatSelectedFiles = [];
                 renderChatFilePreview();
                 pollMessages();
+                window.location.reload();
             } else {
                 alert(data.error || '送信失敗');
             }
@@ -135,18 +134,9 @@ function handleKey(e) {
 let chatSelectedFiles = [];
 
 function previewFile(input) {
-    const preview = document.getElementById('filePreview');
-    const label = input.closest('.chat-attach-btn');
-    const textarea = document.getElementById('chatTextarea');
-    const sendBtn = document.querySelector('.chat-send-btn');
-
     if (input.files && input.files.length > 0) {
-        Array.from(input.files).forEach(f => {
-            if (!chatSelectedFiles.some(existing => existing.name === f.name)) {
-                chatSelectedFiles.push(f);
-            }
-        });
-        input.value = '';
+        // 新しくファイルが選択された場合、過去選択をリセットして今回ファイルで置換
+        chatSelectedFiles = Array.from(input.files);
     }
     renderChatFilePreview();
 }
@@ -161,13 +151,15 @@ function renderChatFilePreview() {
     if (chatSelectedFiles.length > 0) {
         let badgesHtml = '';
         chatSelectedFiles.forEach((f, index) => {
-            badgesHtml += `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-right:5px; margin-bottom:5px;">📎 ${f.name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2fee; border-radius:50%;" onclick="removeChatFile(${index})">×</span></span>`;
+            badgesHtml += `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-right:5px; margin-bottom:5px;">📎 ${f.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2e2; border-radius:50%;" onclick="removeChatFile(${index})">×</span></span>`;
         });
-        preview.innerHTML = badgesHtml;
+        if (preview) preview.innerHTML = badgesHtml;
         if (label) {
             label.classList.add('attached');
             label.style.background = '#10b981';
-            label.style.borderColor = '#059669';
+            label.style.color = '#fff';
+            label.style.padding = '4px 8px';
+            label.style.borderRadius = '4px';
         }
         if (textarea) {
             textarea.style.background = '#f0fdf4';
@@ -176,14 +168,15 @@ function renderChatFilePreview() {
         }
         if (sendBtn) {
             sendBtn.style.background = '#10b981';
-            sendBtn.style.animation = 'pulse-green 1.5s infinite';
         }
     } else {
-        preview.innerHTML = '';
+        if (preview) preview.innerHTML = '';
         if (label) {
             label.classList.remove('attached');
             label.style.background = '';
-            label.style.borderColor = '';
+            label.style.color = '';
+            label.style.padding = '';
+            label.style.borderRadius = '';
         }
         if (textarea) {
             textarea.style.background = '';
@@ -192,7 +185,9 @@ function renderChatFilePreview() {
         }
         if (sendBtn) {
             sendBtn.style.background = '';
-            sendBtn.style.animation = '';
+        }
+        if (fileInput) {
+            fileInput.value = '';
         }
     }
 }

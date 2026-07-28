@@ -93,21 +93,23 @@
                                         $fpath = $msg['file_path'];
                                         // Google Drive IDかローカルパスかを判定
                                         $isGdrive = (strlen($fpath) > 15 && strpos($fpath, '/') === false && strpos($fpath, 'uploads/') !== 0);
+                                        $isImage = ($ftype === 'image') || preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $fpath);
                                         $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
-                                        $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w200' : '';
+                                        $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w400' : htmlspecialchars($fpath, ENT_QUOTES);
                                     ?>
-                                    <?php if ($ftype === 'image' && $isGdrive): ?>
-                                        <a href="<?= $furl ?>" target="_blank">
-                                            <img src="<?= $thumbUrl ?>" class="chat-image-thumb" alt="添付画像">
+                                    <?php if ($isImage): ?>
+                                        <a href="<?= $furl ?>" target="_blank" style="display:block; margin-top:4px;">
+                                            <img src="<?= $thumbUrl ?>" class="chat-image-thumb" style="max-width:220px; max-height:220px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像">
                                         </a>
-                                    <?php elseif ($ftype === 'pdf' || !empty($fpath)): ?>
+                                        <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                    <?php else: ?>
                                         <a href="<?= $furl ?>" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>
                                     <?php endif; ?>
                                 <?php endif; ?>
                                 <div class="chat-time">
                                     <?= $timeStr ?>
                                     <?php if ($isMe || $_SESSION['role'] === 'admin'): ?>
-                                        <span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                        <span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
