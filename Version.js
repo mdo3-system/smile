@@ -174,7 +174,8 @@
 // 1.6.13: 協力業者ポータル（project_subcontractor.php / subcontractor_portal.php）におけるチャット画像添付・緑化表示・過去選択画像誤送信バグの修正、画像インラインサムネイル表示、および全メッセージ取り消し（削除）機能の実装
 // 1.6.14: 添付図書・納品ファイル（project_files）の個別削除API (api_delete_project_file.php) の新設、最新版フラグ自動再計算修復、および画面上からの添付ファイル削除ボタンの実装
 // 1.6.15: 案件詳細ダッシュボード（col_right.php / project_detail.js）の添付ファイルプレビューインジケーター（緑バッジ・緑化スタイル・選択解除）追加、および画像単体メッセージへの取り消し（削除）ボタン表示の改善
+// 1.6.16: 全画面チャットUI（dashboard_client.php / subcontractor_portal.php / project_subcontractor.php / project_detail.js）の横断精査およびプレビュー緑色バッジ・選択解除・画像取り消しボタンの全箇所統一対応
 
-window.APP_VERSION = "1.6.15";
+window.APP_VERSION = "1.6.16";
 const APP_LAST_UPDATED = '2026-07-28';
 

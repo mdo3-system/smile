@@ -1106,7 +1106,12 @@ if (!$is_admin) {
                                                     <a href="<?= $furl ?>" target="_blank" style="display:block; margin-bottom:4px;">
                                                         <img src="<?= $thumbUrl ?>" style="max-width:220px; max-height:220px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像">
                                                     </a>
-                                                    <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                                    <div style="display:flex; align-items:center; gap:8px;">
+                                                        <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                                        <?php if ($isMe || $is_admin): ?>
+                                                            <span style="cursor:pointer; color:#ef4444; font-size:11px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">🗑 この画像を取り消し</span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <?php else: ?>
                                                     <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none; font-weight:bold;">📄 添付ファイルを開く</a>
                                                 <?php endif; ?>

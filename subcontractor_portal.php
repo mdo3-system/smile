@@ -951,16 +951,17 @@ $global_messages = $stmtChat->fetchAll();
                     <?php endif; ?>
                 </div>
 
-                <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;">
+                <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;" onsubmit="setTimeout(() => resetGlobalFileForm(), 500)">
                     <input type="hidden" name="action" value="send_global_message">
-                    <div style="background:#fff; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        <textarea name="message_text" rows="4" style="width:100%; box-sizing:border-box; border:none; resize:vertical; font-family:inherit; font-size:13px; outline:none; display:block; margin-bottom:8px;" placeholder="メッセージを入力..."></textarea>
+                    <div id="globalFilePreview" style="padding:4px 8px; background:#fff; border:1px solid #ccc; border-bottom:none; border-radius:4px 4px 0 0; display:none;"></div>
+                    <div id="globalChatBox" style="background:#fff; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        <textarea id="globalMessageText" name="message_text" rows="4" style="width:100%; box-sizing:border-box; border:none; resize:vertical; font-family:inherit; font-size:13px; outline:none; display:block; margin-bottom:8px;" placeholder="メッセージを入力..."></textarea>
                         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding-top:5px;">
                             <div>
-                                <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="document.getElementById('global_file_label').style.color='#28a745'">
+                                <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="previewGlobalFile(this)">
                                 <label for="global_chat_file" id="global_file_label" style="cursor:pointer; font-size:18px; color:#6c757d; padding:5px;" title="ファイルを添付">📎</label>
                             </div>
-                            <button type="submit" style="background:#10b981; color:white; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
+                            <button type="submit" id="globalSendBtn" style="background:#10b981; color:white; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">送信</button>
                         </div>
                     </div>
                 </form>
@@ -1189,6 +1190,50 @@ $global_messages = $stmtChat->fetchAll();
                     alert(data.error || 'メッセージの取り消しに失敗しました。');
                 }
             }).catch(e => alert('通信エラー: ' + e));
+    }
+
+    function previewGlobalFile(input) {
+        const preview = document.getElementById('globalFilePreview');
+        const box = document.getElementById('globalChatBox');
+        const textarea = document.getElementById('globalMessageText');
+        const label = document.getElementById('global_file_label');
+
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            if (preview) {
+                preview.style.display = 'block';
+                preview.innerHTML = `<span style="background:#dcfce7; color:#15803d; padding:4px 10px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:1px solid #bbf7d0; font-weight:bold;">📎 ${file.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} <span style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; background:#fee2e2; border-radius:50%; padding:0 5px;" onclick="resetGlobalFileForm()">×</span></span>`;
+            }
+            if (box) box.style.borderColor = '#10b981';
+            if (textarea) textarea.style.background = '#f0fdf4';
+            if (label) {
+                label.style.color = '#10b981';
+                label.style.background = '#dcfce7';
+                label.style.borderRadius = '4px';
+            }
+        } else {
+            resetGlobalFileForm();
+        }
+    }
+
+    function resetGlobalFileForm() {
+        const input = document.getElementById('global_chat_file');
+        const preview = document.getElementById('globalFilePreview');
+        const box = document.getElementById('globalChatBox');
+        const textarea = document.getElementById('globalMessageText');
+        const label = document.getElementById('global_file_label');
+
+        if (input) input.value = '';
+        if (preview) {
+            preview.innerHTML = '';
+            preview.style.display = 'none';
+        }
+        if (box) box.style.borderColor = '#ccc';
+        if (textarea) textarea.style.background = '';
+        if (label) {
+            label.style.color = '#6c757d';
+            label.style.background = '';
+        }
     }
 
     // ページ読み込み完了時にチャットのスクロールを最下部に移動
