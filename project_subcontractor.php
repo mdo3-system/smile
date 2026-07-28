@@ -719,6 +719,9 @@ if (!$is_admin) {
                                                 <?= htmlspecialchars($file['file_name'], ENT_QUOTES) ?> 
                                             </a>
                                             <span class="badge" style="background:#64748b; color:white; font-size:9px; padding:1px 4px; border-radius:3px; margin-left:5px;">V<?= $file['version'] ?></span>
+                                            <?php if ($is_admin): ?>
+                                                <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteProjectFile(<?= $file['id'] ?>)">削除</span>
+                                            <?php endif; ?>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
@@ -1059,6 +1062,7 @@ if (!$is_admin) {
                                             <?php if ($hf['is_latest']): ?>
                                                 <span style="background:#17a2b8; color:white; padding:1px 4px; border-radius:3px; font-size:9px;">最新</span>
                                             <?php endif; ?>
+                                            <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteProjectFile(<?= $hf['id'] ?>)">削除</span>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
@@ -1267,6 +1271,22 @@ if (!$is_admin) {
                     location.reload();
                 } else {
                     alert(data.error || 'メッセージの取り消しに失敗しました。');
+                }
+            }).catch(e => alert('通信エラー: ' + e));
+    }
+
+    function deleteProjectFile(fileId) {
+        if (!confirm('この添付ファイルを削除しますか？\n（削除すると復元できません）')) return;
+        const formData = new FormData();
+        formData.append('file_id', fileId);
+
+        fetch('api_delete_project_file.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'ファイルの削除に失敗しました。');
                 }
             }).catch(e => alert('通信エラー: ' + e));
     }

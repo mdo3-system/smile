@@ -172,7 +172,8 @@
 // 1.6.11: ログインおよび新規登録時のログインリンク送信メールの送信元(From/Reply-To)アドレスを no-reply@system.thanks.work に変更
 // 1.6.12: 見積保存時の案件仕様フラグ(req_*)消去バグの修正、成果物スロット消失防止、および影響案件データのDB自動修復スクリプトの適用
 // 1.6.13: 協力業者ポータル（project_subcontractor.php / subcontractor_portal.php）におけるチャット画像添付・緑化表示・過去選択画像誤送信バグの修正、画像インラインサムネイル表示、および全メッセージ取り消し（削除）機能の実装
+// 1.6.14: 添付図書・納品ファイル（project_files）の個別削除API (api_delete_project_file.php) の新設、最新版フラグ自動再計算修復、および画面上からの添付ファイル削除ボタンの実装
 
-window.APP_VERSION = "1.6.13";
+window.APP_VERSION = "1.6.14";
 const APP_LAST_UPDATED = '2026-07-28';
 

@@ -696,3 +696,19 @@ function deleteChatMessage(msgId) {
             }
         }).catch(e => alert('通信エラー: ' + e));
 }
+
+function deleteProjectFile(fileId) {
+    if (!confirm('この添付ファイルを削除しますか？\n（削除すると復元できません）')) return;
+    const formData = new FormData();
+    formData.append('file_id', fileId);
+
+    fetch('api_delete_project_file.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'ファイルの削除に失敗しました。');
+            }
+        }).catch(e => alert('通信エラー: ' + e));
+}
