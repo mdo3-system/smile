@@ -177,7 +177,8 @@
 // 1.6.16: 全画面チャットUI（dashboard_client.php / subcontractor_portal.php / project_subcontractor.php / project_detail.js）の横断精査およびプレビュー緑色バッジ・選択解除・画像取り消しボタンの全箇所統一対応
 // 1.6.17: messages テーブルと global_messages テーブルのID重複（衝突）バグを解消するため、api_delete_message.php へ chat_type (global/project) パラメータ指定の導入、および画像バブル下部への直接取り消しボタン配置の完全対応
 // 1.6.18: 手動追加明細（追加スロット）のみの完了案件における本見積確定バグを修正（全角数値変換・画面ロード時自動計算・バックエンドフォールバック追加）
+// 1.6.19: project_detail.js 内の構文エラー（DOMContentLoaded閉じ忘れ）を修復し、チャット自動最下部スクロールおよびメッセージ送信機能を復旧
 
-window.APP_VERSION = "1.6.18";
+window.APP_VERSION = "1.6.19";
 const APP_LAST_UPDATED = '2026-07-28';
 

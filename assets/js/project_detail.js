@@ -9,7 +9,13 @@ window.addEventListener('DOMContentLoaded', () => {
     scrollToBottom();
     if (typeof toggleEstContainers === 'function') {
         toggleEstContainers();
-        calcClientEstimate// ===== メッセージバブルHTML生成 =====
+    }
+    if (typeof calcClientEstimate === 'function') {
+        calcClientEstimate();
+    }
+});
+
+// ===== メッセージバブルHTML生成 =====
 function buildBubble(msg) {
     const isMe = (msg.sender_id == window.APP_CURRENT_USER_ID);
     const isAdminMsg = (msg.sender_id == 1 || msg.sender_role === 'admin' || msg.sender_role === 'accountant');
