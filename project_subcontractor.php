@@ -1264,10 +1264,11 @@ if (!$is_admin) {
             });
     }
 
-    function deleteChatMessage(msgId) {
+    function deleteChatMessage(msgId, chatType = 'project') {
         if (!confirm('このメッセージを取り消しますか？')) return;
         const formData = new FormData();
         formData.append('message_id', msgId);
+        formData.append('chat_type', chatType);
 
         fetch('api_delete_message.php', { method: 'POST', body: formData })
             .then(r => r.json())

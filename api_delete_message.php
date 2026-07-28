@@ -1,5 +1,6 @@
 <?php
 // api_delete_message.php
+ini_set('display_errors', 0);
 require_once 'auth.php';
 require_once 'db_connect.php';
 
@@ -11,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $message_id = isset($_POST['message_id']) ? intval($_POST['message_id']) : null;
+$chat_type = isset($_POST['chat_type']) ? trim($_POST['chat_type']) : '';
 $current_user_id = $_SESSION['user_id'] ?? null;
 $user_role = $_SESSION['role'] ?? null;
 
@@ -20,19 +22,31 @@ if (!$message_id || !$current_user_id) {
 }
 
 try {
+    $message = null;
     $isGlobal = false;
-    // 対象メッセージを取得
-    $stmt = $pdo->prepare("SELECT * FROM messages WHERE id = :id");
-    $stmt->execute(['id' => $message_id]);
-    $message = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$message) {
-        // global_messages テーブルから取得
+    if ($chat_type === 'global') {
         $stmtG = $pdo->prepare("SELECT * FROM global_messages WHERE id = :id");
         $stmtG->execute(['id' => $message_id]);
         $message = $stmtG->fetch(PDO::FETCH_ASSOC);
         if ($message) {
             $isGlobal = true;
+        }
+    } elseif ($chat_type === 'project') {
+        $stmtM = $pdo->prepare("SELECT * FROM messages WHERE id = :id");
+        $stmtM->execute(['id' => $message_id]);
+        $message = $stmtM->fetch(PDO::FETCH_ASSOC);
+    } else {
+        // chat_type 未指定時のフォールバック (global_messages を優先)
+        $stmtG = $pdo->prepare("SELECT * FROM global_messages WHERE id = :id");
+        $stmtG->execute(['id' => $message_id]);
+        $message = $stmtG->fetch(PDO::FETCH_ASSOC);
+        if ($message) {
+            $isGlobal = true;
+        } else {
+            $stmtM = $pdo->prepare("SELECT * FROM messages WHERE id = :id");
+            $stmtM->execute(['id' => $message_id]);
+            $message = $stmtM->fetch(PDO::FETCH_ASSOC);
         }
     }
 

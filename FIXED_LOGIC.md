@@ -733,11 +733,19 @@
   - 削除したファイルが最新版（`is_latest = 1`）だった場合、残っている同カテゴリの過去バージョンから最新版フラグを自動的に昇格修復するロジックを実装。
   - 協力業者ポータルの「📜 納品履歴一覧」および「📂 共有された共通図書・CADデータ」等に「削除」ボタンを配置。
 
+## 65. メッセージ削除時の ID 衝突バグ解消および `chat_type` パラメータ導入仕様 (v1.6.17)
+- **ID競合バグの解明・解消**:
+  - `messages` (案件チャット) と `global_messages` (全体連絡チャット) の主キー `id` が同一数字（例: `id=10`）で衝突していた際、削除 API (`api_delete_message.php`) が `messages` テーブルを優先検索するため、`global_messages` 側の削除が無視・スキップされる重大バグを解消。
+  - `api_delete_message.php` に `chat_type` (`global` / `project`) パラメータの処理を追加し、指定されたテーブルへ直接クエリを送信して削除を確定させるロジックへ改修。
+- **削除UIの拡張**:
+  - 全チャット画面において、メッセージヘッダーに加え添付画像バブルの直下にも「<span style="color:#ef4444; font-weight:bold;">🗑 この画像を取り消し</span>」ボタンを直接配置。
+  - フロントエンドJavaScriptの `deleteChatMessage(msgId, chatType)` で明示的に `chat_type` を送信するように統一。
+
 ---
 
-## 65. このドキュメントの所在
+## 66. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\77ae2bea-d618-4766-95f1-682f0ba9df0e\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.14（2026-07-28）
+- **最終バージョン**: v1.6.17（2026-07-28）
 

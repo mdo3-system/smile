@@ -683,7 +683,7 @@
                                     <div class="chat-time">
                                         <?= $timeStr ?>
                                         <?php if ($isMe || $_SESSION['role'] === 'admin'): ?>
-                                            <span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                            <span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>, 'project')">取り消し</span>
                                         <?php endif; ?>
                                     </div>
                                 </div>

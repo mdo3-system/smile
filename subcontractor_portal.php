@@ -917,7 +917,7 @@ $global_messages = $stmtChat->fetchAll();
                                 <div style="font-size:10px; color:#777; margin-bottom:2px;">
                                     <?= htmlspecialchars($msg['contact_name']) ?> - <?= date('m/d H:i', strtotime($msg['created_at'])) ?>
                                     <?php if ($is_mine || $is_admin): ?>
-                                        <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                        <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>, 'global')">取り消し</span>
                                     <?php endif; ?>
                                 </div>
                                 <?php if (!empty($msg['message_text'])): ?>
@@ -938,9 +938,19 @@ $global_messages = $stmtChat->fetchAll();
                                             <a href="<?= $furl ?>" target="_blank" style="display:block; margin-bottom:4px;">
                                                 <img src="<?= $thumbUrl ?>" style="max-width:200px; max-height:200px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像">
                                             </a>
-                                            <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                                                <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                                <?php if ($is_mine || $is_admin): ?>
+                                                    <span style="cursor:pointer; color:<?= $is_mine ? '#fecaca' : '#ef4444' ?>; font-size:11px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>, 'global')">🗑 取り消し</span>
+                                                <?php endif; ?>
+                                            </div>
                                         <?php else: ?>
-                                            <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; text-decoration:none; font-weight:bold;">📄 添付ファイルを開く</a>
+                                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                                                <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; text-decoration:none; font-weight:bold;">📄 添付ファイルを開く</a>
+                                                <?php if ($is_mine || $is_admin): ?>
+                                                    <span style="cursor:pointer; color:<?= $is_mine ? '#fecaca' : '#ef4444' ?>; font-size:11px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>, 'global')">🗑 取り消し</span>
+                                                <?php endif; ?>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
@@ -1176,10 +1186,11 @@ $global_messages = $stmtChat->fetchAll();
         });
     }
 
-    function deleteChatMessage(msgId) {
+    function deleteChatMessage(msgId, chatType = 'global') {
         if (!confirm('このメッセージを取り消しますか？')) return;
         const formData = new FormData();
         formData.append('message_id', msgId);
+        formData.append('chat_type', chatType);
 
         fetch('api_delete_message.php', { method: 'POST', body: formData })
             .then(r => r.json())

@@ -28,7 +28,7 @@ function buildBubble(msg) {
         if (isImage) {
             const thumb = isGdrive ? `https://drive.google.com/thumbnail?id=${msg.file_path}&sz=w400` : msg.file_path;
             const canDel = isMe || window.APP_USER_ROLE === 'admin' || window.APP_USER_ROLE === 'accountant';
-            const delHtml = canDel ? `<span style="cursor:pointer; color:#ef4444; font-size:11px; margin-left:10px; text-decoration:underline;" onclick="deleteChatMessage(${msg.id})">🗑 この画像を取り消し</span>` : '';
+            const delHtml = canDel ? `<span style="cursor:pointer; color:#ef4444; font-size:11px; margin-left:10px; text-decoration:underline;" onclick="deleteChatMessage(${msg.id}, 'project')">🗑 この画像を取り消し</span>` : '';
             fileHtml = `<div style="margin-top:4px;"><a href="${furl}" target="_blank" style="display:block; margin-bottom:4px;"><img src="${thumb}" class="chat-image-thumb" style="max-width:220px; max-height:220px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像"></a><div style="display:flex; align-items:center; gap:8px;"><a href="${furl}" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>${delHtml}</div></div>`;
         } else {
             fileHtml = `<a href="${furl}" target="_blank" class="chat-pdf-link">📄 添付ファイルを開く</a>`;
@@ -41,7 +41,7 @@ function buildBubble(msg) {
 
     let deleteBtnHtml = '';
     if (isMe || window.APP_USER_ROLE === 'admin' || window.APP_USER_ROLE === 'accountant') {
-        deleteBtnHtml = `<span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(${msg.id})">取り消し</span>`;
+        deleteBtnHtml = `<span class="chat-delete-btn" style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(${msg.id}, 'project')">取り消し</span>`;
     }
 
     return `<div class="chat-bubble-row ${rowClass}" data-msg-id="${msg.id}">
@@ -672,10 +672,11 @@ if (window.APP_PROJECT_ID) {
     autoPollInterval = setInterval(checkUpdates, 15000);
 }
 
-function deleteChatMessage(msgId) {
+function deleteChatMessage(msgId, chatType = 'project') {
     if (!confirm('このメッセージを取り消しますか？')) return;
     const formData = new FormData();
     formData.append('message_id', msgId);
+    formData.append('chat_type', chatType);
 
     fetch('api_delete_message.php', { method: 'POST', body: formData })
         .then(r => r.json())
