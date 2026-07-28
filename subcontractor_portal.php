@@ -914,25 +914,34 @@ $global_messages = $stmtChat->fetchAll();
                             $is_mine = ($msg['sender_id'] == $user_id);
                         ?>
                             <div style="display:flex; flex-direction:column; align-items: <?= $is_mine ? 'flex-end' : 'flex-start' ?>;">
-                                <div style="font-size:10px; color:#777; margin-bottom:2px;"><?= htmlspecialchars($msg['contact_name']) ?> - <?= date('m/d H:i', strtotime($msg['created_at'])) ?></div>
+                                <div style="font-size:10px; color:#777; margin-bottom:2px;">
+                                    <?= htmlspecialchars($msg['contact_name']) ?> - <?= date('m/d H:i', strtotime($msg['created_at'])) ?>
+                                    <?php if ($is_mine || $is_admin): ?>
+                                        <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                    <?php endif; ?>
+                                </div>
                                 <?php if (!empty($msg['message_text'])): ?>
                                     <div style="max-width:80%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; white-space:pre-wrap; <?= $is_mine ? 'background:#3b82f6; color:white; border-bottom-right-radius:2px;' : 'background:#e2e8f0; color:#333; border-bottom-left-radius:2px;' ?>">
                                         <?= htmlspecialchars($msg['message_text']) ?>
                                     </div>
                                 <?php endif; ?>
                                 <?php if (!empty($msg['file_path'])): 
-                                    $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
-                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
-                                        : htmlspecialchars($msg['file_path'], ENT_QUOTES);
+                                    $ftype = $msg['file_type'] ?? '';
+                                    $fpath = $msg['file_path'];
+                                    $isGdrive = (strpos($fpath, 'uploads/') !== 0 && strlen($fpath) > 15 && strpos($fpath, '/') === false);
+                                    $isImage = ($ftype === 'image') || preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $fpath);
+                                    $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
+                                    $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w400' : htmlspecialchars($fpath, ENT_QUOTES);
                                 ?>
-                                    <div style="max-width:80%; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px; <?= $is_mine ? 'background:#3b82f6;' : 'background:#e2e8f0;' ?>">
-                                        <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; text-decoration:none;">
-                                            <?php if (($msg['file_type'] ?? '') === 'image'): ?>
-                                                🖼 画像を見る
-                                            <?php else: ?>
-                                                📄 添付ファイルを見る
-                                            <?php endif; ?>
-                                        </a>
+                                    <div style="max-width:80%; padding:6px 10px; border-radius:8px; font-size:12px; margin-top:4px; <?= $is_mine ? 'background:#3b82f6; color:white;' : 'background:#e2e8f0; color:#333;' ?>">
+                                        <?php if ($isImage): ?>
+                                            <a href="<?= $furl ?>" target="_blank" style="display:block; margin-bottom:4px;">
+                                                <img src="<?= $thumbUrl ?>" style="max-width:200px; max-height:200px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像">
+                                            </a>
+                                            <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                        <?php else: ?>
+                                            <a href="<?= $furl ?>" target="_blank" style="color:<?= $is_mine ? '#fff' : '#0056b3' ?>; text-decoration:none; font-weight:bold;">📄 添付ファイルを開く</a>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -1164,6 +1173,22 @@ $global_messages = $stmtChat->fetchAll();
             console.error(err);
             alert("設定の更新に失敗しました。");
         });
+    }
+
+    function deleteChatMessage(msgId) {
+        if (!confirm('このメッセージを取り消しますか？')) return;
+        const formData = new FormData();
+        formData.append('message_id', msgId);
+
+        fetch('api_delete_message.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'メッセージの取り消しに失敗しました。');
+                }
+            }).catch(e => alert('通信エラー: ' + e));
     }
 
     // ページ読み込み完了時にチャットのスクロールを最下部に移動

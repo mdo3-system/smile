@@ -569,28 +569,35 @@ if (!$is_admin) {
                             $isMe = ($msg['sender_id'] == $_SESSION['user_id'] || $msg['sender_id'] == 1);
                             $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
                             $align = $isMe ? 'flex-end' : 'flex-start';
-                            
                             $senderName = $isMe ? 'あなた (管理者)' : '協力業者';
+
+                            $ftype = $msg['file_type'] ?? '';
+                            $fpath = $msg['file_path'] ?? '';
+                            $isGdrive = (!empty($fpath) && strpos($fpath, 'uploads/') !== 0 && strlen($fpath) > 15 && strpos($fpath, '/') === false);
+                            $isImage = ($ftype === 'image') || (!empty($fpath) && preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $fpath));
+                            $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
+                            $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w400' : htmlspecialchars($fpath, ENT_QUOTES);
                         ?>
                             <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
                                 <span style="font-size:10px; color:#666; margin-bottom:2px;">
                                     <?= $senderName ?> (<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)
                                     <?php if ($isMe || $is_admin): ?>
-                                        <span style="cursor:pointer; color:#ef4444; font-size:9px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                        <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
                                     <?php endif; ?>
                                 </span>
                                 <?php if (!empty($msg['message_text'])): ?>
                                     <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:80%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
                                 <?php endif; ?>
-                                <?php if (!empty($msg['file_path'])): 
-                                    $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
-                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
-                                        : htmlspecialchars($msg['file_path'], ENT_QUOTES);
-                                ?>
-                                    <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
-                                        <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
-                                            <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo "🖼 画像を見る"; else echo "📄 添付ファイルを見る"; ?>
-                                        </a>
+                                <?php if (!empty($fpath)): ?>
+                                    <div style="background:<?= $bubbleBg ?>; padding:6px 10px; border-radius:8px; font-size:12px; margin-top:4px; max-width:80%;">
+                                        <?php if ($isImage): ?>
+                                            <a href="<?= $furl ?>" target="_blank" style="display:block; margin-bottom:4px;">
+                                                <img src="<?= $thumbUrl ?>" style="max-width:220px; max-height:220px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像">
+                                            </a>
+                                            <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                        <?php else: ?>
+                                            <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none; font-weight:bold;">📄 添付ファイルを開く</a>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -1071,26 +1078,34 @@ if (!$is_admin) {
                                     $bubbleBg = $isMe ? '#dcf8c6' : '#dbeafe';
                                     $align = $isMe ? 'flex-end' : 'flex-start';
                                     $sender = $isMe ? 'あなた' : '管理者';
+
+                                    $ftype = $msg['file_type'] ?? '';
+                                    $fpath = $msg['file_path'] ?? '';
+                                    $isGdrive = (!empty($fpath) && strpos($fpath, 'uploads/') !== 0 && strlen($fpath) > 15 && strpos($fpath, '/') === false);
+                                    $isImage = ($ftype === 'image') || (!empty($fpath) && preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $fpath));
+                                    $furl = $isGdrive ? 'https://drive.google.com/file/d/' . htmlspecialchars($fpath, ENT_QUOTES) . '/view?usp=drivesdk' : htmlspecialchars($fpath, ENT_QUOTES);
+                                    $thumbUrl = $isGdrive ? 'https://drive.google.com/thumbnail?id=' . htmlspecialchars($fpath, ENT_QUOTES) . '&sz=w400' : htmlspecialchars($fpath, ENT_QUOTES);
                                 ?>
                                     <div style="display:flex; flex-direction:column; align-items:<?= $align ?>;">
                                         <span style="font-size:10px; color:#666; margin-bottom:2px;">
                                             <?php if (!$isMe): ?><?= $sender ?> <?php endif; ?>(<?= date('m/d H:i', strtotime($msg['created_at'])) ?>)
                                             <?php if ($isMe || $is_admin): ?>
-                                                <span style="cursor:pointer; color:#ef4444; font-size:9px; margin-left:8px;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
+                                                <span style="cursor:pointer; color:#ef4444; font-size:10px; margin-left:8px; text-decoration:underline;" onclick="deleteChatMessage(<?= $msg['id'] ?>)">取り消し</span>
                                             <?php endif; ?>
                                         </span>
                                         <?php if (!empty($msg['message_text'])): ?>
                                             <div style="background:<?= $bubbleBg ?>; padding:8px 12px; border-radius:12px; font-size:13px; max-width:85%; white-space:pre-wrap; word-break:break-word;"><?= htmlspecialchars($msg['message_text'], ENT_QUOTES) ?></div>
                                         <?php endif; ?>
-                                        <?php if (!empty($msg['file_path'])): 
-                                            $furl = (strpos($msg['file_path'], 'uploads/') !== 0 && strlen($msg['file_path']) > 15 && strpos($msg['file_path'], '/') === false) 
-                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($msg['file_path'], ENT_QUOTES) . '/view?usp=drivesdk' 
-                                                : htmlspecialchars($msg['file_path'], ENT_QUOTES);
-                                        ?>
-                                            <div style="background:<?= $bubbleBg ?>; padding:5px 10px; border-radius:8px; font-size:12px; margin-top:4px;">
-                                                <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none;">
-                                                    <?php if (preg_match('/\.(jpg|jpeg|png|gif)$/i', $msg['file_path'])) echo '🖼 画像を見る'; else echo '📄 添付ファイルを見る'; ?>
-                                                </a>
+                                        <?php if (!empty($fpath)): ?>
+                                            <div style="background:<?= $bubbleBg ?>; padding:6px 10px; border-radius:8px; font-size:12px; margin-top:4px; max-width:85%;">
+                                                <?php if ($isImage): ?>
+                                                    <a href="<?= $furl ?>" target="_blank" style="display:block; margin-bottom:4px;">
+                                                        <img src="<?= $thumbUrl ?>" style="max-width:220px; max-height:220px; border-radius:6px; display:block; border:1px solid #ccc;" alt="添付画像">
+                                                    </a>
+                                                    <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; font-size:11px; text-decoration:none; font-weight:bold;">🖼 画像を拡大表示</a>
+                                                <?php else: ?>
+                                                    <a href="<?= $furl ?>" target="_blank" style="color:#0056b3; text-decoration:none; font-weight:bold;">📄 添付ファイルを開く</a>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -1119,22 +1134,15 @@ if (!$is_admin) {
     <script>
     let subcontractorChatSelectedFiles = {};
 
-    function previewSubFile(input, projectId) {
-        if (!subcontractorChatSelectedFiles[projectId]) {
-            subcontractorChatSelectedFiles[projectId] = [];
-        }
-        const preview = document.getElementById('filePreview_' + projectId);
-        const label = document.getElementById('fileLabel_' + projectId);
-        const textarea = document.getElementById('chatText_' + projectId);
-        const sendBtn = textarea.parentElement.querySelector('button');
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
+    function previewSubFile(input, projectId) {
         if (input.files && input.files.length > 0) {
-            Array.from(input.files).forEach(f => {
-                if (!subcontractorChatSelectedFiles[projectId].some(existing => existing.name === f.name)) {
-                    subcontractorChatSelectedFiles[projectId].push(f);
-                }
-            });
-            input.value = '';
+            // 新しくファイルが選択された場合、過去の選択をリセットして今回選んだファイルに置換（誤添付・追記バグ防止）
+            subcontractorChatSelectedFiles[projectId] = Array.from(input.files);
         }
         renderSubcontractorChatFilePreview(projectId);
     }
@@ -1143,15 +1151,16 @@ if (!$is_admin) {
         const preview = document.getElementById('filePreview_' + projectId);
         const label = document.getElementById('fileLabel_' + projectId);
         const textarea = document.getElementById('chatText_' + projectId);
-        const sendBtn = textarea ? textarea.parentElement.querySelector('button') : null;
+        const fileInput = document.getElementById('chatFile_' + projectId);
+        const sendBtn = textarea ? (textarea.parentElement ? textarea.parentElement.querySelector('button') : null) : null;
         const files = subcontractorChatSelectedFiles[projectId] || [];
 
         if (files.length > 0) {
             let badgesHtml = '';
             files.forEach((f, index) => {
-                badgesHtml += `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-right:5px; margin-bottom:5px;">📎 ${f.name} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2e2; border-radius:50%;" onclick="removeSubChatFile(${index}, ${projectId})">×</span></span>`;
+                badgesHtml += `<span class="preview-badge" style="background:#dcfce7; color:#15803d; padding:6px 12px; border-radius:6px; font-size:12px; display:inline-flex; align-items:center; gap:5px; border:2px solid #bbf7d0; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-right:5px; margin-bottom:5px;">📎 ${escapeHtml(f.name)} <span class="preview-remove" style="cursor:pointer; color:#ef4444; font-weight:bold; margin-left:8px; font-size:14px; line-height:1; padding:2px 6px; background:#fee2e2; border-radius:50%;" onclick="removeSubChatFile(${index}, ${projectId})">×</span></span>`;
             });
-            preview.innerHTML = badgesHtml;
+            if (preview) preview.innerHTML = badgesHtml;
             if (label) {
                 label.style.background = '#10b981';
                 label.style.color = '#fff';
@@ -1165,10 +1174,9 @@ if (!$is_admin) {
             }
             if (sendBtn) {
                 sendBtn.style.background = '#10b981';
-                sendBtn.style.animation = 'pulse-green 1.5s infinite';
             }
         } else {
-            preview.innerHTML = '';
+            if (preview) preview.innerHTML = '';
             if (label) {
                 label.style.background = '';
                 label.style.color = '#6c757d';
@@ -1184,6 +1192,9 @@ if (!$is_admin) {
                 sendBtn.style.background = '#3b82f6';
                 sendBtn.style.animation = '';
             }
+            if (fileInput) {
+                fileInput.value = '';
+            }
         }
     }
 
@@ -1197,7 +1208,7 @@ if (!$is_admin) {
     function sendProjMessage(projectId) {
         const textEl = document.getElementById('chatText_' + projectId);
         const fileEl = document.getElementById('chatFile_' + projectId);
-        const msg = textEl.value.trim();
+        const msg = textEl ? textEl.value.trim() : '';
         const files = subcontractorChatSelectedFiles[projectId] || [];
         
         if (!msg && files.length === 0) return;
@@ -1213,7 +1224,7 @@ if (!$is_admin) {
             });
         }
 
-        const sendBtn = textEl.parentElement.querySelector('button');
+        const sendBtn = textEl ? textEl.parentElement.querySelector('button') : null;
         if (sendBtn) {
             sendBtn.disabled = true;
             sendBtn.textContent = '...';
@@ -1223,12 +1234,13 @@ if (!$is_admin) {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    textEl.value = '';
+                    if (textEl) textEl.value = '';
+                    if (fileEl) fileEl.value = '';
                     subcontractorChatSelectedFiles[projectId] = [];
                     renderSubcontractorChatFilePreview(projectId);
                     window.location.reload();
                 } else {
-                    alert('送信エラー');
+                    alert(data.error || '送信エラー');
                 }
             })
             .catch(e => {
@@ -1238,7 +1250,7 @@ if (!$is_admin) {
             .finally(() => {
                 if (sendBtn) {
                     sendBtn.disabled = false;
-                    sendBtn.textContent = '➤';
+                    sendBtn.textContent = '送信';
                 }
             });
     }

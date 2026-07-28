@@ -20,24 +20,55 @@ if (!$message_id || !$current_user_id) {
 }
 
 try {
+    $isGlobal = false;
     // 対象メッセージを取得
     $stmt = $pdo->prepare("SELECT * FROM messages WHERE id = :id");
     $stmt->execute(['id' => $message_id]);
     $message = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$message) {
+        // global_messages テーブルから取得
+        $stmtG = $pdo->prepare("SELECT * FROM global_messages WHERE id = :id");
+        $stmtG->execute(['id' => $message_id]);
+        $message = $stmtG->fetch(PDO::FETCH_ASSOC);
+        if ($message) {
+            $isGlobal = true;
+        }
+    }
+
+    if (!$message) {
         echo json_encode(['success' => false, 'error' => '該当メッセージが見つかりません。']);
         exit;
     }
 
-    // 削除権限チェック: 自身のメッセージ、または管理者ロールであること
-    if (intval($message['sender_id']) !== intval($current_user_id) && $user_role !== 'admin') {
+    // 削除権限チェック: 本人のメッセージ、管理者/経理、または同じ協力業者グループのユーザーであること
+    $can_delete = false;
+
+    if (in_array($user_role, ['admin', 'accountant'])) {
+        $can_delete = true;
+    } elseif (intval($message['sender_id']) === intval($current_user_id)) {
+        $can_delete = true;
+    } else {
+        // ログインユーザーと送信者の所属会社（親ID）が一致するかチェック
+        $stmtUser = $pdo->prepare("SELECT id, parent_id FROM users WHERE id IN (:uid, :sid)");
+        $stmtUser->execute(['uid' => $current_user_id, 'sid' => $message['sender_id']]);
+        $uMap = [];
+        while ($r = $stmtUser->fetch(PDO::FETCH_ASSOC)) {
+            $uMap[$r['id']] = $r['parent_id'] ? intval($r['parent_id']) : intval($r['id']);
+        }
+        if (isset($uMap[$current_user_id]) && isset($uMap[$message['sender_id']]) && $uMap[$current_user_id] === $uMap[$message['sender_id']]) {
+            $can_delete = true;
+        }
+    }
+
+    if (!$can_delete) {
         echo json_encode(['success' => false, 'error' => 'メッセージを削除する権限がありません。']);
         exit;
     }
 
     // メッセージ削除処理
-    $stmtDel = $pdo->prepare("DELETE FROM messages WHERE id = :id");
+    $targetTable = $isGlobal ? 'global_messages' : 'messages';
+    $stmtDel = $pdo->prepare("DELETE FROM {$targetTable} WHERE id = :id");
     $success = $stmtDel->execute(['id' => $message_id]);
 
     echo json_encode(['success' => $success]);

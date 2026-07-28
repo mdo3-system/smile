@@ -33,8 +33,12 @@ if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
             $fileName = $_FILES['files']['name'][$i];
             $mimeType = $_FILES['files']['type'][$i];
             
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $isImageMime = (strpos($mimeType, 'image/') === 0);
+            $isImageExt = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp']);
+            
             $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType, $projectId, $pdo);
-            $fileType = (strpos($mimeType, 'image/') === 0) ? 'image' : 'pdf';
+            $fileType = ($isImageMime || $isImageExt) ? 'image' : 'pdf';
             
             $uploadedFiles[] = [
                 'drive_id' => $uploadedDriveId,
@@ -48,8 +52,12 @@ if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
     $fileName = $_FILES['file']['name'];
     $mimeType = $_FILES['file']['type'];
     
+    $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    $isImageMime = (strpos($mimeType, 'image/') === 0);
+    $isImageExt = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp']);
+    
     $uploadedDriveId = upload_to_google_drive($fileTmp, $fileName, $mimeType, $projectId, $pdo);
-    $fileType = (strpos($mimeType, 'image/') === 0) ? 'image' : 'pdf';
+    $fileType = ($isImageMime || $isImageExt) ? 'image' : 'pdf';
     
     $uploadedFiles[] = [
         'drive_id' => $uploadedDriveId,
