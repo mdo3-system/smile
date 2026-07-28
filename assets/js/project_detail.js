@@ -480,9 +480,11 @@ function calcClientEstimate() {
         const nameInput = row.querySelector('.manual-est-name');
         const priceInput = row.querySelector('.manual-est-price');
         if (nameInput && priceInput) {
-            const name = nameInput.value.trim();
-            const price = parseInt(priceInput.value) || 0;
-            if (name !== '' && price !== 0) {
+            const rawName = nameInput.value.trim();
+            let rawPriceStr = priceInput.value.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xfee0)).replace(/[^-0-9]/g, '');
+            const price = parseInt(rawPriceStr) || 0;
+            if (price !== 0) {
+                const name = rawName !== '' ? rawName : '追加明細';
                 currentEstimate += pushEstimateItem(name, 1, "式", price, true);
             }
         }
@@ -558,10 +560,15 @@ function saveAndPrintEstimate(isFormal = false, isAdditional = false) {
         const nameInput = row.querySelector('.manual-est-name');
         const priceInput = row.querySelector('.manual-est-price');
         if (nameInput && priceInput) {
-            manualItems.push({
-                name: nameInput.value,
-                price: priceInput.value
-            });
+            const rawName = nameInput.value.trim();
+            let rawPriceStr = priceInput.value.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xfee0)).replace(/[^-0-9]/g, '');
+            const price = parseInt(rawPriceStr) || 0;
+            if (price !== 0) {
+                manualItems.push({
+                    name: rawName !== '' ? rawName : '追加明細',
+                    price: price
+                });
+            }
         }
     });
     inputs['manual_items'] = manualItems;

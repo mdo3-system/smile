@@ -176,7 +176,8 @@
 // 1.6.15: 案件詳細ダッシュボード（col_right.php / project_detail.js）の添付ファイルプレビューインジケーター（緑バッジ・緑化スタイル・選択解除）追加、および画像単体メッセージへの取り消し（削除）ボタン表示の改善
 // 1.6.16: 全画面チャットUI（dashboard_client.php / subcontractor_portal.php / project_subcontractor.php / project_detail.js）の横断精査およびプレビュー緑色バッジ・選択解除・画像取り消しボタンの全箇所統一対応
 // 1.6.17: messages テーブルと global_messages テーブルのID重複（衝突）バグを解消するため、api_delete_message.php へ chat_type (global/project) パラメータ指定の導入、および画像バブル下部への直接取り消しボタン配置の完全対応
+// 1.6.18: 手動追加明細（追加スロット）のみの完了案件における本見積確定バグを修正（全角数値変換・画面ロード時自動計算・バックエンドフォールバック追加）
 
-window.APP_VERSION = "1.6.17";
+window.APP_VERSION = "1.6.18";
 const APP_LAST_UPDATED = '2026-07-28';
 

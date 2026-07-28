@@ -311,6 +311,12 @@ class EstimateController
             $isFormal = isset($_POST['is_formal']) && $_POST['is_formal'] === '1';
             if ($isFormal) {
                 $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice <= 0) {
+                    // POSTにtotal_priceが無いか0の場合、保存済みの最新見積もりレコードから取得
+                    $stmtLastEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+                    $stmtLastEst->execute(['pid' => $projectId]);
+                    $totalPrice = (int)$stmtLastEst->fetchColumn();
+                }
                 if ($totalPrice > 0) {
                     $tax = round($totalPrice * 0.1);
                     $grandTotal = $totalPrice + $tax;

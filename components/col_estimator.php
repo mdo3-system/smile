@@ -331,4 +331,11 @@ if (!empty($all_estimates)) {
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof calcClientEstimate === 'function') {
+        calcClientEstimate();
+    }
+});
+</script>
 <?php endif; ?>

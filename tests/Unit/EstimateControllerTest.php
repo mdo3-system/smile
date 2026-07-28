@@ -166,4 +166,45 @@ class EstimateControllerTest extends TestCase {
          $this->assertEquals('2026-06-12', $actuals_permit[3]); // CB確認
          $this->assertEquals('2026-06-18', $actuals_permit[7]); // 壁量[4] (申請UP) -> 許容[7] (申請UP) へ引き継ぎ！
      }
+
+     /**
+      * 計算タイプチェックなし＆手動明細（追加スロット）のみの案件における本見積確定(is_formal=1)のテスト
+      */
+     public function testSaveFormalEstimateWithManualItemsOnly() {
+         $this->pdo->exec("
+             ALTER TABLE projects ADD COLUMN formal_est_amount INT DEFAULT 0;
+         ");
+         $this->pdo->exec("
+             ALTER TABLE projects ADD COLUMN formal_est_date VARCHAR(50) NULL;
+         ");
+
+         $_POST['project_id'] = '1';
+         $_POST['is_formal'] = '1';
+         $_POST['total_price'] = '50000'; // 手動明細税抜50000円
+         $_POST['inputs_json'] = json_encode([
+             'est_active_permit' => false,
+             'est_active_wall' => false,
+             'est_active_skin' => false,
+             'est_active_sky' => false,
+             'manual_items' => [
+                 ['name' => '追加作図費用', 'price' => 50000]
+             ]
+         ]);
+
+         $controller = new EstimateController();
+         ob_start();
+         try {
+             $controller->save();
+         } catch (\Throwable $e) {
+             // 外部 require (PDF生成・Drive連携) 失敗はテスト環境下で無視
+         }
+         ob_end_clean();
+
+         $stmtCheck = $this->pdo->query("SELECT formal_est_amount, formal_est_date FROM projects WHERE id = 1");
+         $proj = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+         // 50,000円 (税抜) + 10% (5,000円) = 55,000円 (税込) が formal_est_amount に保存されたことを検証！
+         $this->assertEquals(55000, $proj['formal_est_amount']);
+         $this->assertEquals(date('Y-m-d'), $proj['formal_est_date']);
+     }
 }
