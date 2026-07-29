@@ -152,7 +152,7 @@
                             📎
                             <input type="file" id="chatFileInput" style="display:none;" onchange="previewFile(this)" multiple>
                         </label>
-                        <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" onkeydown="handleKey(event)"></textarea>
+                        <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" oninput="autoExpandTextarea(this)" onkeydown="handleKey(event)"></textarea>
                         <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>
                     </div>
                 </div>

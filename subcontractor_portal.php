@@ -965,7 +965,7 @@ $global_messages = $stmtChat->fetchAll();
                     <input type="hidden" name="action" value="send_global_message">
                     <div id="globalFilePreview" style="padding:4px 8px; background:#fff; border:1px solid #ccc; border-bottom:none; border-radius:4px 4px 0 0; display:none;"></div>
                     <div id="globalChatBox" style="background:#fff; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        <textarea id="globalMessageText" name="message_text" rows="4" style="width:100%; box-sizing:border-box; border:none; resize:vertical; font-family:inherit; font-size:13px; outline:none; display:block; margin-bottom:8px;" placeholder="メッセージを入力..."></textarea>
+                        <textarea id="globalMessageText" name="message_text" rows="1" style="width:100%; box-sizing:border-box; border:1px solid #e2e8f0; border-radius:4px; padding:6px 10px; resize:none; font-family:inherit; font-size:13px; outline:none; display:block; margin-bottom:8px; min-height:38px; max-height:250px; overflow-y:hidden;" oninput="autoExpandTextarea(this)" placeholder="メッセージを入力..."></textarea>
                         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #eee; padding-top:5px;">
                             <div>
                                 <input type="file" name="chat_file" id="global_chat_file" style="display:none;" onchange="previewGlobalFile(this)">
@@ -1247,11 +1247,27 @@ $global_messages = $stmtChat->fetchAll();
         }
     }
 
-    // ページ読み込み完了時にチャットのスクロールを最下部に移動
+    function autoExpandTextarea(el) {
+        if (!el) return;
+        el.style.height = 'auto';
+        const newHeight = Math.min(el.scrollHeight, 250);
+        el.style.height = newHeight + 'px';
+        if (el.scrollHeight > 250) {
+            el.style.overflowY = 'auto';
+        } else {
+            el.style.overflowY = 'hidden';
+        }
+    }
+
+    // ページ読み込み完了時にチャットのスクロールを最下部に移動およびtextareaの初期化
     document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('globalChatList');
         if (el) {
             el.scrollTop = el.scrollHeight;
+        }
+        const gText = document.getElementById('globalMessageText');
+        if (gText) {
+            autoExpandTextarea(gText);
         }
     });
     </script>

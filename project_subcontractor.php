@@ -609,7 +609,7 @@ if (!$is_admin) {
                     <!-- 添付ファイルの強力な視認化機能インジケーター -->
                     <div id="filePreview_<?= $project_id ?>" style="padding:5px 10px; background:#fff; border-top:1px solid #eee; font-size:11px;"></div>
                     <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px;">
-                        <textarea id="chatText_<?= $project_id ?>" style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px 12px; font-size:13px; resize:vertical; display:block; margin-bottom:8px;" rows="3" placeholder="メッセージを入力..."></textarea>
+                        <textarea id="chatText_<?= $project_id ?>" style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px 12px; font-size:13px; resize:none; display:block; margin-bottom:8px; min-height:38px; max-height:250px; overflow-y:hidden;" rows="1" oninput="autoExpandTextarea(this)" placeholder="メッセージを入力..."></textarea>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <input type="file" id="chatFile_<?= $project_id ?>" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
@@ -1123,7 +1123,7 @@ if (!$is_admin) {
                             <!-- 添付ファイルの強力な視認化機能インジケーター -->
                             <div id="filePreview_<?= $project_id ?>" style="padding:5px 10px; background:#fff; border-top:1px solid #eee; font-size:11px;"></div>
                             <div style="background:#fff; border-top:1px solid #e2e8f0; padding:10px; border-radius:0 0 8px 8px;">
-                                <textarea id="chatText_<?= $project_id ?>" style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px 12px; font-size:13px; resize:vertical; display:block; margin-bottom:8px;" rows="3" placeholder="メッセージを入力..."></textarea>
+                                <textarea id="chatText_<?= $project_id ?>" style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px 12px; font-size:13px; resize:none; display:block; margin-bottom:8px; min-height:38px; max-height:250px; overflow-y:hidden;" rows="1" oninput="autoExpandTextarea(this)" placeholder="メッセージを入力..."></textarea>
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div>
                                         <input type="file" id="chatFile_<?= $project_id ?>" style="display:none;" onchange="previewSubFile(this, <?= $project_id ?>)" multiple>
@@ -1154,6 +1154,18 @@ if (!$is_admin) {
             subcontractorChatSelectedFiles[projectId] = Array.from(input.files);
         }
         renderSubcontractorChatFilePreview(projectId);
+    }
+
+    function autoExpandTextarea(el) {
+        if (!el) return;
+        el.style.height = 'auto';
+        const newHeight = Math.min(el.scrollHeight, 250);
+        el.style.height = newHeight + 'px';
+        if (el.scrollHeight > 250) {
+            el.style.overflowY = 'auto';
+        } else {
+            el.style.overflowY = 'hidden';
+        }
     }
 
     function renderSubcontractorChatFilePreview(projectId) {
@@ -1243,7 +1255,10 @@ if (!$is_admin) {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    if (textEl) textEl.value = '';
+                    if (textEl) {
+                        textEl.value = '';
+                        autoExpandTextarea(textEl);
+                    }
                     if (fileEl) fileEl.value = '';
                     subcontractorChatSelectedFiles[projectId] = [];
                     renderSubcontractorChatFilePreview(projectId);

@@ -178,7 +178,8 @@
 // 1.6.17: messages テーブルと global_messages テーブルのID重複（衝突）バグを解消するため、api_delete_message.php へ chat_type (global/project) パラメータ指定の導入、および画像バブル下部への直接取り消しボタン配置の完全対応
 // 1.6.18: 手動追加明細（追加スロット）のみの完了案件における本見積確定バグを修正（全角数値変換・画面ロード時自動計算・バックエンドフォールバック追加）
 // 1.6.19: project_detail.js 内の構文エラー（DOMContentLoaded閉じ忘れ）を修復し、チャット自動最下部スクロールおよびメッセージ送信機能を復旧
+// 1.6.20: 全画面のチャット入力欄（管理者・依頼主・協力業者ポータル・個案画面）における文字数に応じた高さを動的自動拡張（伸縮）する機能の実装
 
-window.APP_VERSION = "1.6.19";
-const APP_LAST_UPDATED = '2026-07-28';
+window.APP_VERSION = "1.6.20";
+const APP_LAST_UPDATED = '2026-07-29';
 

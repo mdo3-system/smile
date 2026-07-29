@@ -5,8 +5,29 @@ function scrollToBottom() {
     const el = document.getElementById('chatMessages');
     if (el) el.scrollTop = el.scrollHeight;
 }
+
+// ===== チャット入力欄の動的自動拡張 =====
+function autoExpandTextarea(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    const newHeight = Math.min(el.scrollHeight, 250);
+    el.style.height = newHeight + 'px';
+    if (el.scrollHeight > 250) {
+        el.style.overflowY = 'auto';
+    } else {
+        el.style.overflowY = 'hidden';
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     scrollToBottom();
+    const chatTa = document.getElementById('chatTextarea');
+    if (chatTa) {
+        chatTa.addEventListener('input', function() {
+            autoExpandTextarea(this);
+        });
+        autoExpandTextarea(chatTa);
+    }
     if (typeof toggleEstContainers === 'function') {
         toggleEstContainers();
     }
@@ -115,7 +136,10 @@ function sendMessage(text) {
         .then(r => r.json())
         .then(data => {
             if(data.success) {
-                if (textarea) textarea.value = '';
+                if (textarea) {
+                    textarea.value = '';
+                    autoExpandTextarea(textarea);
+                }
                 if (fileInput) fileInput.value = '';
                 chatSelectedFiles = [];
                 renderChatFilePreview();
