@@ -1,7 +1,10 @@
 <?php
 require_once 'auth.php';
 require_once 'functions.php';
+require_once 'src/Services/SalesFinanceService.php';
 check_auth(['admin', 'subcontractor', 'accountant']);
+
+$financeService = new \App\Services\SalesFinanceService($pdo);
 
 // 追加メールアドレスの取得
 $stmtAddEmails = $pdo->prepare("SELECT email FROM user_notification_emails WHERE user_id = :uid ORDER BY id ASC");
@@ -226,6 +229,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
+    // 個別タスクの支払い状態更新 (管理者・経理)
+    if ($action === 'update_payment' && $has_finance_access) {
+        $order_id = intval($_POST['order_id'] ?? 0);
+        $payment_status = $_POST['payment_status'] ?? 'unpaid';
+        $payment_date = !empty($_POST['payment_date']) ? $_POST['payment_date'] : null;
+        
+        try {
+            $financeService->updateSubcontractorPayment($order_id, $payment_status, $payment_date, $user_id);
+            header("Location: subcontractor_portal.php" . (($is_admin || $is_accountant) ? "?sub_id=" . $target_sub_id : ""));
+            exit;
+        } catch (\Exception $e) {
+            die("支払い情報の更新に失敗しました: " . $e->getMessage());
+        }
+    }
+
     // 支払い記録の保存 (管理者・経理)
     if ($action === 'log_sub_payment' && $has_finance_access) {
         $target_month = $_POST['target_month'] ?? '';
@@ -557,6 +575,7 @@ foreach ($tasks as $t) {
 
 // 月次集計データの作成 (25日締め)
 $monthly_totals = [];
+$monthly_tasks = [];
 foreach ($tasks as $t) {
     if ($t['status'] === 'completed') {
         // completed_at を最優先、無ければ updated_at, created_at を完了日として月を判定
@@ -579,8 +598,10 @@ foreach ($tasks as $t) {
         
         if (!isset($monthly_totals[$month])) {
             $monthly_totals[$month] = 0;
+            $monthly_tasks[$month] = [];
         }
         $monthly_totals[$month] += intval($t['order_amount']);
+        $monthly_tasks[$month][] = $t;
     }
 }
 krsort($monthly_totals); // 最新月順にソート
@@ -1010,30 +1031,104 @@ $global_messages = $stmtChat->fetchAll();
                         
                         <!-- アクティブリスト -->
                         <?php if (count($active_months) > 0): ?>
-                            <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; flex-direction:column; gap:15px;">
                                 <?php foreach ($active_months as $month => $total): 
                                     $payment = $payments[$month] ?? null;
                                     $paid_amount = $payment ? intval($payment['paid_amount']) : 0;
                                     $balance = $total - $paid_amount;
+                                    $m_tasks = $monthly_tasks[$month] ?? [];
+                                    $exp_pay_date = date('Y-m-25', strtotime($month . '-01 +1 month'));
                                 ?>
-                                    <div style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#f8fafc;">
-                                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:5px; margin-bottom:5px;">
-                                            <strong style="font-size:15px; color:#1e293b;"><?= $month ?> 納品分</strong>
+                                    <div style="border:1px solid #cbd5e1; border-radius:8px; padding:12px; background:#f8fafc; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:10px;">
+                                            <strong style="font-size:15px; color:#1e293b;">📅 <?= $month ?> 納品分 (25日締め)</strong>
                                             <?php if ($balance <= 0): ?>
-                                                <span class="badge" style="background:#10b981;">お受け取り完了</span>
+                                                <span class="badge" style="background:#10b981; font-size:12px; padding:4px 8px;">お受け取り完了</span>
                                             <?php else: ?>
-                                                <span class="badge" style="background:#ef4444;">支払期日前</span>
+                                                <span class="badge" style="background:#ef4444; font-size:12px; padding:4px 8px;">支払期日前</span>
                                             <?php endif; ?>
                                         </div>
-                                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
-                                            <span>ご請求額:</span>
+
+                                        <!-- 協力業者 支払明細テーブル (管理者・経理画面と同レイアウト) -->
+                                        <div style="overflow-x:auto; margin-bottom:10px;">
+                                            <table style="width:100%; border-collapse:collapse; font-size:12px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
+                                                <thead>
+                                                    <tr style="background:#f1f5f9; color:#475569; border-bottom:2px solid #cbd5e1; text-align:left;">
+                                                        <th style="padding:8px 10px; width:35%;">対象タスク (物件名)</th>
+                                                        <th style="padding:8px 10px; width:15%; text-align:right;">支払額 (税込)</th>
+                                                        <th style="padding:8px 10px; width:15%;">支払予定日</th>
+                                                        <th style="padding:8px 10px; width:15%;">実際の支払日</th>
+                                                        <th style="padding:8px 10px; width:12%;">支払状況</th>
+                                                        <?php if ($has_finance_access): ?>
+                                                            <th style="padding:8px 10px; width:8%; text-align:center;">操作</th>
+                                                        <?php endif; ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($m_tasks as $mt): 
+                                                        $pay_st = $mt['payment_status'] ?: 'unpaid';
+                                                        $comp_date = $mt['completed_at'] ?? $mt['updated_at'] ?? $mt['created_at'];
+                                                    ?>
+                                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                                            <?php if ($has_finance_access): ?>
+                                                                <form method="POST">
+                                                                    <input type="hidden" name="action" value="update_payment">
+                                                                    <input type="hidden" name="order_id" value="<?= $mt['id'] ?>">
+                                                            <?php endif; ?>
+
+                                                            <td style="padding:8px 10px;">
+                                                                <span style="color:#1e293b; font-weight:600;">[<?= htmlspecialchars($mt['project_name'], ENT_QUOTES) ?>]</span><br>
+                                                                <span style="font-size:11px; color:#64748b;"><?= htmlspecialchars($mt['task_title'], ENT_QUOTES) ?></span>
+                                                                <span style="font-size:10px; color:#94a3b8;">(完了: <?= !empty($comp_date) ? date('m/d', strtotime($comp_date)) : '' ?>)</span>
+                                                            </td>
+                                                            <td style="padding:8px 10px; text-align:right; font-weight:bold; color:#1e293b;">
+                                                                <?= number_format($mt['order_amount']) ?> 円
+                                                            </td>
+                                                            <td style="padding:8px 10px; color:#64748b; white-space:nowrap;">
+                                                                <?= $exp_pay_date ?>
+                                                            </td>
+                                                            <td style="padding:8px 10px; white-space:nowrap;">
+                                                                <?php if ($has_finance_access): ?>
+                                                                    <input type="date" name="payment_date" value="<?= !empty($mt['payment_date']) ? date('Y-m-d', strtotime($mt['payment_date'])) : '' ?>" style="width:105px; font-size:11px; padding:2px; border:1px solid #cbd5e1; border-radius:4px;">
+                                                                <?php else: ?>
+                                                                    <?= !empty($mt['payment_date']) ? date('Y-m-d', strtotime($mt['payment_date'])) : '<span style="color:#94a3b8;">未設定</span>' ?>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td style="padding:8px 10px; white-space:nowrap;">
+                                                                <?php if ($has_finance_access): ?>
+                                                                    <select name="payment_status" style="font-size:11px; font-weight:bold; padding:2px; border:1px solid #cbd5e1; border-radius:4px;">
+                                                                        <option value="unpaid" <?= $pay_st === 'unpaid' ? 'selected' : '' ?>>未払</option>
+                                                                        <option value="paid" <?= $pay_st === 'paid' ? 'selected' : '' ?>>支払済</option>
+                                                                    </select>
+                                                                <?php else: ?>
+                                                                    <?php if ($pay_st === 'paid'): ?>
+                                                                        <span class="badge" style="background:#10b981;">支払済</span>
+                                                                    <?php else: ?>
+                                                                        <span class="badge" style="background:#f59e0b;">未払</span>
+                                                                    <?php endif; ?>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <?php if ($has_finance_access): ?>
+                                                                <td style="padding:8px 10px; text-align:center;">
+                                                                    <button type="submit" style="background:#0f172a; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">保存</button>
+                                                                </td>
+                                                                </form>
+                                                            <?php endif; ?>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; padding-top:4px;">
+                                            <span>ご請求総額:</span>
                                             <strong><?= number_format($total) ?> 円</strong>
                                         </div>
                                         <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; color:#10b981;">
-                                            <span>弊社支払額:</span>
+                                            <span>弊社支払済額:</span>
                                             <strong><?= number_format($paid_amount) ?> 円</strong>
                                         </div>
-                                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444;">
+                                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#ef4444; font-weight:bold;">
                                             <span>未払残高:</span>
                                             <strong><?= number_format($balance) ?> 円</strong>
                                         </div>
@@ -1075,7 +1170,7 @@ $global_messages = $stmtChat->fetchAll();
                                                 <input type="hidden" name="target_month" value="<?= $month ?>">
                                                 <div style="display:flex; gap:5px; align-items:center;">
                                                     <input type="number" name="paid_amount" value="<?= $total ?>" style="width:100px; padding:4px; font-size:12px;"> 円を
-                                                    <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">支払記録として保存</button>
+                                                    <button type="submit" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:11px; cursor:pointer;">一括支払記録として保存</button>
                                                 </div>
                                             </form>
                                         <?php endif; ?>

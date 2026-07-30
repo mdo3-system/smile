@@ -181,7 +181,8 @@
 // 1.6.20: 全画面のチャット入力欄（管理者・依頼主・協力業者ポータル・個案画面）における文字数に応じた高さを動的自動拡張（伸縮）する機能の実装
 
 // 1.6.21: 協力業者納品時のアーキサーバーUP報告における未定義変数バグ($via_archiserver -> $viaArchiserver)の修正
+// 1.6.22: 協力業者ポータル（subcontractor_portal.php）へ管理者・経理画面と同等の「協力業者 請求・支払い管理」テーブル表示の統合
 
-window.APP_VERSION = "1.6.21";
+window.APP_VERSION = "1.6.22";
 const APP_LAST_UPDATED = '2026-07-30';
 
