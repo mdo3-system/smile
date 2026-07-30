@@ -58,6 +58,20 @@ class SubcontractorOrderServiceTest extends TestCase
             );
         ");
 
+        $this->pdo->exec("
+            CREATE TABLE project_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                subcontractor_order_id INTEGER NULL,
+                file_category TEXT NOT NULL,
+                file_name TEXT NOT NULL,
+                drive_file_id TEXT NULL,
+                version INTEGER DEFAULT 1,
+                is_latest INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+        ");
+
         // テスト用データ追加
         $this->pdo->exec("
             INSERT INTO users (id, parent_id, company_name, contact_name, role) 
@@ -156,5 +170,42 @@ class SubcontractorOrderServiceTest extends TestCase
         $this->assertEquals('sub_admin', $msg['thread_type']);
         $this->assertStringContainsString('発注依頼がキャンセルされました', $msg['message_text']);
         $this->assertStringContainsString('現在までの費用をご請求してください', $msg['message_text']);
+    }
+
+    public function testDeliverTaskViaArchiserverSuccess(): void
+    {
+        $orderId = 1;
+        $projectId = 10;
+        $userId = 3;
+        $subCompanyId = 3;
+        $files = [];
+        $viaArchiserver = true;
+        $deliverType = 'struct';
+        $userRole = 'subcontractor';
+
+        $result = $this->service->deliverTask(
+            $orderId,
+            $projectId,
+            $userId,
+            $subCompanyId,
+            $files,
+            $viaArchiserver,
+            $deliverType,
+            $userRole
+        );
+
+        $this->assertTrue($result);
+
+        // 状態検証 (subcontractor_orders)
+        $stmt = $this->pdo->prepare("SELECT * FROM subcontractor_orders WHERE id = :id");
+        $stmt->execute(['id' => $orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertEquals('delivered', $order['status']);
+
+        // チャットメッセージ検証 (messages)
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($msg);
+        $this->assertStringContainsString('アーキトレンドサーバーへのアップロード完了連絡', $msg['message_text']);
     }
 }

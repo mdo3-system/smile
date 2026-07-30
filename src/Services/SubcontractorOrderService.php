@@ -352,7 +352,7 @@ class SubcontractorOrderService
                 }
             }
             
-            if ($uploaded_any || $via_archiserver) {
+            if ($uploaded_any || $viaArchiserver) {
                 // 発注ステータスを delivered (納品済) に更新
                 $stmtOrder = $this->pdo->prepare("
                     UPDATE subcontractor_orders 

@@ -180,6 +180,8 @@
 // 1.6.19: project_detail.js 内の構文エラー（DOMContentLoaded閉じ忘れ）を修復し、チャット自動最下部スクロールおよびメッセージ送信機能を復旧
 // 1.6.20: 全画面のチャット入力欄（管理者・依頼主・協力業者ポータル・個案画面）における文字数に応じた高さを動的自動拡張（伸縮）する機能の実装
 
-window.APP_VERSION = "1.6.20";
-const APP_LAST_UPDATED = '2026-07-29';
+// 1.6.21: 協力業者納品時のアーキサーバーUP報告における未定義変数バグ($via_archiserver -> $viaArchiserver)の修正
+
+window.APP_VERSION = "1.6.21";
+const APP_LAST_UPDATED = '2026-07-30';
 
