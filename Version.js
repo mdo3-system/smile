@@ -182,7 +182,8 @@
 
 // 1.6.21: 協力業者納品時のアーキサーバーUP報告における未定義変数バグ($via_archiserver -> $viaArchiserver)の修正
 // 1.6.22: 協力業者ポータル（subcontractor_portal.php）へ管理者・経理画面と同等の「協力業者 請求・支払い管理」テーブル表示の統合
+// 1.6.23: 協力業者ポータル（subcontractor_portal.php）のCSVエクスポートにおける重複SQLプレースホルダーバグ(HY093)の修正
 
-window.APP_VERSION = "1.6.22";
+window.APP_VERSION = "1.6.23";
 const APP_LAST_UPDATED = '2026-07-30';
 

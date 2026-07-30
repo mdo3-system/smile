@@ -56,6 +56,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
     $export_type = $_GET['type'] ?? 'design'; // design or structural
     $sub_view_mode = $_SESSION['sub_view_mode'] ?? 'all';
     
+    $type_condition = ($export_type === 'structural') 
+        ? "o.order_type IN ('struct', 'structural')" 
+        : "o.order_type = 'design'";
+        
     if ($has_parent && $sub_view_mode === 'personal') {
         $parent_id = $target_sub_id;
         $stmtExport = $pdo->prepare("
@@ -65,29 +69,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
             LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
             WHERE (
                 o.subcontractor_id = :user_id 
-                AND (
-                    (:otype = 'design' AND o.order_type = 'design')
-                    OR (:otype = 'structural' AND o.order_type IN ('struct', 'structural'))
-                )
+                AND {$type_condition}
             ) OR (
                 o.status = 'requested'
                 AND o.subcontractor_id = :parent_id
-                AND (
-                    (:specialty = 'design' AND :otype = 'design' AND o.order_type = 'design')
-                    OR (:specialty = 'structural' AND :otype = 'structural' AND o.order_type IN ('struct', 'structural'))
-                    OR (:specialty = 'both' AND (
-                        (:otype = 'design' AND o.order_type = 'design')
-                        OR (:otype = 'structural' AND o.order_type IN ('struct', 'structural'))
-                    ))
-                )
+                AND {$type_condition}
             )
             ORDER BY o.id DESC
         ");
         $stmtExport->execute([
             'user_id' => $user_id,
-            'parent_id' => $parent_id,
-            'otype' => $export_type,
-            'specialty' => $my_specialty
+            'parent_id' => $parent_id
         ]);
     } else {
         $stmtExport = $pdo->prepare("
@@ -96,16 +88,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
             JOIN projects p ON o.project_id = p.id 
             LEFT JOIN users u_std ON o.subcontractor_id = u_std.id
             WHERE (o.subcontractor_id = :sub_id_1 OR o.subcontractor_id IN (SELECT id FROM users WHERE parent_id = :sub_id_2))
-              AND (
-                  (:otype = 'design' AND o.order_type = 'design')
-                  OR (:otype = 'structural' AND o.order_type IN ('struct', 'structural'))
-              )
+              AND {$type_condition}
             ORDER BY o.id DESC
         ");
         $stmtExport->execute([
             'sub_id_1' => $target_sub_id,
-            'sub_id_2' => $target_sub_id,
-            'otype' => $export_type
+            'sub_id_2' => $target_sub_id
         ]);
     }
     $export_orders = $stmtExport->fetchAll(PDO::FETCH_ASSOC);
