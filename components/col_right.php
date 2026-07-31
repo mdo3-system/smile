@@ -158,6 +158,41 @@
                 </div>
             </div>
 
+            <!-- チェックバック（修正指示）入力・更新枠 専用ボックス -->
+            <div style="margin-top:15px; padding:12px; background:#fff5f5; border:1px solid #feb2b2; border-radius:8px;">
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin:0; display:flex; flex-direction:column; gap:8px;">
+                    <input type="hidden" name="action" value="submit_client_checkback">
+                    <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab ?? '', ENT_QUOTES) ?>">
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label style="font-size:12px; font-weight:bold; color:#c53030;">📝 チェックバック（修正指示）入力・更新枠:</label>
+                        <span style="font-size:10px; color:#9b2c2c;">※送信内容はチャットに自動UPされます</span>
+                    </div>
 
+                    <div style="display:flex; gap:6px;">
+                        <select name="target_file" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#475569;">
+                            <option value="">-- 対象図書を選択（任意） --</option>
+                            <?php if (!empty($uploaded_file_names)): ?>
+                                <?php foreach ($uploaded_file_names as $fname): ?>
+                                    <option value="<?= htmlspecialchars($fname, ENT_QUOTES) ?>">📎 <?= htmlspecialchars($fname, ENT_QUOTES) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+
+                    <textarea name="checkback_text" style="width:100%; min-height:70px; padding:8px; box-sizing:border-box; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; resize:vertical;" placeholder="修正指示・指示内容を入力してください..."></textarea>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:11px; flex-wrap:wrap; background:#fff; padding:6px 8px; border:1px solid #e2e8f0; border-radius:4px;">
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <label style="font-weight:bold; color:#475569;">📎 指示用ファイルをUP:</label>
+                            <input type="file" name="checkback_file" style="font-size:11px;">
+                        </div>
+                        <button type="submit" style="background:#dc3545; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;" onclick="return confirm('チェックバック（修正指示）を保存してチャットに投稿しますか？')">
+                            チェックバックを保存・チャット送信
+                        </button>
+                    </div>
+                </form>
+            </div>
 
         </div>
+

@@ -200,7 +200,37 @@ class UploadService
                     // メール通知のトリガー
                     require_once __DIR__ . '/../../functions.php';
                     sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgText, $this->pdo);
+                } else {
+                    // スケジュール自動更新対象外の成果物アップロード時にもチャット通知を投稿
+                    $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+                    $catLabel = $this->getFileCategoryLabel($fileCategory);
+                    $msgText = "【成果物・図書UP】設計担当より「{$catLabel}」（ファイル名: {$fileName}）がアップロードされました。";
+                    $stmtNotify = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                    $stmtNotify->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $msgText
+                    ]);
+
+                    require_once __DIR__ . '/../../functions.php';
+                    sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgText, $this->pdo);
                 }
+            } else {
+                // スケジュール自動入力対象外の成果物スロット
+                $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+                $catLabel = $this->getFileCategoryLabel($fileCategory);
+                $msgText = "【成果物・図書UP】設計担当より「{$catLabel}」（ファイル名: {$fileName}）がアップロードされました。";
+                $stmtNotify = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                $stmtNotify->execute([
+                    'pid' => $projectId,
+                    'sid' => $userId,
+                    'thread' => $threadType,
+                    'msg' => $msgText
+                ]);
+
+                require_once __DIR__ . '/../../functions.php';
+                sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgText, $this->pdo);
             }
 
             $this->pdo->commit();
@@ -325,20 +355,36 @@ class UploadService
             $catLabel = $this->getFileCategoryLabel($fileCategory);
             $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
 
+            // 案件の現在のステータスを確認
+            $stmtProjStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :pid");
+            $stmtProjStatus->execute(['pid' => $projectId]);
+            $currentProjectStatus = $stmtProjStatus->fetchColumn() ?: '';
+
+            $isPostPrimary = !in_array($currentProjectStatus, ['quote_req', 'primary_prep']);
+            $isNoticeOrExtra = in_array($fileCategory, ['other_extra', 'correction_notice']) || (strpos($fileCategory, 'custom_') === 0);
+
+            if ($role === 'client' && ($isPostPrimary || $isNoticeOrExtra)) {
+                $headerTag = "🚨【一次回答後の追加図書・チェックバック提出】";
+            } elseif ($newVersion > 1) {
+                $headerTag = "【図書差し替え】";
+            } else {
+                $headerTag = "【図書提出】";
+            }
+
             if ($newVersion > 1) {
                 if ($isIncluded) {
-                    $msg = "【図書差し替え設定】\n{$uploaderRoleName}が「{$catLabel}」を「他ファイルに記載」に設定変更しました。";
+                    $msg = "{$headerTag}\n{$uploaderRoleName}が「{$catLabel}」を「他ファイルに記載」に設定変更しました。";
                 } else {
-                    $msg = "【図書差し替え】\n{$uploaderRoleName}が「{$catLabel}」に「{$fileName}」をアップロード（差し替え）しました。";
+                    $msg = "{$headerTag}\n{$uploaderRoleName}が「{$catLabel}」に「{$fileName}」をアップロード（差し替え）しました。";
                 }
                 if (!empty($updateReason)) {
                     $msg .= "\n差し替え理由: {$updateReason}";
                 }
             } else {
                 if ($isIncluded) {
-                    $msg = "【図書提出設定】\n{$uploaderRoleName}が「{$catLabel}」を「他ファイルに記載」に設定しました。";
+                    $msg = "{$headerTag}\n{$uploaderRoleName}が「{$catLabel}」を「他ファイルに記載」に設定しました。";
                 } else {
-                    $msg = "【図書提出】\n{$uploaderRoleName}が「{$catLabel}」に「{$fileName}」をアップロードしました。";
+                    $msg = "{$headerTag}\n{$uploaderRoleName}が「{$catLabel}」に「{$fileName}」をアップロードしました。";
                 }
             }
 

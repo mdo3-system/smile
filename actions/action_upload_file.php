@@ -176,3 +176,64 @@ if ($action === 'rename_custom_slot' && $is_admin) {
     }
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
 }
+
+// ==============================
+// 依頼主・管理者間のチェックバック（修正指示）送信処理
+// ==============================
+if ($action === 'submit_client_checkback') {
+    $checkback_text = trim($_POST['checkback_text'] ?? '');
+    $tab = $_POST['tab'] ?? '';
+    $thread_type = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+    $target_file = trim($_POST['target_file'] ?? '');
+
+    $drive_file_id = null;
+    $file_uploaded = false;
+    $file_type = null;
+
+    if (isset($_FILES['checkback_file']) && $_FILES['checkback_file']['error'] === UPLOAD_ERR_OK) {
+        require_once __DIR__ . '/../google_drive_client.php';
+        $file_tmp  = $_FILES['checkback_file']['tmp_name'];
+        $file_name = $_FILES['checkback_file']['name'];
+        $mime_type = $_FILES['checkback_file']['type'];
+
+        $drive_file_id = upload_to_google_drive($file_tmp, $file_name, $mime_type, $project_id, $pdo);
+        $file_uploaded = true;
+
+        if (preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $file_name)) {
+            $file_type = 'image';
+        } else {
+            $file_type = 'file';
+        }
+    }
+
+    if (!empty($checkback_text) || $file_uploaded) {
+        $user_role = $_SESSION['role'] ?? 'admin';
+        
+        $msg = "【修正指示（チェックバック）】\n" . $checkback_text;
+        if (!empty($target_file)) {
+            $msg = "【修正指示（チェックバック）: {$target_file}】\n" . $checkback_text;
+        }
+        if ($file_uploaded) {
+            $msg .= "\n\n📎 指示用ファイルが添付されました。";
+        }
+
+        $stmtMsg = $pdo->prepare("
+            INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) 
+            VALUES (:pid, :sid, :thread, :msg, :fpath, :ftype)
+        ");
+        $stmtMsg->execute([
+            'pid' => $project_id,
+            'sid' => $_SESSION['user_id'] ?? 1,
+            'thread' => $thread_type,
+            'msg' => $msg,
+            'fpath' => $drive_file_id,
+            'ftype' => $file_type
+        ]);
+
+        require_once __DIR__ . '/../functions.php';
+        sendChatEmailNotification($project_id, $_SESSION['user_id'] ?? 1, $user_role, $thread_type, $msg, $pdo);
+    }
+
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
+}
+
