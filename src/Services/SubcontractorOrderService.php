@@ -353,18 +353,40 @@ class SubcontractorOrderService
             }
             
             if ($uploaded_any || $viaArchiserver) {
-                // 発注ステータスを delivered (納品済) に更新
-                $stmtOrder = $this->pdo->prepare("
-                    UPDATE subcontractor_orders 
-                    SET status = 'delivered', updated_at = NOW() 
-                    WHERE id = :id 
-                      AND (subcontractor_id = :sub_id OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :parent_id))
-                ");
-                $stmtOrder->execute([
-                    'id' => $orderId,
-                    'sub_id' => $subCompanyId,
-                    'parent_id' => $subCompanyId
-                ]);
+                // 現在の発注ステータスを確認
+                $stmtCurrStatus = $this->pdo->prepare("SELECT status FROM subcontractor_orders WHERE id = :id");
+                $stmtCurrStatus->execute(['id' => $orderId]);
+                $curr_status = $stmtCurrStatus->fetchColumn();
+
+                $is_already_completed = ($curr_status === 'completed');
+
+                if (!$is_already_completed) {
+                    // 発注ステータスを delivered (納品済) に更新
+                    $stmtOrder = $this->pdo->prepare("
+                        UPDATE subcontractor_orders 
+                        SET status = 'delivered', updated_at = NOW() 
+                        WHERE id = :id 
+                          AND (subcontractor_id = :sub_id OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :parent_id))
+                    ");
+                    $stmtOrder->execute([
+                        'id' => $orderId,
+                        'sub_id' => $subCompanyId,
+                        'parent_id' => $subCompanyId
+                    ]);
+                } else {
+                    // 納品完了(completed)済みの場合は updated_at のみ更新し completed ステータスを維持
+                    $stmtOrder = $this->pdo->prepare("
+                        UPDATE subcontractor_orders 
+                        SET updated_at = NOW() 
+                        WHERE id = :id 
+                          AND (subcontractor_id = :sub_id OR subcontractor_id IN (SELECT id FROM users WHERE parent_id = :parent_id))
+                    ");
+                    $stmtOrder->execute([
+                        'id' => $orderId,
+                        'sub_id' => $subCompanyId,
+                        'parent_id' => $subCompanyId
+                    ]);
+                }
 
                 // 協力業者から管理者への納品報告チャットを自動登録
                 $stmtGetSubName = $this->pdo->prepare("SELECT contact_name FROM users WHERE id = :uid");
@@ -378,12 +400,21 @@ class SubcontractorOrderService
                     $deliver_type_label = '（構造図）';
                 }
 
-                if ($viaArchiserver) {
-                    $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品{$deliver_type_label}（アーキトレンドサーバーへのアップロード完了連絡）が行われました。\n";
+                if ($is_already_completed) {
+                    if ($viaArchiserver) {
+                        $notify_msg = "🚨【審査補正・成果物修正差し替え】{$sub_name} 様より納品完了後図面{$deliver_type_label}の差し替え（アーキトレンドサーバーへの再UP連絡）が行われました。\n";
+                    } else {
+                        $notify_msg = "🚨【審査補正・成果物修正差し替え】{$sub_name} 様より納品完了後図面{$deliver_type_label}の補正・修正版アップロードが行われました。\n";
+                    }
+                    $notify_msg .= "管理者画面にて最新の修正ファイルをご確認ください。";
                 } else {
-                    $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品{$deliver_type_label}（ファイルアップロード）が行われました。\n";
+                    if ($viaArchiserver) {
+                        $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品{$deliver_type_label}（アーキトレンドサーバーへのアップロード完了連絡）が行われました。\n";
+                    } else {
+                        $notify_msg = "【自動通知】{$sub_name} 様より成果物の納品{$deliver_type_label}（ファイルアップロード）が行われました。\n";
+                    }
+                    $notify_msg .= "管理者画面にて内容をご確認の上、承認（クライアントへの公開）処理を行ってください。";
                 }
-                $notify_msg .= "管理者画面にて内容をご確認の上、承認（クライアントへの公開）処理を行ってください。";
 
                 $stmtChat = $this->pdo->prepare("
                     INSERT INTO messages (project_id, sender_id, thread_type, message_text) 

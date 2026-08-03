@@ -43,7 +43,7 @@ class SubcontractorOrderServiceTest extends TestCase
                 status TEXT NOT NULL DEFAULT 'requested',
                 expected_delivery_date TEXT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NULL
+                updated_at TEXT NULL, completed_at TEXT NULL
             );
         ");
 
@@ -207,5 +207,46 @@ class SubcontractorOrderServiceTest extends TestCase
         $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
         $this->assertNotFalse($msg);
         $this->assertStringContainsString('アーキトレンドサーバーへのアップロード完了連絡', $msg['message_text']);
+    }
+
+
+    public function testDeliverTaskWhenAlreadyCompletedPreservesCompletedStatus(): void
+    {
+        $projectId = 1;
+
+        // 納品完了(completed)の発注を作成
+        $stmtOrder = $this->pdo->prepare("
+            INSERT INTO subcontractor_orders (project_id, subcontractor_id, task_title, order_amount, status, completed_at) 
+            VALUES (:pid, 3, '構造図作図', 50000, 'completed', '2026-08-01 10:00:00')
+        ");
+        $stmtOrder->execute(['pid' => $projectId]);
+        $orderId = (int)$this->pdo->lastInsertId();
+
+        // アーキサーバー再UP連絡（差し替え）を実行
+        $result = $this->service->deliverTask(
+            $orderId,
+            $projectId,
+            3,
+            3,
+            [],
+            true,
+            'struct',
+            'subcontractor'
+        );
+
+        $this->assertTrue($result);
+
+        // 状態検証: completed ステータスおよび completed_at が保持されていること
+        $stmt = $this->pdo->prepare("SELECT * FROM subcontractor_orders WHERE id = :id");
+        $stmt->execute(['id' => $orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertEquals('completed', $order['status']);
+        $this->assertEquals('2026-08-01 10:00:00', $order['completed_at']);
+
+        // チャットメッセージ検証: 補正・修正差し替え用の通知が入っていること
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($msg);
+        $this->assertStringContainsString('🚨【審査補正・成果物修正差し替え】', $msg['message_text']);
     }
 }

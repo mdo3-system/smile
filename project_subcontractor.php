@@ -833,14 +833,15 @@ if (!$is_admin) {
                                         </div>
                                     <?php endif; ?>
 
-                                    <?php if ($task['status'] !== 'cancelled' && $task['status'] !== 'completed'): ?>
+                                    <?php if ($task['status'] !== 'cancelled'): ?>
                                         <?php 
                                         $show_struct_delivery = ($project_info['req_permit'] == 1 || $project_info['req_opt_kisohari'] == 1);
                                         $task_type = ($task['order_type'] === 'structure' || $task['order_type'] === 'struct') ? 'struct' : 'design';
+                                        $is_completed_task = ($task['status'] === 'completed');
                                         ?>
-                                        <div class="delivery-section" style="border:1px solid #e2e8f0; background:#fdfdfd; padding:15px; border-radius:6px; font-size:13px; display:flex; flex-direction:column; gap:20px; margin-top: 10px; text-align:left;">
-                                            <strong>📤 成果物（作成した図面）の納品・差し替え:</strong>
-                                            <p style="font-size:11px; color:#666; margin:-5px 0 5px 0;">※個別にアップロード可能です。差し替えた場合も履歴が残ります。</p>
+                                        <div class="delivery-section" style="border:1px solid <?= $is_completed_task ? '#b91c1c' : '#e2e8f0' ?>; background:<?= $is_completed_task ? '#fef2f2' : '#fdfdfd' ?>; padding:15px; border-radius:6px; font-size:13px; display:flex; flex-direction:column; gap:20px; margin-top: 10px; text-align:left;">
+                                            <strong>📤 成果物（作成した図面）の<?= $is_completed_task ? '補正・修正差し替え' : '納品・差し替え' ?>:</strong>
+                                            <p style="font-size:11px; color:<?= $is_completed_task ? '#991b1b' : '#666' ?>; margin:-5px 0 5px 0;"><?= $is_completed_task ? '※納品完了（支払確定後）の図面差し替え・審査補正アップロードも可能です。アップロードするとバージョン（V2, V3...）が繰り上がり最新版として登録されます。' : '※個別にアップロード可能です。差し替えた場合も履歴が残ります。' ?></p>
                                             
                                             <!-- ■ 意匠図の納品エリア -->
                                             <?php if ($task_type === 'design'): ?>
@@ -922,8 +923,8 @@ if (!$is_admin) {
                                                     </div>
 
                                                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                                        <button type="button" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, false, 'design')">意匠図ファイルを納品</button>
-                                                        <button type="button" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, true, 'design')">☁ 意匠図アーキサーバーUP報告</button>
+                                                        <button type="button" style="background:<?= $is_completed_task ? '#dc2626' : '#28a745' ?>; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, false, 'design')"><?= $is_completed_task ? '補正・修正意匠図を差し替えUP' : '意匠図ファイルを納品' ?></button>
+                                                        <button type="button" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, true, 'design')"><?= $is_completed_task ? '☁ 補正意匠図アーキサーバーUP報告' : '☁ 意匠図アーキサーバーUP報告' ?></button>
                                                     </div>
                                                 </form>
                                             </div>
@@ -1021,8 +1022,8 @@ if (!$is_admin) {
                                                         </div>
 
                                                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                                            <button type="button" style="background:#28a745; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, false, 'struct')">構造図ファイルを納品</button>
-                                                            <button type="button" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, true, 'struct')">☁ 構造図アーキサーバーUP報告</button>
+                                                            <button type="button" style="background:<?= $is_completed_task ? '#dc2626' : '#28a745' ?>; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, false, 'struct')"><?= $is_completed_task ? '補正・修正構造図を差し替えUP' : '構造図ファイルを納品' ?></button>
+                                                            <button type="button" style="background:#0284c7; color:white; border:none; padding:8px 18px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" onclick="handleIndividualDeliverSubmit(event, this, true, 'struct')"><?= $is_completed_task ? '☁ 補正構造図アーキサーバーUP報告' : '☁ 構造図アーキサーバーUP報告' ?></button>
                                                         </div>
                                                     </form>
                                                 </div>
