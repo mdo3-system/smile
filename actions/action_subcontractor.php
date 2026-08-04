@@ -245,19 +245,18 @@ if ($action === 'submit_checkback') {
 
         $pdo->beginTransaction();
         try {
-            // ステータスを 'cb_requested'（修正依頼）に更新し、チェックバックを保存
+            // ステータスを 'cb_requested'（修正依頼）に更新し、チェックバックテキストは送信後にクリア（空欄）にする
             if ($file_uploaded) {
                 $stmt = $pdo->prepare("
                     UPDATE subcontractor_orders 
                     SET status = 'cb_requested', 
-                        checkback_text = :text, 
+                        checkback_text = '', 
                         checkback_file_path = :file_path,
                         checkback_updated_at = NOW(),
                         updated_at = NOW()
                     WHERE id = :id
                 ");
                 $stmt->execute([
-                    'text' => $checkback_text,
                     'file_path' => $drive_file_id,
                     'id' => $order_id
                 ]);
@@ -265,13 +264,12 @@ if ($action === 'submit_checkback') {
                 $stmt = $pdo->prepare("
                     UPDATE subcontractor_orders 
                     SET status = 'cb_requested', 
-                        checkback_text = :text, 
+                        checkback_text = '', 
                         checkback_updated_at = NOW(),
                         updated_at = NOW()
                     WHERE id = :id
                 ");
                 $stmt->execute([
-                    'text' => $checkback_text,
                     'id' => $order_id
                 ]);
             }
