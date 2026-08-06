@@ -13,14 +13,16 @@ $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 // 完了案件のクエリ
 if ($_SESSION['role'] === 'client') {
-    // 自身の完了案件のみ
+    // 自身または所属グループ（親・子アカウント）の完了案件を取得
+    $my_company_id = $_SESSION['parent_id'] ?: $current_user_id;
     $sql = "
         SELECT p.*, u.company_name 
         FROM projects p 
         JOIN users u ON p.client_id = u.id 
-        WHERE p.client_id = :cid AND p.status = 'completed'
+        WHERE (p.client_id = :cid OR p.client_id IN (SELECT id FROM users WHERE parent_id = :pid)) 
+          AND p.status = 'completed'
     ";
-    $params = ['cid' => $current_user_id];
+    $params = ['cid' => $my_company_id, 'pid' => $my_company_id];
     if ($search_query !== '') {
         $sql .= " AND p.project_name LIKE :search";
         $params['search'] = '%' . $search_query . '%';
