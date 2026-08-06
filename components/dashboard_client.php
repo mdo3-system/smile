@@ -133,7 +133,17 @@
                         </div>
                     <?php endif; ?>
 
-                    <?php if ($project_info['status'] === 'submission'): ?>
+                    <?php 
+                    $show_complete_btn = in_array($project_info['status'], ['submission', 'submitting', 'correction']);
+                    if (!$show_complete_btn && !in_array($project_info['status'], ['quote_req', 'quote_sent', 'completed'])) {
+                        // 申請図書一式UPに実施日が入っており、最終完了が未完了の場合は表示
+                        $act_check = json_decode($project_info['schedule_actuals'] ?? '{}', true) ?: [];
+                        if (!empty($act_check[5]) || !empty($act_check[6])) {
+                            $show_complete_btn = true;
+                        }
+                    }
+                    if ($show_complete_btn): 
+                    ?>
                         <?php 
                         $formal_amt = (int)($project_info['formal_est_amount'] ?? 0);
                         $add_est_amt = (int)($project_info['add_est_amount'] ?? 0);

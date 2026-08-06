@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.6.27');
+define('SYSTEM_VERSION', 'v1.6.28');
 
 
 // ==========================================
@@ -701,17 +701,16 @@ function syncProjectStatusWithSchedule(int $projectId, PDO $pdo) {
     if (!empty($actuals[$completed_idx])) {
         $new_status = 'completed';
     }
-    // 2. 補正対応中チェック
-    elseif ($correction_idx !== -1 && !empty($actuals[$correction_idx - 1]) && empty($actuals[$correction_idx])) {
+    // 2. 申請図書一式UP済 ＆ 最終完了未設定（審査・待機 / 補正対応フェーズ）
+    elseif ($submission_idx !== -1 && !empty($actuals[$submission_idx])) {
         // 補正対応の前のステップ（質疑・審査待機）が完了しており、補正対応が未完了の場合
-        $new_status = 'correction';
+        if ($correction_idx !== -1 && !empty($actuals[$correction_idx - 1]) && empty($actuals[$correction_idx])) {
+            $new_status = 'correction';
+        } else {
+            $new_status = 'submitting';
+        }
     }
-    // 3. 審査・待機 (submission/submitting) チェック
-    elseif ($submission_idx !== -1 && !empty($actuals[$submission_idx]) && empty($actuals[$submission_idx + 1])) {
-        // 申請図書一式UPが完了しており、その次の「質疑・審査待機」が未完了の場合
-        $new_status = 'submitting';
-    }
-    // 4. 申請図書作成中 (structural_dwg)
+    // 3. 申請図書作成中 (structural_dwg)
     elseif (!empty($actuals[2]) && ($submission_idx !== -1 && empty($actuals[$submission_idx]))) {
         // 一次回答（初回提示）が終わっており、申請図書一式UPがまだの場合
         $new_status = 'structural_dwg';
