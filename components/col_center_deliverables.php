@@ -163,6 +163,56 @@
                         <button type="submit" class="btn" style="background:#8b5cf6; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">➕ 別の成果物スロットを追加</button>
                     </form>
                 </div>
+
+                <?php
+                // 協力業者から提出された納品ファイル(sub_structural_pdf等)を取得
+                $stmtSubPdfs = $pdo->prepare("
+                    SELECT * FROM project_files 
+                    WHERE project_id = :pid 
+                      AND file_category IN ('sub_structural_pdf', 'sub_architrend_design', 'sub_architrend_struct') 
+                    ORDER BY created_at DESC
+                ");
+                $stmtSubPdfs->execute(['pid' => $project_id]);
+                $sub_pdfs = $stmtSubPdfs->fetchAll(PDO::FETCH_ASSOC);
+                
+                if (!empty($sub_pdfs)):
+                ?>
+                    <div class="box" style="margin-top:15px; background:#f0f9ff; border:1px solid #bae6fd;">
+                        <h4 style="margin:0 0 8px 0; font-size:12px; color:#0369a1;">🔄 協力業者納品データから任意リネームして成果物へUP</h4>
+                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="display:flex; flex-direction:column; gap:6px; font-size:11px;">
+                            <input type="hidden" name="action" value="copy_sub_pdf_to_client">
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <label style="width:70px; font-weight:bold; color:#334155;">元データ:</label>
+                                <select name="sub_file_id" required style="font-size:11px; padding:3px; flex:1;">
+                                    <?php foreach ($sub_pdfs as $sp): 
+                                        $cat_name = ($sp['file_category'] === 'sub_structural_pdf') ? '構造図PDF' : (($sp['file_category'] === 'sub_architrend_design') ? '意匠アーキ' : '構造アーキ');
+                                    ?>
+                                        <option value="<?= $sp['id'] ?>"><?= htmlspecialchars($sp['file_name']) ?> (<?= $cat_name ?> / V<?= $sp['version'] ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <label style="width:70px; font-weight:bold; color:#334155;">転送先枠:</label>
+                                <select name="target_category" style="font-size:11px; padding:3px; flex:1;">
+                                    <option value="structural_dwg">構造図 (structural_dwg)</option>
+                                    <option value="standard_dwg">構造標準図 (standard_dwg)</option>
+                                    <option value="calc_doc">構造計算書 (calc_doc)</option>
+                                    <option value="safety_cert">安全証明書 (safety_cert)</option>
+                                    <option value="wall_calc_doc">壁量計算書 (wall_calc_doc)</option>
+                                    <option value="other_artifact">その他ファイル (other_artifact)</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <label style="width:70px; font-weight:bold; color:#334155;">新ファイル名:</label>
+                                <input type="text" name="custom_file_name" value="<?= htmlspecialchars(($project_info['project_name'] ?? '成果物') . '_構造図.pdf', ENT_QUOTES) ?>" style="font-size:11px; padding:3px 6px; flex:1; border:1px solid #cbd5e1; border-radius:3px;" placeholder="例: ○○様邸_構造図.pdf" required>
+                            </div>
+                            <div style="text-align:right; margin-top:4px;">
+                                <button type="submit" style="background:#0284c7; color:white; border:none; padding:4px 10px; border-radius:3px; font-weight:bold; cursor:pointer;" onclick="return confirm('選択した納品ファイルを任意名にリネームして成果物へ追加登録（公開）しますか？')">リネームして依頼主へUP</button>
+                            </div>
+                        </form>
+                    </div>
+                <?php endif; ?>
+
                 <script>
                 function promptCustomDeliverable(form) {
                     const name = prompt("追加する成果物の名前を入力してください（例: 特記仕様書）:");

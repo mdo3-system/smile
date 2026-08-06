@@ -32,6 +32,10 @@
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
                                 <input type="hidden" name="action" value="approve_delivery">
                                 <input type="hidden" name="order_id" value="<?= $del['id'] ?>">
+                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                    <label style="font-size:10px; color:#555; font-weight:bold;">公開用ファイル名 (任意リネーム):</label>
+                                    <input type="text" name="custom_file_name" value="<?= htmlspecialchars(($project_info['project_name'] ?? '成果物') . '_構造図.pdf', ENT_QUOTES) ?>" style="padding:3px 6px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; width:100%; box-sizing:border-box;" placeholder="例: ○○様邸_構造図.pdf">
+                                </div>
                                 <div style="display:flex; align-items:center; gap:5px;">
                                     <label style="font-size:10px; color:#666;">完了日を指定:</label>
                                     <input type="date" name="completed_at" value="<?= date('Y-m-d') ?>" style="padding:2px 5px; font-size:11px; border:1px solid #ccc; border-radius:4px;" required>

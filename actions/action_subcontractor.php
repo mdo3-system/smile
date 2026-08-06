@@ -136,6 +136,13 @@ if ($action === 'approve_delivery') {
             $pdf_file = $stmtGetPdf->fetch();
 
             if ($pdf_file) {
+                // 任意リネーム名が指定されていれば使用
+                $custom_name = trim($_POST['custom_file_name'] ?? '');
+                $target_fname = (!empty($custom_name)) ? $custom_name : $pdf_file['file_name'];
+                if (!empty($custom_name) && !preg_match('/\.pdf$/i', $target_fname)) {
+                    $target_fname .= '.pdf';
+                }
+
                 // 既存の依頼主向け structural_dwg を非最新にする
                 $stmtUpdate = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = 'structural_dwg'");
                 $stmtUpdate->execute(['pid' => $project_id]);
@@ -151,7 +158,7 @@ if ($action === 'approve_delivery') {
                 ");
                 $stmtInsert->execute([
                     'pid' => $project_id,
-                    'fname' => $pdf_file['file_name'],
+                    'fname' => $target_fname,
                     'fpath' => $pdf_file['drive_file_id'],
                     'ver' => $new_v
                 ]);
@@ -314,4 +321,89 @@ if ($action === 'submit_checkback') {
         header("Location: project_subcontractor.php?id=" . $project_id . "&t=" . time()); exit;
     }
 }
+
+// 協力業者納品ファイル(PDF等)をリネームして依頼主向け成果物へコピーUP
+if ($action === 'copy_sub_pdf_to_client' && $is_admin) {
+    $sub_file_id = intval($_POST['sub_file_id'] ?? 0);
+    $target_cat = trim($_POST['target_category'] ?? 'structural_dwg');
+    $custom_name = trim($_POST['custom_file_name'] ?? '');
+
+    if ($sub_file_id > 0) {
+        $stmtSrc = $pdo->prepare("SELECT * FROM project_files WHERE id = :id AND project_id = :pid");
+        $stmtSrc->execute(['id' => $sub_file_id, 'pid' => $project_id]);
+        $src_file = $stmtSrc->fetch(PDO::FETCH_ASSOC);
+
+        if ($src_file) {
+            $target_fname = (!empty($custom_name)) ? $custom_name : $src_file['file_name'];
+            if (!empty($custom_name) && !preg_match('/\.[a-z0-9]+$/i', $target_fname)) {
+                $ext = pathinfo($src_file['file_name'], PATHINFO_EXTENSION);
+                if ($ext) {
+                    $target_fname .= '.' . $ext;
+                }
+            }
+
+            $pdo->beginTransaction();
+            try {
+                // 対象カテゴリの既存最新ファイルを is_latest = 0 に
+                $stmtUpdate = $pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+                $stmtUpdate->execute(['pid' => $project_id, 'cat' => $target_cat]);
+
+                // バージョン取得
+                $stmtVer = $pdo->prepare("SELECT MAX(version) as max_v FROM project_files WHERE project_id = :pid AND file_category = :cat");
+                $stmtVer->execute(['pid' => $project_id, 'cat' => $target_cat]);
+                $new_v = ($stmtVer->fetch()['max_v'] ?? 0) + 1;
+
+                // レコード作成
+                $stmtInsert = $pdo->prepare("
+                    INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest)
+                    VALUES (:pid, :cat, :fname, :fpath, :ver, 1)
+                ");
+                $stmtInsert->execute([
+                    'pid' => $project_id,
+                    'cat' => $target_cat,
+                    'fname' => $target_fname,
+                    'fpath' => $src_file['drive_file_id'],
+                    'ver' => $new_v
+                ]);
+
+                // チャット通知
+                $cat_labels = [
+                    'structural_dwg' => '構造図',
+                    'standard_dwg' => '構造標準図',
+                    'calc_doc' => '構造計算書',
+                    'safety_cert' => '安全証明書',
+                    'wall_calc_doc' => '壁量計算書',
+                    'skin_calc_doc' => '外皮計算書',
+                    'sky_dwg' => '天空率図書'
+                ];
+                $cat_label = $cat_labels[$target_cat] ?? $target_cat;
+                
+                $notify_client_msg = "【成果物アップロード】成果物（{$cat_label}: {$target_fname}）が公開されました。成果物エリアよりご確認ください。";
+                $stmtChatClient = $pdo->prepare("
+                    INSERT INTO messages (project_id, sender_id, thread_type, message_text) 
+                    VALUES (:pid, :sid, 'client_admin', :msg)
+                ");
+                $stmtChatClient->execute([
+                    'pid' => $project_id,
+                    'sid' => $_SESSION['user_id'],
+                    'msg' => $notify_client_msg
+                ]);
+                if (function_exists('sendChatEmailNotification')) {
+                    sendChatEmailNotification($project_id, $_SESSION['user_id'], $_SESSION['role'], 'client_admin', $notify_client_msg, $pdo);
+                }
+
+                $pdo->commit();
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                die("ファイルの転送処理に失敗しました: " . $e->getMessage());
+            }
+        }
+    }
+    $redirect_url = "project_detail.php?id=" . $project_id;
+    if (strpos($_SERVER['HTTP_REFERER'] ?? '', 'project_subcontractor.php') !== false) {
+        $redirect_url = "project_subcontractor.php?id=" . $project_id;
+    }
+    header("Location: " . $redirect_url . "&t=" . time()); exit;
+}
+
 
