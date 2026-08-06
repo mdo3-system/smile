@@ -165,11 +165,12 @@
                 </div>
 
                 <?php
-                // 協力業者から提出された納品ファイル(sub_structural_pdf等)を取得
+                // 協力業者から提出された納品ファイル（PDF図面データのみ）を取得
                 $stmtSubPdfs = $pdo->prepare("
                     SELECT * FROM project_files 
                     WHERE project_id = :pid 
-                      AND file_category IN ('sub_structural_pdf', 'sub_architrend_design', 'sub_architrend_struct') 
+                      AND file_category = 'sub_structural_pdf'
+                      AND LOWER(file_name) LIKE '%.pdf'
                     ORDER BY created_at DESC
                 ");
                 $stmtSubPdfs->execute(['pid' => $project_id]);
@@ -178,16 +179,14 @@
                 if (!empty($sub_pdfs)):
                 ?>
                     <div class="box" style="margin-top:15px; background:#f0f9ff; border:1px solid #bae6fd;">
-                        <h4 style="margin:0 0 8px 0; font-size:12px; color:#0369a1;">🔄 協力業者納品データから任意リネームして成果物へUP</h4>
+                        <h4 style="margin:0 0 8px 0; font-size:12px; color:#0369a1;">🔄 協力業者納品PDFから任意リネームして成果物へUP</h4>
                         <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="display:flex; flex-direction:column; gap:6px; font-size:11px;">
                             <input type="hidden" name="action" value="copy_sub_pdf_to_client">
                             <div style="display:flex; gap:5px; align-items:center;">
                                 <label style="width:70px; font-weight:bold; color:#334155;">元データ:</label>
                                 <select name="sub_file_id" required style="font-size:11px; padding:3px; flex:1;">
-                                    <?php foreach ($sub_pdfs as $sp): 
-                                        $cat_name = ($sp['file_category'] === 'sub_structural_pdf') ? '構造図PDF' : (($sp['file_category'] === 'sub_architrend_design') ? '意匠アーキ' : '構造アーキ');
-                                    ?>
-                                        <option value="<?= $sp['id'] ?>"><?= htmlspecialchars($sp['file_name']) ?> (<?= $cat_name ?> / V<?= $sp['version'] ?>)</option>
+                                    <?php foreach ($sub_pdfs as $sp): ?>
+                                        <option value="<?= $sp['id'] ?>"><?= htmlspecialchars($sp['file_name']) ?> (構造図PDF / V<?= $sp['version'] ?>)</option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>

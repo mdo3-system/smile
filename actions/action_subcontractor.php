@@ -334,6 +334,12 @@ if ($action === 'copy_sub_pdf_to_client' && $is_admin) {
         $src_file = $stmtSrc->fetch(PDO::FETCH_ASSOC);
 
         if ($src_file) {
+            // PDFファイル以外の転送を厳密にブロック（セキュリティガード）
+            $ext_check = strtolower(pathinfo($src_file['file_name'], PATHINFO_EXTENSION));
+            if ($ext_check !== 'pdf') {
+                die("PDF形式以外のファイル（CADデータ等）は依頼主へ公開・転送できません。");
+            }
+
             $target_fname = (!empty($custom_name)) ? $custom_name : $src_file['file_name'];
             if (!empty($custom_name) && !preg_match('/\.[a-z0-9]+$/i', $target_fname)) {
                 $ext = pathinfo($src_file['file_name'], PATHINFO_EXTENSION);
