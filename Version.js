@@ -191,9 +191,10 @@
 // 1.6.29: 完了案件DB（completed_projects.php）の依頼主用抽出クエリを親・子アカウント（企業グループ全体）対応に拡張
 // 1.6.30: 協力業者納品データから依頼主成果物への転送対象をPDFファイル（.pdf）限定に厳密化し、CADデータ等の誤転送防止ガードを追加
 // 1.6.31: 手動追加明細（意匠図変更対応等）の金額全角入力による計算漏れバグの修正、およびリアルタイム全角半角自動変換の追加
+// 1.6.32: project_detail_post.php での submit_client_checkback アクションのルーティング判定漏れバグを修正し、チェックバック（修正指示）および指示用ファイルUPによるチャット自動反映を復旧
 
-window.APP_VERSION = "1.6.31";
-const APP_LAST_UPDATED = '2026-08-07';
+window.APP_VERSION = "1.6.32";
+const APP_LAST_UPDATED = '2026-08-15';
 
 
 
