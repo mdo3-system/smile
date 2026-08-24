@@ -194,6 +194,63 @@ class EstimateController
                 throw new \Exception("見積もりデータの保存に失敗しました。");
             }
 
+            // 1.5. 金銭ステータスの更新
+            // projects.initial_est_amount が未設定(0 or NULL)の場合のみ初期見積額を自動設定
+            $stmtCheckInit = $pdo->prepare("SELECT initial_est_amount FROM projects WHERE id = :pid");
+            $stmtCheckInit->execute(['pid' => $projectId]);
+            $currentInitAmt = $stmtCheckInit->fetchColumn();
+            if (empty($currentInitAmt) || (int)$currentInitAmt === 0) {
+                $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice > 0) {
+                    $tax = round($totalPrice * 0.1);
+                    $grandTotal = $totalPrice + $tax;
+                    $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid");
+                    $stmtInit->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
+                }
+            }
+
+            // is_formal = 1 の場合、本見積額 (formal_est_amount) と本見積日 (formal_est_date) を更新
+            $isFormal = isset($_POST['is_formal']) && $_POST['is_formal'] === '1';
+            if ($isFormal) {
+                $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice <= 0) {
+                    $stmtLastEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
+                    $stmtLastEst->execute(['pid' => $projectId]);
+                    $totalPrice = (int)$stmtLastEst->fetchColumn();
+                }
+                if ($totalPrice > 0) {
+                    $tax = round($totalPrice * 0.1);
+                    $grandTotal = $totalPrice + $tax;
+                    $stmtFormal = $pdo->prepare("UPDATE projects SET formal_est_amount = :amt, formal_est_date = :dt WHERE id = :pid");
+                    $stmtFormal->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
+                }
+            }
+
+            // is_additional = 1 の場合、追加見積額を projects.additional_estimates JSON に追記更新
+            $isAdditional = isset($_POST['is_additional']) && $_POST['is_additional'] === '1';
+            if ($isAdditional) {
+                $totalPrice = (int)($_POST['total_price'] ?? 0);
+                if ($totalPrice > 0) {
+                    $tax = round($totalPrice * 0.1);
+                    $grandTotal = $totalPrice + $tax;
+                    
+                    $stmtGetAdd = $pdo->prepare("SELECT additional_estimates FROM projects WHERE id = :pid");
+                    $stmtGetAdd->execute(['pid' => $projectId]);
+                    $currentAddJson = $stmtGetAdd->fetchColumn();
+                    $addEstimates = json_decode($currentAddJson ?? '[]', true) ?: [];
+                    
+                    $addEstimates[] = [
+                        'amount' => $grandTotal,
+                        'date' => date('Y-m-d'),
+                        'note' => 'シミュレーター発行追加見積'
+                    ];
+                    
+                    $newAddJson = json_encode($addEstimates, JSON_UNESCAPED_UNICODE);
+                    $stmtUpdateAdd = $pdo->prepare("UPDATE projects SET additional_estimates = :add_json WHERE id = :pid");
+                    $stmtUpdateAdd->execute(['add_json' => $newAddJson, 'pid' => $projectId]);
+                }
+            }
+
             // 2. Driveフォルダの確保とPDFの生成 (生成処理内部で最新の見積もりレコードを参照する)
             $temp_pdf_path = generate_estimate_pdf($projectId, $pdo);
             
@@ -262,10 +319,6 @@ class EstimateController
                 
                 if (copy($temp_pdf_path, $dest_path)) {
                     $pdfDriveId = $relative_path;
-                    // 保存したファイルを project_files テーブルにもローカルパスでインサートして、
-                    // 依頼主詳細画面等で「見積時の受領図面」の枠などでリンク可能にする
-                    // ※ estimates.pdf_drive_file_id に登録すれば印刷用リンクが機能するが、
-                    // project_files にも登録しておくことで、後から自動同期機能が uploads/% のパターンで Drive へ吸い上げる対象になります。
                     try {
                         $stmtFile = $pdo->prepare("
                             INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
@@ -292,65 +345,6 @@ class EstimateController
             // 4. 保存した最新の見積もりレコードにDrive IDを追記
             $stmtUpdate = $pdo->prepare("UPDATE estimates SET pdf_drive_file_id = :did WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
             $stmtUpdate->execute(['did' => $pdfDriveId, 'pid' => $projectId]);
-
-            // 5. projects.initial_est_amount が未設定(0 or NULL)の場合のみ初期見積額を自動設定
-            $stmtCheckInit = $pdo->prepare("SELECT initial_est_amount FROM projects WHERE id = :pid");
-            $stmtCheckInit->execute(['pid' => $projectId]);
-            $currentInitAmt = $stmtCheckInit->fetchColumn();
-            if (empty($currentInitAmt) || (int)$currentInitAmt === 0) {
-                $totalPrice = (int)($_POST['total_price'] ?? 0);
-                if ($totalPrice > 0) {
-                    $tax = round($totalPrice * 0.1);
-                    $grandTotal = $totalPrice + $tax;
-                    $stmtInit = $pdo->prepare("UPDATE projects SET initial_est_amount = :amt, initial_est_date = :dt WHERE id = :pid");
-                    $stmtInit->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
-                }
-            }
-
-            // is_formal = 1 の場合、本見積額 (formal_est_amount) と本見積日 (formal_est_date) を更新
-            $isFormal = isset($_POST['is_formal']) && $_POST['is_formal'] === '1';
-            if ($isFormal) {
-                $totalPrice = (int)($_POST['total_price'] ?? 0);
-                if ($totalPrice <= 0) {
-                    // POSTにtotal_priceが無いか0の場合、保存済みの最新見積もりレコードから取得
-                    $stmtLastEst = $pdo->prepare("SELECT total_price FROM estimates WHERE project_id = :pid ORDER BY id DESC LIMIT 1");
-                    $stmtLastEst->execute(['pid' => $projectId]);
-                    $totalPrice = (int)$stmtLastEst->fetchColumn();
-                }
-                if ($totalPrice > 0) {
-                    $tax = round($totalPrice * 0.1);
-                    $grandTotal = $totalPrice + $tax;
-                    $stmtFormal = $pdo->prepare("UPDATE projects SET formal_est_amount = :amt, formal_est_date = :dt WHERE id = :pid");
-                    $stmtFormal->execute(['amt' => $grandTotal, 'dt' => date('Y-m-d'), 'pid' => $projectId]);
-                }
-            }
-
-            // is_additional = 1 の場合、追加見積額を projects.additional_estimates JSON に追記更新
-            $isAdditional = isset($_POST['is_additional']) && $_POST['is_additional'] === '1';
-            if ($isAdditional) {
-                $totalPrice = (int)($_POST['total_price'] ?? 0);
-                if ($totalPrice > 0) {
-                    $tax = round($totalPrice * 0.1);
-                    $grandTotal = $totalPrice + $tax;
-                    
-                    // 現在の projects.additional_estimates を取得
-                    $stmtGetAdd = $pdo->prepare("SELECT additional_estimates FROM projects WHERE id = :pid");
-                    $stmtGetAdd->execute(['pid' => $projectId]);
-                    $currentAddJson = $stmtGetAdd->fetchColumn();
-                    $addEstimates = json_decode($currentAddJson ?? '[]', true) ?: [];
-                    
-                    // 新しい追加見積データを追加
-                    $addEstimates[] = [
-                        'amount' => $grandTotal,
-                        'date' => date('Y-m-d'),
-                        'note' => 'シミュレーター発行追加見積'
-                    ];
-                    
-                    $newAddJson = json_encode($addEstimates, JSON_UNESCAPED_UNICODE);
-                    $stmtUpdateAdd = $pdo->prepare("UPDATE projects SET additional_estimates = :add_json WHERE id = :pid");
-                    $stmtUpdateAdd->execute(['add_json' => $newAddJson, 'pid' => $projectId]);
-                }
-            }
 
             $debug = ob_get_clean();
             header('Content-Type: application/json');

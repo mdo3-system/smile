@@ -167,7 +167,12 @@ function issueFinalInvoiceHelper($pdo, $project_id, $user_id) {
     require_once __DIR__ . '/../estimate_pdf_generator.php';
 
     // 1. まず案件情報を取得して本見積額が確定しているか確認
-    $stmtProj = $pdo->prepare("SELECT project_name, formal_est_amount, add_est_amount, deposit_amount_50 FROM projects WHERE id = :pid");
+    $stmtProj = $pdo->prepare("
+        SELECT project_name, formal_est_amount, add_est_amount, 
+               deposit_amount_50, deposit_amount_rem, additional_estimates, additional_deposits 
+        FROM projects 
+        WHERE id = :pid
+    ");
     $stmtProj->execute(['pid' => $project_id]);
     $proj_info = $stmtProj->fetch(PDO::FETCH_ASSOC);
 
@@ -282,21 +287,41 @@ function issueFinalInvoiceHelper($pdo, $project_id, $user_id) {
 
         // 5. 自動的にチャット通知メッセージを生成し、チャットに送信
         $formal = intval($proj_info['formal_est_amount']);
-        $add = intval($proj_info['add_est_amount'] ?? 0);
-        $dep_50 = intval($proj_info['deposit_amount_50'] ?? 0);
-        
         $base_formal = round($formal / 1.1);
-        $base_add = round($add / 1.1);
-        $base_dep_50 = round($dep_50 / 1.1);
+
+        $add_estimates = json_decode($proj_info['additional_estimates'] ?? '[]', true) ?: [];
+        if (empty($add_estimates) && !empty($proj_info['add_est_amount']) && intval($proj_info['add_est_amount']) > 0) {
+            $add_estimates[] = ['amount' => intval($proj_info['add_est_amount'])];
+        }
+        $total_base_add = 0;
+        foreach ($add_estimates as $ae) {
+            $total_base_add += round(intval($ae['amount'] ?? 0) / 1.1);
+        }
+
+        $dep_50 = intval($proj_info['deposit_amount_50'] ?? 0);
+        $dep_rem = intval($proj_info['deposit_amount_rem'] ?? 0);
+        $additional_deposits = json_decode($proj_info['additional_deposits'] ?? '[]', true) ?: [];
         
-        $subtotal = ($base_formal + $base_add) - $base_dep_50;
+        $total_base_dep = round($dep_50 / 1.1) + round($dep_rem / 1.1);
+        foreach ($additional_deposits as $ad) {
+            $total_base_dep += round(intval($ad['amount'] ?? 0) / 1.1);
+        }
+        
+        $subtotal = max(0, ($base_formal + $total_base_add) - $total_base_dep);
         $tax = round($subtotal * 0.1);
         $grand_total = $subtotal + $tax;
 
         $msg = "【最終請求書が発行されました】\n";
-        $msg .= "残金（本見積＋追加費用から着手金50%分を差し引いた額）を請求させていただきます。\n";
+        $msg .= "残金（本見積＋追加費用から入金済分を差し引いた額）を請求させていただきます。\n";
         $msg .= "請求金額: " . number_format($grand_total) . "円 (税込)\n";
-        $msg .= "（内訳: 本見積税抜 " . number_format($base_formal) . "円、追加税抜 " . number_format($base_add) . "円、着手金控除税抜 -" . number_format($base_dep_50) . "円、消費税 " . number_format($tax) . "円）\n\n";
+        $msg .= "（内訳: 本見積税抜 " . number_format($base_formal) . "円";
+        if ($total_base_add > 0) {
+            $msg .= "、追加税抜 " . number_format($total_base_add) . "円";
+        }
+        if ($total_base_dep > 0) {
+            $msg .= "、既入金分控除税抜 -" . number_format($total_base_dep) . "円";
+        }
+        $msg .= "、消費税 " . number_format($tax) . "円）\n\n";
         $msg .= "詳細は左パネルの「最終請求書」からご確認ください。よろしくお願い申し上げます。";
 
         $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");

@@ -32,7 +32,28 @@ class EstimateControllerTest extends TestCase {
                 schedule_actuals TEXT NULL,
                 schedule_actuals_wall TEXT NULL,
                 schedule_actuals_skin TEXT NULL,
-                schedule_actuals_sky TEXT NULL
+                schedule_actuals_sky TEXT NULL,
+                initial_est_amount INT DEFAULT 0,
+                initial_est_date VARCHAR(50) NULL,
+                formal_est_amount INT DEFAULT 0,
+                formal_est_date VARCHAR(50) NULL,
+                additional_estimates TEXT NULL
+            );
+            CREATE TABLE estimates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                base_price INTEGER DEFAULT 0,
+                area REAL DEFAULT 0,
+                grade_price INTEGER DEFAULT 0,
+                total_price INTEGER DEFAULT 0,
+                note TEXT NULL,
+                pdf_drive_file_id VARCHAR(255) NULL,
+                req_permit INTEGER DEFAULT 0,
+                req_wall INTEGER DEFAULT 0,
+                req_skin INTEGER DEFAULT 0,
+                req_sky INTEGER DEFAULT 0,
+                inputs_json TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         ");
 
@@ -171,25 +192,18 @@ class EstimateControllerTest extends TestCase {
       * 計算タイプチェックなし＆手動明細（追加スロット）のみの案件における本見積確定(is_formal=1)のテスト
       */
      public function testSaveFormalEstimateWithManualItemsOnly() {
-         $this->pdo->exec("
-             ALTER TABLE projects ADD COLUMN formal_est_amount INT DEFAULT 0;
-         ");
-         $this->pdo->exec("
-             ALTER TABLE projects ADD COLUMN formal_est_date VARCHAR(50) NULL;
-         ");
-
-         $_POST['project_id'] = '1';
-         $_POST['is_formal'] = '1';
-         $_POST['total_price'] = '50000'; // 手動明細税抜50000円
-         $_POST['inputs_json'] = json_encode([
-             'est_active_permit' => false,
-             'est_active_wall' => false,
-             'est_active_skin' => false,
-             'est_active_sky' => false,
-             'manual_items' => [
-                 ['name' => '追加作図費用', 'price' => 50000]
-             ]
-         ]);
+        $_POST['project_id'] = '1';
+        $_POST['is_formal'] = '1';
+        $_POST['total_price'] = '50000'; // 手動明細税抜50000円
+        $_POST['inputs_json'] = json_encode([
+            'est_active_permit' => false,
+            'est_active_wall' => false,
+            'est_active_skin' => false,
+            'est_active_sky' => false,
+            'manual_items' => [
+                ['name' => '追加作図費用', 'price' => 50000]
+            ]
+        ]);
 
          $controller = new EstimateController();
          ob_start();

@@ -525,12 +525,37 @@
                 <?php endif; ?>
             </div>
 
-            <?php if (isset($files_by_cat['inv_primary'][0])): ?>
+            <?php if (isset($files_by_cat['inv_primary'][0])): 
+                $inv_p = $files_by_cat['inv_primary'][0];
+                $inv_p_url = (strpos($inv_p['drive_file_id'], 'uploads/') !== 0 && !empty($inv_p['drive_file_id'])) 
+                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($inv_p['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                    : htmlspecialchars($inv_p['drive_file_id'], ENT_QUOTES);
+                $is_full_p = (($project_info['primary_invoice_rate'] ?? 0.5) >= 1.0);
+            ?>
             <div class="box" style="background:#eff6ff; border-color:#bfdbfe; margin-top:10px;">
-                <h3 style="margin-top:0; font-size:14px; color:#1e40af; border-bottom:1px solid #bfdbfe; padding-bottom:5px;">📄 最新の一次請求書 (50%分)</h3>
-                <div style="font-size:12px; color:#666; margin-bottom:10px;">発行された一次請求書（着手金50%）をPDFとして表示・印刷できます。</div>
-                <a href="https://drive.google.com/file/d/<?= htmlspecialchars($files_by_cat['inv_primary'][0]['drive_file_id'], ENT_QUOTES) ?>/view?usp=drivesdk" target="_blank" style="display:block; width:100%; text-align:center; background:#2563eb; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold;">
+                <h3 style="margin-top:0; font-size:14px; color:#1e40af; border-bottom:1px solid #bfdbfe; padding-bottom:5px;">
+                    📄 最新の請求書 (<?= $is_full_p ? '100%全額' : '着手金50%' ?>)
+                </h3>
+                <div style="font-size:12px; color:#666; margin-bottom:10px;">発行された請求書（<?= $is_full_p ? '100%全額' : '着手金50%' ?>）をPDFとして表示・印刷できます。</div>
+                <a href="<?= $inv_p_url ?>" target="_blank" style="display:block; width:100%; text-align:center; background:#2563eb; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold;">
                     📄 一次請求書PDFを表示
+                </a>
+            </div>
+            <?php endif; ?>
+
+            <?php if (isset($files_by_cat['inv_final'][0])): 
+                $inv_f = $files_by_cat['inv_final'][0];
+                $inv_f_url = (strpos($inv_f['drive_file_id'], 'uploads/') !== 0 && !empty($inv_f['drive_file_id'])) 
+                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($inv_f['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                    : htmlspecialchars($inv_f['drive_file_id'], ENT_QUOTES);
+            ?>
+            <div class="box" style="background:#fef2f2; border-color:#fecaca; margin-top:10px;">
+                <h3 style="margin-top:0; font-size:14px; color:#991b1b; border-bottom:1px solid #fecaca; padding-bottom:5px;">
+                    📄 最新の最終請求書 (残金精算分)
+                </h3>
+                <div style="font-size:12px; color:#666; margin-bottom:10px;">発行された最終請求書（残金精算分）をPDFとして表示・印刷できます。</div>
+                <a href="<?= $inv_f_url ?>" target="_blank" style="display:block; width:100%; text-align:center; background:#dc3545; color:white; text-decoration:none; padding:8px; border-radius:4px; font-weight:bold;">
+                    📄 最終請求書PDFを表示
                 </a>
             </div>
             <?php endif; ?>

@@ -389,7 +389,9 @@ function generate_primary_invoice_pdf($project_id, $pdo, $invoice_rate = 0.5) {
 function generate_final_invoice_pdf($project_id, $pdo) {
     // 案件情報と見積もり情報を取得
     $stmt = $pdo->prepare("
-        SELECT p.project_name, p.billing_company_name, p.formal_est_amount, p.add_est_amount, p.deposit_amount_50, u.company_name, u.contact_name 
+        SELECT p.project_name, p.billing_company_name, p.formal_est_amount, p.add_est_amount, 
+               p.deposit_amount_50, p.deposit_amount_rem, p.additional_estimates, p.additional_deposits,
+               u.company_name, u.contact_name 
         FROM projects p 
         JOIN users u ON p.client_id = u.id 
         WHERE p.id = :pid
@@ -406,15 +408,94 @@ function generate_final_invoice_pdf($project_id, $pdo) {
     }
     
     $formal = intval($data['formal_est_amount']);
-    $add = intval($data['add_est_amount'] ?? 0);
-    $dep_50 = intval($data['deposit_amount_50'] ?? 0);
-    
-    // 税抜換算
     $base_formal = round($formal / 1.1);
-    $base_add = round($add / 1.1);
-    $base_dep_50 = round($dep_50 / 1.1);
+
+    // 複数追加見積のパース
+    $add_estimates = json_decode($data['additional_estimates'] ?? '[]', true) ?: [];
+    if (empty($add_estimates) && !empty($data['add_est_amount']) && intval($data['add_est_amount']) > 0) {
+        $add_estimates[] = [
+            'amount' => intval($data['add_est_amount']),
+            'note' => '追加業務費用',
+            'date' => null
+        ];
+    }
+
+    // 複数入金情報のパース
+    $dep_50 = intval($data['deposit_amount_50'] ?? 0);
+    $dep_rem = intval($data['deposit_amount_rem'] ?? 0);
+    $additional_deposits = json_decode($data['additional_deposits'] ?? '[]', true) ?: [];
+
+    $total_base_add = 0;
+    $table_add_rows = '';
+    foreach ($add_estimates as $idx => $ae) {
+        $amt = intval($ae['amount'] ?? 0);
+        if ($amt <= 0) continue;
+        $base_add_item = round($amt / 1.1);
+        $total_base_add += $base_add_item;
+        
+        $item_label = '追加業務費用';
+        if (!empty($ae['note'])) {
+            $item_label .= ' (' . htmlspecialchars($ae['note'], ENT_QUOTES) . ')';
+        } else {
+            $item_label .= ' #' . ($idx + 1);
+        }
+
+        $table_add_rows .= '
+            <tr>
+                <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> ' . $item_label . '</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">¥' . number_format($base_add_item) . '</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">¥' . number_format($base_add_item) . '</td>
+            </tr>
+        ';
+    }
+
+    $total_base_dep = 0;
+    $table_dep_rows = '';
+    if ($dep_50 > 0) {
+        $base_dep_50 = round($dep_50 / 1.1);
+        $total_base_dep += $base_dep_50;
+        $table_dep_rows .= '
+            <tr style="color: #666;">
+                <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> 内金（着手金50%）お支払い済み分差し引き</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_dep_50) . '</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_dep_50) . '</td>
+            </tr>
+        ';
+    }
+    if ($dep_rem > 0) {
+        $base_dep_rem = round($dep_rem / 1.1);
+        $total_base_dep += $base_dep_rem;
+        $table_dep_rows .= '
+            <tr style="color: #666;">
+                <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> 残金お支払い済み分差し引き</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_dep_rem) . '</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_dep_rem) . '</td>
+            </tr>
+        ';
+    }
+    foreach ($additional_deposits as $idx => $ad) {
+        $amt = intval($ad['amount'] ?? 0);
+        if ($amt <= 0) continue;
+        $base_ad = round($amt / 1.1);
+        $total_base_dep += $base_ad;
+        $ad_label = '追加入金お支払い済み分差し引き';
+        if (!empty($ad['note'])) {
+            $ad_label .= ' (' . htmlspecialchars($ad['note'], ENT_QUOTES) . ')';
+        }
+        $table_dep_rows .= '
+            <tr style="color: #666;">
+                <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> ' . $ad_label . '</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_ad) . '</td>
+                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_ad) . '</td>
+            </tr>
+        ';
+    }
     
-    $subtotal = ($base_formal + $base_add) - $base_dep_50;
+    $subtotal = max(0, ($base_formal + $total_base_add) - $total_base_dep);
     $tax = round($subtotal * 0.1);
     $grand_total = $subtotal + $tax;
     
@@ -448,27 +529,8 @@ function generate_final_invoice_pdf($project_id, $pdo) {
         </tr>
     ';
     
-    if ($base_add > 0) {
-        $table_rows .= '
-            <tr>
-                <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> 追加業務費用</td>
-                <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
-                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">¥' . number_format($base_add) . '</td>
-                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">¥' . number_format($base_add) . '</td>
-            </tr>
-        ';
-    }
-    
-    if ($base_dep_50 > 0) {
-        $table_rows .= '
-            <tr style="color: #999;">
-                <td style="border-bottom: 1px solid #dddddd; text-align: left; padding: 8px;"> 内金（着手金50%）お支払い済み分差し引き</td>
-                <td style="border-bottom: 1px solid #dddddd; text-align: center; padding: 8px; width: 15%;">1 式</td>
-                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_dep_50) . '</td>
-                <td style="border-bottom: 1px solid #dddddd; text-align: right; padding: 8px; width: 20%;">-¥' . number_format($base_dep_50) . '</td>
-            </tr>
-        ';
-    }
+    $table_rows .= $table_add_rows;
+    $table_rows .= $table_dep_rows;
     
     $html = '
     <div style="font-family: kozminproregular; color: #333333;">
