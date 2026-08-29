@@ -6,10 +6,69 @@ check_auth(['admin', 'client', 'accountant']);
 
 $current_user_id = $_SESSION['user_id'];
 require_once 'Repositories/UserRepository.php';
+require_once 'Repositories/ProjectRepository.php';
 $userRepo = new UserRepository($pdo);
+$projectRepo = new ProjectRepository($pdo);
 $current_user = $userRepo->findById($current_user_id);
 
+// 管理者による完了差し戻し（進行中へ復帰）POST処理
+$flash_msg = $_GET['msg'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'revert_completed_status') {
+    if ($_SESSION['role'] !== 'admin') {
+        die("管理者権限が必要です。");
+    }
+    $target_pid = intval($_POST['project_id'] ?? 0);
+    if ($target_pid > 0) {
+        $stmtP = $pdo->prepare("SELECT * FROM projects WHERE id = :id");
+        $stmtP->execute(['id' => $target_pid]);
+        $target_project = $stmtP->fetch(PDO::FETCH_ASSOC);
+        if ($target_project) {
+            // ステータスを「審査・待機」へ差し戻し
+            $projectRepo->updateStatus($target_pid, 'submitting');
+
+            // スケジュール実績の完了ステップ（最終ステップ）をクリア
+            $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+            $stmtAct->execute(['id' => $target_pid]);
+            $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+            if ($act_row) {
+                $cols_to_completed_steps = [
+                    'schedule_actuals' => [11],
+                    'schedule_actuals_wall' => [8],
+                    'schedule_actuals_skin' => [8],
+                    'schedule_actuals_sky' => [8],
+                ];
+                foreach ($cols_to_completed_steps as $col => $steps) {
+                    $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+                    foreach ($steps as $step_idx) {
+                        if (isset($actuals[$step_idx])) {
+                            unset($actuals[$step_idx]);
+                        }
+                    }
+                    $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+                    $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $target_pid]);
+                }
+            }
+
+            // チャットへ通知メッセージ登録
+            $msg = "【管理者通知】案件の完了状態が取り消され、ステータスが「審査・待機」に差し戻されました。";
+            $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+            $stmtMsg->execute([
+                'pid' => $target_pid,
+                'sid' => $current_user_id,
+                'msg' => $msg
+            ]);
+            sendChatEmailNotification($target_pid, $current_user_id, 'admin', 'client_admin', $msg, $pdo);
+
+            syncScheduleDatesToFinance($target_pid, $pdo);
+
+            header("Location: completed_projects.php?msg=" . urlencode("案件「" . $target_project['project_name'] . "」を進行中（審査・待機）に差し戻しました。"));
+            exit;
+        }
+    }
+}
+
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+
 
 // 完了案件のクエリ
 if ($_SESSION['role'] === 'client') {
@@ -80,6 +139,9 @@ $status_labels = [
         .client-name { font-size: 14px; color: #666; margin-bottom: 10px; }
         .btn { display: inline-block; padding: 8px 15px; background: #10b981; color: #fff; text-decoration: none; border-radius: 4px; font-size: 14px; text-align: center; }
         .btn:hover { background: #059669; }
+        .btn-revert { display: inline-block; padding: 8px 12px; background: #ef4444; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; }
+        .btn-revert:hover { background: #dc2626; }
+        .alert-success { background: #ecfdf5; border: 1px solid #10b981; color: #065f46; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; font-size: 14px; }
         .no-data { text-align: center; color: #64748b; padding: 40px; font-size: 15px; background: white; border-radius: 8px; grid-column: 1 / -1; }
     </style>
 </head>
@@ -91,6 +153,12 @@ $status_labels = [
             <a href="index.php" class="back-btn">⬅️ ダッシュボードへ戻る</a>
         </div>
     </div>
+
+    <?php if (!empty($flash_msg)): ?>
+        <div class="alert-success">
+            ✅ <?= htmlspecialchars($flash_msg, ENT_QUOTES) ?>
+        </div>
+    <?php endif; ?>
 
     <!-- 検索フォーム -->
     <div class="search-card">
@@ -114,11 +182,21 @@ $status_labels = [
                     <?php if ($_SESSION['role'] !== 'client'): ?>
                         <div class="client-name">🏢 依頼主: <?= htmlspecialchars($project['company_name'], ENT_QUOTES) ?></div>
                     <?php endif; ?>
-                    <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn">詳細を開く</a>
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:15px;">
+                        <a href="project_detail.php?id=<?= $project['id'] ?>" class="btn">詳細を開く</a>
+                        <?php if ($_SESSION['role'] === 'admin'): ?>
+                            <form method="POST" action="completed_projects.php" style="margin:0;">
+                                <input type="hidden" name="action" value="revert_completed_status">
+                                <input type="hidden" name="project_id" value="<?= $project['id'] ?>">
+                                <button type="submit" class="btn-revert" onclick="return confirm('案件「<?= htmlspecialchars($project['project_name'], ENT_QUOTES) ?>」の完了状態を取り消し、進行中（審査・待機）に差し戻します。よろしいですか？')">🔄 進行中に戻す</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
 
 </body>
 </html>

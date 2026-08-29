@@ -743,9 +743,20 @@
 
 ---
 
-## 66. このドキュメントの所在
+## 67. 完了ステータスの管理者による取り消し・進行中（審査・待機）差し戻し仕様 (v1.6.34)
+- **仕様**: 依頼主が誤って「審査完了（残金お振込み＆審査完了）」ボタンを押してしまい、案件が「完了（`completed`）」となって完了案件DBへ移動してしまった場合、管理者（`role = 'admin'`）が案件詳細画面（`project_detail.php` / `col_left.php`）または完了案件DB（`completed_projects.php`）から直接「🔄 完了を取り消して進行中に戻す」を実行できる仕様を追加。
+- **処理ロジック**:
+  - `projects.status` を `submitting`（審査・待機）へ更新。
+  - スケジュール実績（`schedule_actuals` / `schedule_actuals_wall` / `schedule_actuals_skin` / `schedule_actuals_sky`）内の完了ステップ（最終ステップ）実績日をクリア（削除）。これにより `syncProjectStatusWithSchedule()` による意図しない再完了化を確実に防止。
+  - 案件チャットスレッド（`client_admin`）へ「【管理者通知】案件の完了状態が取り消され、ステータスが「審査・待機」に差し戻されました。」と通知メッセージを登録・メール通知。
+  - 依頼主側の審査完了ボタン押下時の確認ダイアログ（`confirm`）文言にも完了案件DBへ移動する旨および誤操作時の案内を追記。
+
+---
+
+## 68. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\77ae2bea-d618-4766-95f1-682f0ba9df0e\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.17（2026-07-28）
+- **最終バージョン**: v1.6.34（2026-08-29）
+
 

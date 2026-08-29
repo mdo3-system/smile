@@ -662,7 +662,24 @@
             <?php endif; ?>
             <?php endif; ?>
 
+            <?php if ($is_admin && $project_info['status'] === 'completed'): ?>
+            <div class="box" style="background:#fef2f2; border:1px solid #f87171; margin-top:15px; padding:15px; border-radius:6px;">
+                <h3 style="margin-top:0; font-size:14px; color:#991b1b; border-bottom:1px solid #fecaca; padding-bottom:5px;">
+                    ⚠️ 完了ステータスの取り消し（差し戻し）
+                </h3>
+                <div style="font-size:12px; color:#7f1d1d; margin-bottom:12px; line-height:1.5;">
+                    依頼主が誤って「審査完了」を押してしまった場合など、案件を再度<strong>進行中（審査・待機）</strong>に戻すことができます。<br>
+                    ※実行すると完了案件DBからメインダッシュボードへ復帰します。
+                </div>
+                <form action="project_detail.php?id=<?= $project_id ?>" method="POST">
+                    <input type="hidden" name="action" value="revert_completed_status">
+                    <button type="submit" style="width:100%; background:#ef4444; color:white; border:none; padding:9px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:13px;" onclick="return confirm('完了状態を取り消し、進行中（審査・待機）に差し戻します。よろしいですか？')">🔄 完了を取り消して進行中に戻す</button>
+                </form>
+            </div>
+            <?php endif; ?>
+
             <?php if ($is_admin && $project_info['status'] !== 'completed'): ?>
+
             <div class="box" style="background:#fff3cd; border-color:#ffeeba; margin-top:15px;">
                 <h3 style="margin-top:0; font-size:14px; color:#856404; border-bottom:1px solid #ffeeba; padding-bottom:5px;">
                     🎯 一次回答期日の設定・修正

@@ -158,13 +158,14 @@
                                     ※確認申請の審査合格が確認できましたら、残金をお振込みいただき、本ボタンを押して完了登録を行ってください。
                                 </div>
                             <?php endif; ?>
-                            <form method="POST" style="margin: 0;" onsubmit="return confirm('<?= $is_zero_balance ? '確認機関の審査が完了（合格）したことを登録して、設計業務を完了にします。よろしいですか？' : '確認機関の審査が完了（合格）し、残金の振込みが完了したことを登録して、設計業務を完了にします。よろしいですか？' ?>');">
+                            <form method="POST" style="margin: 0;" onsubmit="return confirm('<?= $is_zero_balance ? '【確認】確認機関の審査が完了（合格）したことを登録し、本案件を完了にします。完了案件DBへ移動しますが、よろしいですか？\n（※誤って押した場合は管理者にご連絡ください）' : '【確認】確認機関の審査が完了（合格）し、残金のお振込みが完了したことを登録して、本案件を完了にします。完了案件DBへ移動しますが、よろしいですか？\n（※誤って押した場合は管理者にご連絡ください）' ?>');">
                                 <input type="hidden" name="action" value="complete_review">
                                 <input type="hidden" name="project_id" value="<?= $project_id ?>">
                                 <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">
                                     <?= $is_zero_balance ? '💮 審査完了にする（審査合格）' : '💮 残金お振込み ＆ 審査完了にする（審査合格）' ?>
                                 </button>
                             </form>
+
                         </div>
                     <?php endif; ?>
                 </div>

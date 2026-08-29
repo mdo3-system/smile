@@ -547,3 +547,68 @@ if ($action === 'pay_intermediate') {
     header("Location: project_detail.php?id=" . $project_id . "&t=" . time()); exit;
 }
 
+// 完了ステータスの取り消し・進行中（審査・待機）への差し戻し - 管理者専用
+if ($action === 'revert_completed_status') {
+    if ($_SESSION['role'] !== 'admin') {
+        die("管理者権限が必要です。");
+    }
+
+    // ステータスを「審査・待機」へ差し戻し
+    $projectRepo->updateStatus($project_id, 'submitting');
+
+    // スケジュール実績の完了ステップ（最終ステップ）をクリア
+    $stmtAct = $pdo->prepare("SELECT schedule_actuals, schedule_actuals_wall, schedule_actuals_skin, schedule_actuals_sky FROM projects WHERE id = :id");
+    $stmtAct->execute(['id' => $project_id]);
+    $act_row = $stmtAct->fetch(PDO::FETCH_ASSOC);
+    if ($act_row) {
+        $cols_to_completed_steps = [
+            'schedule_actuals' => [11], // 許容応力度・基礎梁: 残金のご精算/審査完了
+            'schedule_actuals_wall' => [8], // 壁量
+            'schedule_actuals_skin' => [8], // 外皮
+            'schedule_actuals_sky' => [8], // 天空率
+        ];
+        foreach ($cols_to_completed_steps as $col => $steps) {
+            $actuals = json_decode($act_row[$col] ?? '{}', true) ?: [];
+            foreach ($steps as $step_idx) {
+                if (isset($actuals[$step_idx])) {
+                    unset($actuals[$step_idx]);
+                }
+            }
+            $stmtUpdateAct = $pdo->prepare("UPDATE projects SET {$col} = :act WHERE id = :pid");
+            $stmtUpdateAct->execute(['act' => json_encode($actuals, JSON_FORCE_OBJECT), 'pid' => $project_id]);
+        }
+    }
+
+    // 自動メッセージ（チャット）の登録
+    $msg = "【管理者通知】案件の完了状態が取り消され、ステータスが「審査・待機」に差し戻されました。";
+    $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, 'client_admin', :msg)");
+    $stmtMsg->execute([
+        'pid' => $project_id,
+        'sid' => $_SESSION['user_id'],
+        'msg' => $msg
+    ]);
+    sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', 'client_admin', $msg, $pdo);
+
+    // 経理財務データへの同期
+    syncScheduleDatesToFinance($project_id, $pdo);
+
+    // Googleカレンダーへ同期
+    try {
+        if (class_exists('App\Services\GoogleCalendarService')) {
+            $calendarService = new \App\Services\GoogleCalendarService($pdo);
+            $calendarService->syncProjectEvents($project_id);
+        }
+    } catch (Exception $cal_err) {
+        // エラーは無視して進行
+    }
+
+    $redirect_to = $_POST['redirect_to'] ?? 'project_detail';
+    if ($redirect_to === 'completed_projects') {
+        header("Location: completed_projects.php?msg=" . urlencode("案件「" . $project_info['project_name'] . "」を進行中（審査・待機）に差し戻しました。"));
+    } else {
+        header("Location: project_detail.php?id=" . $project_id . "&t=" . time());
+    }
+    exit;
+}
+
+
