@@ -61,7 +61,8 @@ if ($needs_specs):
     <!-- 通常表示モード -->
     <div id="specs_display_mode">
         <table style="width:100%; border-collapse:collapse; font-size:12px; line-height:1.6;">
-            <tr><td style="width:70px; font-weight:bold; color:#4b5563; padding:2px 0;">土台:</td><td><?= htmlspecialchars($wood_json['dodai'] ?? '-', ENT_QUOTES) ?></td></tr>
+            <tr><td style="width:110px; font-weight:bold; color:#4b5563; padding:2px 0;">屋根葺き材:</td><td><?= htmlspecialchars($wood_json['roof'] ?? '-', ENT_QUOTES) ?></td></tr>
+            <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">土台:</td><td><?= htmlspecialchars($wood_json['dodai'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">大引:</td><td><?= htmlspecialchars($wood_json['obiki'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">柱:</td><td><?= htmlspecialchars($wood_json['hashira'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">梁:</td><td><?= htmlspecialchars($wood_json['hari'] ?? '-', ENT_QUOTES) ?></td></tr>
@@ -69,6 +70,8 @@ if ($needs_specs):
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">母屋:</td><td><?= htmlspecialchars($wood_json['moya'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">棟木:</td><td><?= htmlspecialchars($wood_json['munagi'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">垂木:</td><td><?= htmlspecialchars($wood_json['taruki'] ?? '-', ENT_QUOTES) ?></td></tr>
+            <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0; border-top:1px dashed #ddd;">垂木ー軒桁接合部:</td><td style="border-top:1px dashed #ddd;"><?= htmlspecialchars($hw_json['taruki_noki'] ?? '-', ENT_QUOTES) ?></td></tr>
+            <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">垂木ー母屋接合部:</td><td><?= htmlspecialchars($hw_json['taruki_moya'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0; border-top:1px dashed #ddd;">耐力壁:</td><td style="border-top:1px dashed #ddd;"><?= htmlspecialchars($wall_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
             <tr><td style="font-weight:bold; color:#4b5563; padding:2px 0;">金物:</td><td><?= htmlspecialchars($hw_json['type'] ?? '-', ENT_QUOTES) ?></td></tr>
             <?php if (!empty($project_info['client_notes_extra'])): ?>
@@ -84,6 +87,10 @@ if ($needs_specs):
             <input type="hidden" name="action" value="update_specs_detail">
             
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;">
+                <div style="grid-column: 1 / -1;">
+                    <label style="font-weight:bold; color:#4b5563; display:block; margin-bottom:2px;">屋根葺き材</label>
+                    <input type="text" name="spec_roof" value="<?= htmlspecialchars($wood_json['roof'] ?? '', ENT_QUOTES) ?>" placeholder="スレート葺き" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:10px;">
+                </div>
                 <div>
                     <label style="font-weight:bold; color:#4b5563; display:block; margin-bottom:2px;">土台</label>
                     <div style="display:flex; gap:3px;">
@@ -197,6 +204,14 @@ if ($needs_specs):
                     </div>
                 </div>
                 <div>
+                    <label style="font-weight:bold; color:#4b5563; display:block; margin-bottom:2px;">垂木ー軒桁接合部</label>
+                    <input type="text" name="spec_taruki_noki" value="<?= htmlspecialchars($hw_json['taruki_noki'] ?? '', ENT_QUOTES) ?>" placeholder="ひねり金物ST-12（釘4-ZN40）" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:10px;">
+                </div>
+                <div>
+                    <label style="font-weight:bold; color:#4b5563; display:block; margin-bottom:2px;">垂木ー母屋接合部</label>
+                    <input type="text" name="spec_taruki_moya" value="<?= htmlspecialchars($hw_json['taruki_moya'] ?? '', ENT_QUOTES) ?>" placeholder="釘N90打ち（2本）" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:10px;">
+                </div>
+                <div>
                     <label style="font-weight:bold; color:#4b5563; display:block; margin-bottom:2px;">金物指定</label>
                     <input type="text" name="spec_kanamono" value="<?= htmlspecialchars($hw_json['type'] ?? '', ENT_QUOTES) ?>" placeholder="例: Z金物等" style="width:100%; padding:3px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:10px;">
                 </div>
@@ -219,6 +234,7 @@ if ($needs_specs):
                     <textarea name="client_notes_extra" rows="2" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:10px; resize:vertical; font-family:inherit;"><?= htmlspecialchars($project_info['client_notes_extra'] ?? '', ENT_QUOTES) ?></textarea>
                 </div>
             </div>
+
             
             <div style="display:flex; gap:6px; margin-top:10px; justify-content:flex-end;">
                 <button type="button" onclick="toggleSpecsEdit()" style="background:#e2e8f0; color:#475569; border:none; padding:4px 10px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">キャンセル</button>

@@ -37,6 +37,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
         }
 
         $wood_details = [
+            'roof'     => trim($_POST['spec_roof'] ?? ''),
             'dodai'    => $buildSpecString('spec_dodai'),
             'obiki'    => $buildSpecString('spec_obiki'),
             'hashira'  => $buildSpecString('spec_hashira'),
@@ -50,8 +51,11 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             'type' => $_POST['spec_wall'] ?? ''
         ];
         $hardware_details = [
-            'type' => $_POST['spec_kanamono'] ?? ''
+            'type' => $_POST['spec_kanamono'] ?? '',
+            'taruki_noki' => trim($_POST['spec_taruki_noki'] ?? ''),
+            'taruki_moya' => trim($_POST['spec_taruki_moya'] ?? '')
         ];
+
 
         if ($action === 'update_specs_detail') {
             $pdo->beginTransaction();

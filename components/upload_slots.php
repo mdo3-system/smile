@@ -252,6 +252,10 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
             ※ 壁量計算のみの依頼では材種の指定は不要です（このセクションは許容応力度・基礎梁計算の場合のみ表示されます）。
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
+            <div style="grid-column: 1 / -1;">
+                <label style="font-weight:bold; color:#374151;">屋根葺き材</label>
+                <input type="text" name="spec_roof" value="<?= htmlspecialchars($wood_json['roof'] ?? '', ENT_QUOTES) ?>" placeholder="スレート葺き" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:11px;">
+            </div>
             <div>
                 <label style="font-weight:bold; color:#374151;">土台</label>
                 <div style="display:flex; gap:5px;">
@@ -365,6 +369,14 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
                 </div>
             </div>
             <div>
+                <label style="font-weight:bold; color:#374151;">垂木ー軒桁接合部</label>
+                <input type="text" name="spec_taruki_noki" value="<?= htmlspecialchars($hw_json['taruki_noki'] ?? '', ENT_QUOTES) ?>" placeholder="ひねり金物ST-12（釘4-ZN40）" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:11px;">
+            </div>
+            <div>
+                <label style="font-weight:bold; color:#374151;">垂木ー母屋接合部</label>
+                <input type="text" name="spec_taruki_moya" value="<?= htmlspecialchars($hw_json['taruki_moya'] ?? '', ENT_QUOTES) ?>" placeholder="釘N90打ち（2本）" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:11px;">
+            </div>
+            <div>
                 <label style="font-weight:bold; color:#374151;">金物指定</label>
                 <input type="text" name="spec_kanamono" value="<?= htmlspecialchars($hw_json['type'] ?? '', ENT_QUOTES) ?>" placeholder="例: Z金物、Tec-One等" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; font-size:11px;">
             </div>
@@ -420,6 +432,10 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
             const wall = JSON.parse(proj.wall_details || '{}');
             const hw = JSON.parse(proj.hardware_details || '{}');
             
+            // 屋根葺き材
+            const roofInput = document.querySelector('input[name="spec_roof"]');
+            if (roofInput) roofInput.value = wood.roof || '';
+
             // 各項目の自動入力
             autoFillSpec('spec_dodai', wood.dodai, ['ﾋﾉｷKD', 'ﾍﾞｲﾏﾂ', 'ﾍﾞｲﾂｶﾞKD']);
             autoFillSpec('spec_obiki', wood.obiki, ['ﾋﾉｷKD', 'ﾍﾞｲﾂｶﾞKD', 'ｽｷﾞKD']);
@@ -431,6 +447,12 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
             
             // 垂木の処理
             fillTarukiSpec(wood.taruki);
+
+            // 垂木接合部
+            const tarukiNokiInput = document.querySelector('input[name="spec_taruki_noki"]');
+            if (tarukiNokiInput) tarukiNokiInput.value = hw.taruki_noki || '';
+            const tarukiMoyaInput = document.querySelector('input[name="spec_taruki_moya"]');
+            if (tarukiMoyaInput) tarukiMoyaInput.value = hw.taruki_moya || '';
             
             // 金物
             const kanamonoInput = document.querySelector('input[name="spec_kanamono"]');

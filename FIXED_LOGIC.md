@@ -753,10 +753,20 @@
 
 ---
 
-## 68. このドキュメントの所在
+## 68. 構造仕様指定への屋根葺き材・垂木接合部スロット追加仕様 (v1.6.35)
+- **仕様**: 依頼主・管理者間の「🟣 構造仕様指定」モジュール（`components/col_specs.php` および `components/upload_slots.php`）に、以下の指定スロット（入力フィールド）を追加。
+  - **屋根葺き材** (`spec_roof`): 初期表示は薄墨プレースホルダー `スレート葺き`
+  - **垂木ー軒桁接合部** (`spec_taruki_noki`): 初期表示は薄墨プレースホルダー `ひねり金物ST-12（釘4-ZN40）`
+  - **垂木ー母屋接合部** (`spec_taruki_moya`): 初期表示は薄墨プレースホルダー `釘N90打ち（2本）`
+- **データ永続化**: `actions/action_save_specs.php` にて `wood_details`（`roof`）および `hardware_details`（`taruki_noki`, `taruki_moya`）の JSON 内に格納し、過去案件コピー機能（`upload_slots.php` 内の `loadPastProjectSpecs`）でも自動反映されるよう実装。
+
+---
+
+## 69. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\77ae2bea-d618-4766-95f1-682f0ba9df0e\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.34（2026-08-29）
+- **最終バージョン**: v1.6.35（2026-08-31）
+
 
 
