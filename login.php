@@ -1,10 +1,8 @@
 <?php
 // login.php
+require_once __DIR__ . '/session_config.php';
 require_once 'db_connect.php';
 require_once 'functions.php';
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 $message = '';
 $devel_link = '';
@@ -22,10 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user) {
             // トークン生成 (64文字)
             $token = bin2hex(random_bytes(32));
-            // magic_links へ登録 (有効期限はDBサーバー時間で24時間後)
+            // magic_links へ登録 (有効期限はDBサーバー時間で30分後)
             $stmtInsert = $pdo->prepare("
                 INSERT INTO magic_links (user_id, token, expires_at) 
-                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 24 HOUR))
+                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 30 MINUTE))
             ");
             $stmtInsert->execute([
                 'user_id' => $user['id'],
@@ -75,9 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $subject = "【木造住宅設計サポート・ポータル】ログインリンクのご案内";
             $body = "いつもお世話になっております。木造住宅設計サポート・ポータルです。\n\n";
             $body .= "以下のログインリンクをクリックして、システムにアクセスしてください。\n";
-            $body .= "（このリンクは送信から24時間有効です）\n\n";
+            $body .= "（このリンクは送信から30分間有効です）\n\n";
             $body .= "{$login_url}\n\n";
             $body .= "※本メールに心当たりがない場合は、破棄してください。\n";
+
             
             $headers = "From: no-reply@system.thanks.work\r\n";
             $headers .= "Reply-To: no-reply@system.thanks.work\r\n";

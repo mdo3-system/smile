@@ -1,8 +1,8 @@
 <?php
 ini_set('display_errors', 0);
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/session_config.php';
 
-session_start();
 if (!isset($_SESSION['user_id'])) {
     http_response_code(403);
     echo json_encode(['error' => 'Not authenticated']);

@@ -1,12 +1,11 @@
 <?php
 // register.php
+require_once __DIR__ . '/session_config.php';
 require_once 'db_connect.php';
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 $message = '';
 $devel_link = '';
+
 
 $invite_parent_id = intval($_GET['invite_parent_id'] ?? $_POST['invite_parent_id'] ?? 0);
 $invite_project_id = intval($_GET['invite_project_id'] ?? $_POST['invite_project_id'] ?? 0);
@@ -64,10 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // トークン生成 (64文字)
             $token = bin2hex(random_bytes(32));
-            // magic_links へ登録 (有効期限は24時間後)
+            // magic_links へ登録 (有効期限は30分後)
             $stmtMagic = $pdo->prepare("
                 INSERT INTO magic_links (user_id, token, expires_at) 
-                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 24 HOUR))
+                VALUES (:user_id, :token, DATE_ADD(NOW(), INTERVAL 30 MINUTE))
             ");
             $stmtMagic->execute([
                 'user_id' => $new_user_id,
@@ -117,9 +116,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $body = "いつもお世話になっております。木造住宅設計サポート・ポータルです。\n\n";
             $body .= "この度はポータルへのご登録、誠にありがとうございます。\n";
             $body .= "登録が完了いたしましたので、以下のログインリンクをクリックしてシステムにアクセスしてください。\n";
-            $body .= "（このリンクは送信から24時間有効です）\n\n";
+            $body .= "（このリンクは送信から30分間有効です）\n\n";
             $body .= "{$login_url}\n\n";
             $body .= "※本メールに心当たりがない場合は、破棄してください。\n";
+
             
             $headers = "From: no-reply@system.thanks.work\r\n";
             $headers .= "Reply-To: no-reply@system.thanks.work\r\n";

@@ -762,11 +762,24 @@
 
 ---
 
-## 69. このドキュメントの所在
+## 69. 自動ログアウト防止（セッション24時間維持）およびマジックリンク有効期限30分化仕様 (v1.6.36)
+- **課題と背景**: 協力業者・依頼主が作業中（図面チェック、長文作成、チェックリスト入力等）にサーバー標準のセッション有効期限（24分）が経過し、送信ボタン押下時にログイン画面へ飛ばされて入力データが失われる問題を解決。
+- **仕様**:
+  1. **マジックリンク有効期限**: `30分`（`login.php`, `register.php`, `api_self_estimate.php` にて `INTERVAL 30 MINUTE` / `+30 minutes`）。案内メール文面も30分に更新。
+  2. **ログイン後セッション有効期限**: `24時間（86400秒）`。
+  3. **共通セッション初期化モジュール (`session_config.php`)**:
+     - `session.gc_maxlifetime = 86400`
+     - Cookie 有効期限 `86400`（`session_set_cookie_params` で `samesite=Lax`, `httponly=true`）
+     - 共有サーバー（XServer）での他プロセスによるGC消去を防ぐため、専用セッションディレクトリ（`sys_get_temp_dir() . '/thanks_work_sessions'`）を自動生成・設定。
+
+---
+
+## 70. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\77ae2bea-d618-4766-95f1-682f0ba9df0e\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.35（2026-08-31）
+- **最終バージョン**: v1.6.36（2026-08-31）
+
 
 
 

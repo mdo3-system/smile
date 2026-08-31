@@ -1,6 +1,7 @@
 <?php
-session_start();
+require_once __DIR__ . '/../session_config.php';
 require_once '../db_connect.php';
+
 require_once '../functions.php';
 
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'accountant'])) {

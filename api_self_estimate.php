@@ -192,7 +192,7 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
         $token = '';
         if ($is_new_user) {
             $token = bin2hex(random_bytes(32));
-            $expires_at = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            $expires_at = date('Y-m-d H:i:s', strtotime('+30 minutes'));
             $stmtMagic = $pdo->prepare("
                 INSERT INTO magic_links (user_id, token, expires_at) 
                 VALUES (:user_id, :token, :expires_at)
@@ -203,6 +203,7 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
                 'expires_at' => $expires_at
             ]);
         }
+
 
         $pdo->commit();
     } catch (Exception $e) {
@@ -346,8 +347,9 @@ function handleSelfEstimate(array $data, PDO $pdo, bool $isTest = false) {
             $body .= "上記を入力の上、ポータル上の「設計開始を依頼する」ボタンを押していただくことで、正式な設計依頼が完了し、弊社での計算作業及びスケジュールが確定します。\n\n";
             $body .= "■ 3. ポータル上での取引について\n";
             $body .= "弊社とのすべてのお取引（図面の受け渡し、チャットでの質疑応答、スケジュール管理、請求書・領収書の発行など）は、この専用ポータルで行います。メールや電話の履歴が混ざることなく、一元管理が可能です。\n\n";
-            $body .= "▼ポータル初回ログインURL（送信から24時間有効）\n";
+            $body .= "▼ポータル初回ログインURL（送信から30分間有効）\n";
             $body .= "{$login_url}\n\n";
+
             $body .= "※2回目以降のログインは、ポータルのログイン画面（ {$app_url}/login.php ）よりメールアドレスを入力して再発行いただけます。ブックマークをお勧めいたします。\n\n";
             $body .= "▼ポータル操作マニュアル（ログインなしでご覧いただけます）\n";
             $body .= "{$app_url}/manual_client.php\n\n";
