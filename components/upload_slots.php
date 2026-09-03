@@ -13,7 +13,7 @@ if (!function_exists('renderUploadSlot')) {
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
             {$noteHtml}
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').checked && (this.required=false);">
+                <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').checked && (this.required=false);">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="if ({$jsRequired}) { document.getElementById('file_{$name}').required = !this.checked; }"> 他ﾌｧｲﾙに記載
                 </label>
@@ -76,9 +76,9 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
     ============================================ -->
     <div style="margin-bottom:15px; border:2px solid #ef4444; padding:12px; border-radius:6px; background:#fef2f2;">
         <strong style="display:block; margin-bottom:8px; color:#b91c1c;">🔴 【必須】意匠CADデータ（正式依頼時に必ず必要）</strong>
-        <div style="font-size:11px; color:#6b7280; margin-bottom:10px;">JWW/DXF等のCADデータをアップロードしてください。個別図面でも一括ZIPでも構いません。</div>
-        <?= renderUploadSlot('配置図 (CAD)', 'cad_layout', true, 'JWW/DXF形式') ?>
-        <?= renderUploadSlot('1F平面図 (CAD)', 'cad_plan_1f', true, 'JWW/DXF形式') ?>
+        <div style="font-size:11px; color:#6b7280; margin-bottom:10px;">JWW/DXF/FCBZ等のCADデータをアップロードしてください。個別図面でも一括ZIPでも構いません。</div>
+        <?= renderUploadSlot('配置図 (CAD)', 'cad_layout', true, 'JWW/DXF/FCBZ形式') ?>
+        <?= renderUploadSlot('1F平面図 (CAD)', 'cad_plan_1f', true, 'JWW/DXF/FCBZ形式') ?>
         <?= renderUploadSlot('2F平面図 (CAD)', 'cad_plan_2f', false, '平屋の場合は不要（送信時に確認します）') ?>
         <?= renderUploadSlot('3F・PH・RF 平面図 (CAD)', 'cad_plan_3f', false, '該当する場合のみ') ?>
         <?= renderUploadSlot('立面図 (CAD)', 'cad_elevation', true, '各方向の立面図') ?>
@@ -642,7 +642,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
                 <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
             </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
+                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
                 </label>
@@ -678,7 +678,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
                 <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
             </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
+                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
                 </label>
@@ -714,7 +714,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
                 <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
             </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_" id="file_${catName}" style="font-size:11px; flex:1;">
+                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz" id="file_${catName}" style="font-size:11px; flex:1;">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
                 </label>

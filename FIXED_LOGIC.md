@@ -774,11 +774,22 @@
 
 ---
 
-## 70. このドキュメントの所在
+## 70. 依頼主からのCAD提出および一次回答添付におけるアーキトレンド形式（.fcbz）対応 (v1.6.37)
+- **仕様**: 依頼主が正式依頼時に意匠CADデータを提出するスロット（`components/upload_slots.php`）、および管理者が一次回答（計算書・CAD）を発行するファイル選択枠（`components/col_left.php`）において、従来のJWW/DXF/ZIP/PDFに加え、アーキトレンドのファイル形式 **`.fcbz`** のアップロードに完全対応。
+- **改修内容**:
+  1. `components/upload_slots.php`: ファイル入力要素の `accept` 属性に `.fcbz` を追加（`accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz"`）。案内文およびスロット補足テキストを「JWW/DXF/FCBZ形式」に更新。
+  2. `components/col_left.php`: 一次請求・一次回答ファイル選択用ダイアログの `accept` に `.fcbz` を追加。
+  3. `components/col_center.php`: 必要図書一覧の表記を「意匠CAD一式（JWW/DXF/FCBZ等）」に更新。
+  4. `actions/action_save_specs.php`: 正式依頼時のエラー文言を「意匠CADデータ（JWW/DXF/FCBZ等）」に更新。
+  5. `manual_client.php` / `project_detail.php`: 依頼主向けマニュアルおよび案内文の表記を「JWW/DXF/FCBZ等」に更新。
+
+---
+
+## 71. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\user\.gemini\antigravity-ide\brain\77ae2bea-d618-4766-95f1-682f0ba9df0e\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.36（2026-08-31）
+- **最終バージョン**: v1.6.37（2026-09-04）
 
 
 

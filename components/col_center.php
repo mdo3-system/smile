@@ -166,7 +166,7 @@
 
                     // CADデータは全依頼で正式依頼時に必須
                     if ($project_info['req_permit'] == 1 || $project_info['req_wall'] == 1 || $project_info['req_skin'] == 1 || $project_info['req_sky'] == 1 || $project_info['req_opt_kisohari'] == 1) {
-                        $req_docs_required['cad_design_all'] = '意匠CAD一式（JWW/DXF等）';
+                        $req_docs_required['cad_design_all'] = '意匠CAD一式（JWW/DXF/FCBZ等）';
                     }
 
                     // 確認申請書は全依頼で必須（後出し可）

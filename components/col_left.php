@@ -216,7 +216,7 @@
                         // 一次回答ファイルの選択ダイアログを動的に作成
                         const fileInput = document.createElement('input');
                         fileInput.type = 'file';
-                        fileInput.accept = '.pdf,.zip,.jww,.dxf';
+                        fileInput.accept = '.pdf,.zip,.jww,.dxf,.fcbz';
                         fileInput.style.display = 'none';
                         
                         fileInput.onchange = function() {

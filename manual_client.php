@@ -257,7 +257,7 @@ $is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-title">ステップ3: 正式なご依頼 ＆ 設計CADデータのUP</div>
-                    <div class="timeline-desc">見積内容に問題がなければ、詳細画面の「設計依頼データの送付」パネルから、意匠図CADデータ（JWW/DXF等）や地盤調査報告書などをUPして正式にご依頼ください。</div>
+                    <div class="timeline-desc">見積内容に問題がなければ、詳細画面の「設計依頼データの送付」パネルから、意匠図CADデータ（JWW/DXF/FCBZ等）や地盤調査報告書などをUPして正式にご依頼ください。</div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-title">ステップ4: サポート担当による着手 ＆ 一次回答の提示</div>

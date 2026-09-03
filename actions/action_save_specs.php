@@ -221,7 +221,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             $stmtCadCheck->execute(['pid' => $project_id]);
             $cad_count = (int)$stmtCadCheck->fetchColumn();
             if ($cad_count === 0) {
-                throw new Exception("正式依頼には意匠CADデータ（JWW/DXF等）のアップロードが必須です。CADデータをアップロードしてから再度お試しください。");
+                throw new Exception("正式依頼には意匠CADデータ（JWW/DXF/FCBZ等）のアップロードが必須です。CADデータをアップロードしてから再度お試しください。");
             }
 
             // Save drawing change report to messages
