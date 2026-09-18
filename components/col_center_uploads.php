@@ -218,7 +218,7 @@
 
                                 <?php if (count($actual_history) > 1): ?>
                                     <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
-                                        <option value="">過去バージョン...</option>
+                                        <option value="">過去バージョン (<?= count($actual_history) - 1 ?>件)...</option>
                                         <?php foreach ($actual_history as $idx => $h): 
                                             if ($idx === 0) continue; 
                                             $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
@@ -228,6 +228,10 @@
                                         ?>
                                             <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>)</option>
                                         <?php endforeach; ?>
+                                    </select>
+                                <?php else: ?>
+                                    <select disabled style="font-size:11px; padding:3px; max-width:140px; opacity:0.6; cursor:not-allowed;">
+                                        <option value="">過去バージョンなし</option>
                                     </select>
                                 <?php endif; ?>
                             </div>
