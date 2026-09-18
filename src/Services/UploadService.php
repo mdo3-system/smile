@@ -82,6 +82,10 @@ class UploadService
 
         $this->pdo->beginTransaction();
         try {
+            // 空のプレースホルダー（スロット作成時の初期空レコード）が存在する場合は削除・整理
+            $stmtCleanEmpty = $this->pdo->prepare("DELETE FROM project_files WHERE project_id = :pid AND file_category = :cat AND (drive_file_id IS NULL OR drive_file_id = '')");
+            $stmtCleanEmpty->execute(['pid' => $projectId, 'cat' => $fileCategory]);
+
             // 既存の同カテゴリファイルを履歴に落とす
             $stmtOld = $this->pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
             $stmtOld->execute(['pid' => $projectId, 'cat' => $fileCategory]);
@@ -303,6 +307,10 @@ class UploadService
             }
 
             $this->pdo->beginTransaction();
+
+            // 0. 空のプレースホルダー（スロット作成時の初期空レコード）が存在する場合は削除・整理
+            $stmtCleanEmpty = $this->pdo->prepare("DELETE FROM project_files WHERE project_id = :pid AND file_category = :cat AND (drive_file_id IS NULL OR drive_file_id = '') AND file_name != '【他ファイルに記載】'");
+            $stmtCleanEmpty->execute(['pid' => $projectId, 'cat' => $fileCategory]);
 
             // 1. 既存の同カテゴリのファイルを最新フラグから外す
             $stmtDisable = $this->pdo->prepare("

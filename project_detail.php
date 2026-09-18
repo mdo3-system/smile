@@ -102,12 +102,12 @@ $stmtAllEst = $pdo->prepare("SELECT * FROM estimates WHERE project_id = :pid ORD
 $stmtAllEst->execute(['pid' => $project_id]);
 $all_estimates = $stmtAllEst->fetchAll();
 
-// 案件に関連する全ファイル（最新のみ）を取得 (依頼主提出物用)
-$stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND is_latest = 1 ORDER BY version DESC, id DESC");
+// 案件に関連する全ファイル（履歴含む）を取得 (依頼主提出物用)
+$stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid ORDER BY version DESC, id DESC");
 $stmtFiles->execute(['pid' => $project_id]);
 $all_files = $stmtFiles->fetchAll();
 
-// カテゴリごとに整理 (最新のもの。複数ファイル対応のため配列化)
+// カテゴリごとに整理 (降順のためインデックス0が最新版。複数ファイル・履歴対応のため配列化)
 $files_by_cat = [];
 foreach($all_files as $f) {
     if (!isset($files_by_cat[$f['file_category']])) {

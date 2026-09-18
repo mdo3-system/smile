@@ -176,4 +176,30 @@ class UploadServiceTest extends TestCase
         $this->assertNotFalse($msg);
         $this->assertStringContainsString('成果物スロット「特記仕様書」の名称を「特記仕様書最新版」に変更しました', $msg['message_text']);
     }
+
+    public function testSingleUploadCleansEmptyPlaceholder(): void
+    {
+        $projectId = 1;
+        $customCat = 'custom_wall_3F平面図';
+        
+        // スロット追加（空プレースホルダー作成）
+        $this->service->addCustomSlot($projectId, '3F平面図', '専門図書', 'wall', 1);
+
+        // スロット追加直後は1件
+        $stmtCount = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtCount->execute(['pid' => $projectId, 'cat' => $customCat]);
+        $this->assertEquals(1, $stmtCount->fetchColumn());
+
+        // 初回アップロード（他ファイル記載として）
+        $this->service->singleUpload($projectId, $customCat, null, true, '初回登録', 1, 'client', 'wall');
+
+        // 空プレースホルダーが削除され、実データのみ1件（version 1）残っていること
+        $stmtFiles = $this->pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtFiles->execute(['pid' => $projectId, 'cat' => $customCat]);
+        $files = $stmtFiles->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->assertCount(1, $files);
+        $this->assertEquals(1, $files[0]['version']);
+        $this->assertEquals('【他ファイルに記載】', $files[0]['file_name']);
+    }
 }

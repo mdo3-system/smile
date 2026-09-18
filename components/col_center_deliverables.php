@@ -86,7 +86,14 @@
                 $show_section = $is_admin;
                 if (!$is_admin) {
                     foreach ($categories as $cat => $label) {
-                        if (!empty($artifacts_by_cat[$cat])) { $show_section = true; break; }
+                        if (!empty($artifacts_by_cat[$cat])) {
+                            foreach ($artifacts_by_cat[$cat] as $item) {
+                                if (!empty($item['drive_file_id'])) {
+                                    $show_section = true;
+                                    break 2;
+                                }
+                            }
+                        }
                     }
                 }
                 if (!$show_section) continue;
@@ -96,7 +103,18 @@
                     
                     <div style="display:flex; flex-direction:column; gap:10px;">
                         <?php foreach ($categories as $cat => $label): ?>
-                            <?php $history = $artifacts_by_cat[$cat] ?? []; ?>
+                            <?php 
+                            $history = $artifacts_by_cat[$cat] ?? []; 
+                            $actual_history = [];
+                            if (!empty($history)) {
+                                foreach ($history as $h) {
+                                    if (!empty($h['drive_file_id'])) {
+                                        $actual_history[] = $h;
+                                    }
+                                }
+                            }
+                            $has_actual_file = !empty($actual_history);
+                            ?>
                             <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:8px;">
                                 <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px; display:flex; align-items:center; justify-content:space-between;">
                                     <span><?= $label ?></span>
@@ -105,8 +123,8 @@
                                     <?php endif; ?>
                                 </div>
                                 
-                                <?php if (!empty($history) && !empty($history[0]['drive_file_id'])): 
-                                    $latest = $history[0]; 
+                                <?php if ($has_actual_file): 
+                                    $latest = $actual_history[0]; 
                                     $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
                                         ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
                                         : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
@@ -116,10 +134,10 @@
                                             📄 最新版ダウンロード (V<?= $latest['version'] ?>)
                                         </a>
                                         
-                                        <?php if (count($history) > 1): ?>
+                                        <?php if (count($actual_history) > 1): ?>
                                             <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
                                                 <option value="">過去バージョン...</option>
-                                                <?php foreach ($history as $idx => $h): 
+                                                <?php foreach ($actual_history as $idx => $h): 
                                                     if ($idx === 0) continue; // 最新は除外
                                                     $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
                                                         ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
