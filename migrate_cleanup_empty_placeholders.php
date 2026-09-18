@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/db_connect.php';
 
 try {
     // drive_file_id が NULL または空文字で、かつ is_latest = 0 の不要な空旧バージョンをカウント
