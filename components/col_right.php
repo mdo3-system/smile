@@ -159,6 +159,12 @@
                         <textarea id="chatTextarea" class="chat-textarea" placeholder="メッセージを入力..." rows="1" oninput="autoExpandTextarea(this)" onkeydown="handleKey(event)"></textarea>
                         <button class="chat-send-btn" onclick="sendMessage()" title="送信">➤</button>
                     </div>
+                    <?php if (!$is_admin): ?>
+                        <div style="margin-top:6px; font-size:10.5px; color:#b45309; background:#fffbeb; border:1px solid #fef3c7; border-radius:4px; padding:4px 8px; display:flex; align-items:center; gap:5px;">
+                            <span>💡</span>
+                            <span><strong>補正通知書・質疑書をお持ちの方へ:</strong> チャットではなく下の<strong>【補正通知書スロット】</strong>にUPしてください（自動で管理者ボールに切り替わり通知されます）。</span>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -196,6 +202,83 @@
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <!-- 補正通知書・追加質疑書 専用スロット -->
+            <div id="chat_correction_slot" style="margin-top:12px; padding:12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:12px; font-weight:bold; color:#1d4ed8;">📂 補正通知書・質疑書スロット:</label>
+                    <span style="font-size:10px; color:#2563eb;">※UPで自動「補正対応中」移行＆管理者へ通知</span>
+                </div>
+                
+                <?php
+                $corr_history = $files_by_cat['correction_notice'] ?? [];
+                $corr_actual_history = [];
+                if (!empty($corr_history)) {
+                    foreach ($corr_history as $h) {
+                        if (!empty($h['drive_file_id']) || $h['file_name'] === '【他ファイルに記載】') {
+                            $corr_actual_history[] = $h;
+                        }
+                    }
+                }
+                $has_corr_file = !empty($corr_actual_history);
+                ?>
+
+                <div style="background:#fff; border:1px solid #cbd5e1; border-radius:4px; padding:8px;">
+                    <?php if ($has_corr_file): 
+                        $corr_latest = $corr_actual_history[0];
+                        $corr_url = (strpos($corr_latest['drive_file_id'], 'uploads/') !== 0 && !empty($corr_latest['drive_file_id'])) 
+                            ? 'https://drive.google.com/file/d/' . htmlspecialchars($corr_latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                            : htmlspecialchars($corr_latest['drive_file_id'], ENT_QUOTES);
+                    ?>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px; margin-bottom:5px;">
+                            <a href="<?= $corr_url ?>" target="_blank" class="file-link" style="background:#2563eb; color:white; border-color:#1d4ed8; padding:3px 8px; border-radius:3px; font-size:11px; text-decoration:none; font-weight:bold;">
+                                📄 最新の補正通知書 (V<?= $corr_latest['version'] ?>)
+                            </a>
+                            
+                            <?php if (count($corr_actual_history) > 1): ?>
+                                <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
+                                    <option value="">過去バージョン (<?= count($corr_actual_history) - 1 ?>件)...</option>
+                                    <?php foreach ($corr_actual_history as $idx => $h): 
+                                        if ($idx === 0) continue; 
+                                        $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
+                                            ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                            : htmlspecialchars($h['drive_file_id'], ENT_QUOTES);
+                                        $dateStr = date('m/d H:i', strtotime($h['created_at']));
+                                    ?>
+                                        <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php else: ?>
+                                <select disabled style="font-size:11px; padding:3px; max-width:140px; opacity:0.6; cursor:not-allowed;">
+                                    <option value="">過去バージョンなし</option>
+                                </select>
+                            <?php endif; ?>
+                        </div>
+                        <div style="font-size:10px; color:#64748b; margin-bottom:6px; word-break:break-all;">
+                            <?= htmlspecialchars($corr_latest['file_name'], ENT_QUOTES) ?>
+                        </div>
+                    <?php else: ?>
+                        <div style="font-size:11px; color:#ef4444; margin-bottom:5px;">現在、登録されている補正通知書はありません（未提出）</div>
+                    <?php endif; ?>
+
+                    <?php if (!$is_admin): ?>
+                        <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin:0; display:flex; flex-direction:column; gap:4px; border-top:1px dashed #e2e8f0; padding-top:6px;">
+                            <input type="hidden" name="file_category" value="correction_notice">
+                            <input type="hidden" name="action_type" value="single_upload">
+                            
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <input type="file" name="upload_file" id="chat_correction_file_input" required style="font-size:11px; flex:1; min-width:120px; padding:2px;">
+                                <button type="submit" style="font-size:11px; background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-weight:bold; white-space:nowrap;" onclick="return confirm('補正通知書をアップロードしますか？\n（案件ステータスが「補正対応中」になり、管理者に通知されます）')">
+                                    <?= $has_corr_file ? '差し替えUP' : '補正通知書をUP' ?>
+                                </button>
+                            </div>
+                            <?php if ($has_corr_file): ?>
+                                <input type="text" name="update_reason" placeholder="差し替え・追加理由（例：2回目質疑通知書、再審査通知等）" required style="font-size:10px; width:100%; padding:3px; border:1px solid #cbd5e1; border-radius:3px; box-sizing:border-box;">
+                            <?php endif; ?>
+                        </form>
+                    <?php endif; ?>
+                </div>
             </div>
 
         </div>

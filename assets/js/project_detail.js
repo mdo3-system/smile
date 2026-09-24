@@ -102,6 +102,33 @@ function pollMessages() {
 }
 setInterval(pollMessages, 30000);
 
+// ===== 補正通知書・質疑書のチャット添付検出と警告 =====
+function checkCorrectionFileWarning(files) {
+    if (window.APP_USER_ROLE !== 'client' || !files || files.length === 0) {
+        return false;
+    }
+    const keywords = ['補正', '通知書', '質疑', '質疑書', '適判', '指摘'];
+    return files.some(f => {
+        const name = (f.name || '').toLowerCase();
+        return keywords.some(k => name.includes(k.toLowerCase()));
+    });
+}
+
+function handleCorrectionWarningRedirect() {
+    alert("⚠️【ご注意・お願い】\n補正通知書や追加質疑書は、チャットではなく専用の【補正通知書スロット】へアップロードしてください。\n\n※チャットに直接アップロードすると、ステータス変更（補正対応中への移行）や管理者への正式通知が行われません。");
+    const fileInput = document.getElementById('chatFileInput');
+    if (fileInput) fileInput.value = '';
+    chatSelectedFiles = [];
+    renderChatFilePreview();
+
+    const slotEl = document.getElementById('chat_correction_slot') || document.getElementById('file_correction_notice');
+    if (slotEl) {
+        slotEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        slotEl.style.outline = '3px solid #ef4444';
+        setTimeout(() => { slotEl.style.outline = ''; }, 3000);
+    }
+}
+
 // ===== メッセージ送信 =====
 function sendMessage(text) {
     const textarea = document.getElementById('chatTextarea');
@@ -109,6 +136,11 @@ function sendMessage(text) {
     const targetSelect = document.getElementById('chatTargetFile');
     const msg = text || (textarea ? textarea.value.trim() : '');
     if (!msg && chatSelectedFiles.length === 0) return;
+
+    if (checkCorrectionFileWarning(chatSelectedFiles)) {
+        handleCorrectionWarningRedirect();
+        return;
+    }
 
     const formData = new FormData();
     formData.append('project_id', window.APP_PROJECT_ID);
@@ -167,8 +199,13 @@ let chatSelectedFiles = [];
 
 function previewFile(input) {
     if (input.files && input.files.length > 0) {
+        const files = Array.from(input.files);
+        if (checkCorrectionFileWarning(files)) {
+            handleCorrectionWarningRedirect();
+            return;
+        }
         // 新しくファイルが選択された場合、過去選択をリセットして今回ファイルで置換
-        chatSelectedFiles = Array.from(input.files);
+        chatSelectedFiles = files;
     }
     renderChatFilePreview();
 }

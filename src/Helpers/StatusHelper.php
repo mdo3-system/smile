@@ -305,7 +305,14 @@ class StatusHelper
                         ];
                     }
                 }
-                elseif ($status === 'primary_prep' || $status === 'structural_dwg' || $status === 'correction') {
+                elseif ($status === 'correction') {
+                    $res = [
+                        'ball_owner' => 'admin',
+                        'label' => '補正対応中 (管理者ボール)',
+                        'color' => '#3b82f6' // Blue
+                    ];
+                }
+                elseif ($status === 'primary_prep' || $status === 'structural_dwg') {
                     $res = [
                         'ball_owner' => 'admin',
                         'label' => '図書作成中 (管理者ボール)',

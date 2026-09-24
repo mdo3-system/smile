@@ -202,4 +202,62 @@ class UploadServiceTest extends TestCase
         $this->assertEquals(1, $files[0]['version']);
         $this->assertEquals('【他ファイルに記載】', $files[0]['file_name']);
     }
+
+    public function testCorrectionNoticeUploadResetsScheduleActualsAndTransitionsStatus(): void
+    {
+        $projectId = 1;
+        // 初期状態: 補正対応・残金精算が完了済み、ステータスはsubmission
+        $initialActuals = [
+            0 => '2026-09-01',
+            1 => '2026-09-02',
+            10 => '2026-09-15', // 補正対応
+            11 => '2026-09-20', // 残金のご精算
+        ];
+        $stmt = $this->pdo->prepare("
+            UPDATE projects 
+            SET status = 'submission', 
+                req_permit = 1,
+                schedule_actuals = :act 
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            'act' => json_encode($initialActuals),
+            'id' => $projectId
+        ]);
+
+        // 依頼主が2回目の補正通知書をアップロード（他ファイル記載としてシミュレート）
+        $result = $this->service->singleUpload(
+            $projectId, 
+            'correction_notice', 
+            null, 
+            true, 
+            '2回目質疑通知書の受領', 
+            2, 
+            'client', 
+            'permit'
+        );
+
+        $this->assertTrue($result);
+
+        // 案件のステータスが 'correction' に更新されていること
+        $stmtProj = $this->pdo->prepare("SELECT status, schedule_actuals FROM projects WHERE id = :id");
+        $stmtProj->execute(['id' => $projectId]);
+        $proj = $stmtProj->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertEquals('correction', $proj['status']);
+
+        // schedule_actuals の補正対応(10)と残金のご精算(11)がクリアされ、0と1だけ残っていること
+        $actuals = json_decode($proj['schedule_actuals'], true);
+        $this->assertArrayHasKey(0, $actuals);
+        $this->assertArrayHasKey(1, $actuals);
+        $this->assertArrayNotHasKey(10, $actuals, '補正対応の実績日がクリアされていること');
+        $this->assertArrayNotHasKey(11, $actuals, '残金のご精算の実績日がクリアされていること');
+
+        // チャットメッセージに「補正通知書」自動通知が投稿されていること
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertNotFalse($msg);
+        $this->assertStringContainsString('補正通知書', $msg['message_text']);
+        $this->assertStringContainsString('補正対応中', $msg['message_text']);
+    }
 }

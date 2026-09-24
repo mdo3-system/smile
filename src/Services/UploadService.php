@@ -467,28 +467,9 @@ class UploadService
                 }
             }
 
-            // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
+            // 補正通知 (correction_notice) ファイルがアップロードされた場合、ステータス更新・スケジュール巻き戻し・通知を実行
             if ($fileCategory === 'correction_notice') {
-                $stmtCheckStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :id");
-                $stmtCheckStatus->execute(['id' => $projectId]);
-                $currentStatus = $stmtCheckStatus->fetchColumn();
-                if ($currentStatus === 'submitting') {
-                    $stmtUpdateStatus = $this->pdo->prepare("UPDATE projects SET status = 'correction' WHERE id = :id");
-                    $stmtUpdateStatus->execute(['id' => $projectId]);
-
-                    // チャット通知 (自動)
-                    $msgSubmittingCorrection = "【自動通知】補正通知書がアップロードされました。案件ステータスを「申請中」から「補正対応中」に変更しました。";
-                    $stmtMsgCorrection = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
-                    $stmtMsgCorrection->execute([
-                        'pid' => $projectId,
-                        'sid' => $userId,
-                        'thread' => $threadType,
-                        'msg' => $msgSubmittingCorrection
-                    ]);
-
-                    require_once __DIR__ . '/../../functions.php';
-                    sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgSubmittingCorrection, $this->pdo);
-                }
+                $this->handleCorrectionNoticeUploaded($projectId, $userId, $threadType, $newVersion);
             }
 
             $this->pdo->commit();
@@ -620,28 +601,9 @@ class UploadService
                 sendChatEmailNotification($projectId, $userId, $role, $threadType, $chatMsg, $this->pdo);
             }
 
-            // 補正通知 (correction_notice) ファイルがアップロードされた場合で、ステータスが「申請中」であれば「補正対応中」に更新
+            // 補正通知 (correction_notice) ファイルがアップロードされた場合、ステータス更新・スケジュール巻き戻し・通知を実行
             if (in_array('correction_notice', $uploadedCats)) {
-                $stmtCheckStatus = $this->pdo->prepare("SELECT status FROM projects WHERE id = :id");
-                $stmtCheckStatus->execute(['id' => $projectId]);
-                $currentStatus = $stmtCheckStatus->fetchColumn();
-                if ($currentStatus === 'submitting') {
-                    $stmtUpdateStatus = $this->pdo->prepare("UPDATE projects SET status = 'correction' WHERE id = :id");
-                    $stmtUpdateStatus->execute(['id' => $projectId]);
-
-                    // チャット通知 (自動)
-                    $msgSubmittingCorrection = "【自動通知】補正通知書がアップロードされました。案件ステータスを「申請中」から「補正対応中」に変更しました。";
-                    $stmtMsgCorrection = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
-                    $stmtMsgCorrection->execute([
-                        'pid' => $projectId,
-                        'sid' => $userId,
-                        'thread' => $threadType,
-                        'msg' => $msgSubmittingCorrection
-                    ]);
-
-                    require_once __DIR__ . '/../../functions.php';
-                    sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msgSubmittingCorrection, $this->pdo);
-                }
+                $this->handleCorrectionNoticeUploaded($projectId, $userId, $threadType);
             }
 
             $this->pdo->commit();
@@ -914,4 +876,71 @@ class UploadService
             throw $e;
         }
     }
+
+    /**
+     * 補正通知書アップロード時の案件ステータス更新、スケジュール実績巻き戻し、およびチャット・メール通知処理
+     */
+    protected function handleCorrectionNoticeUploaded(int $projectId, int $userId, string $threadType, ?int $version = null): void
+    {
+        $stmtProj = $this->pdo->prepare("SELECT * FROM projects WHERE id = :id");
+        $stmtProj->execute(['id' => $projectId]);
+        $project = $stmtProj->fetch(PDO::FETCH_ASSOC);
+        if (!$project) {
+            return;
+        }
+
+        require_once __DIR__ . '/../../functions.php';
+        $base_days = getScheduleBaseDays($project);
+        $is_koyou_or_kisohari = (($project['req_permit'] ?? 0) == 1 || ($project['req_opt_kisohari'] ?? 0) == 1);
+
+        $typeConfigs = [
+            'schedule_actuals' => getScheduleSteps($base_days, $is_koyou_or_kisohari),
+            'schedule_actuals_wall' => getScheduleStepsWall($base_days),
+            'schedule_actuals_skin' => getScheduleStepsSkin($base_days),
+            'schedule_actuals_sky' => getScheduleStepsSky($base_days),
+        ];
+
+        $updates = ["status = 'correction'"];
+        $params = ['id' => $projectId];
+
+        foreach ($typeConfigs as $col => $steps) {
+            if (!isset($project[$col])) {
+                continue;
+            }
+            $actuals = json_decode($project[$col] ?? '{}', true) ?: [];
+            $changed = false;
+            foreach ($steps as $idx => $step) {
+                // 「補正対応」「残金のご精算」「審査完了」の実施日をクリアし、ボールを「補正対応」へ巻き戻す
+                if (in_array($step['name'], ['補正対応', '残金のご精算', '審査完了'])) {
+                    if (isset($actuals[$idx])) {
+                        unset($actuals[$idx]);
+                        $changed = true;
+                    }
+                }
+            }
+            if ($changed) {
+                $updates[] = "{$col} = :{$col}";
+                $params[$col] = json_encode($actuals, JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT);
+            }
+        }
+
+        $sql = "UPDATE projects SET " . implode(', ', $updates) . " WHERE id = :id";
+        $stmtUpdate = $this->pdo->prepare($sql);
+        $stmtUpdate->execute($params);
+
+        // チャット通知 (自動) & メール送信
+        $verText = ($version !== null && $version > 0) ? " (V{$version})" : "";
+        $msg = "🚨【自動通知】補正通知書{$verText}がアップロードされました。\n案件ステータスを「補正対応中」に変更し、スケジュール上のボールを管理者（設計者）へ移行しました。";
+
+        $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+        $stmtMsg->execute([
+            'pid' => $projectId,
+            'sid' => $userId,
+            'thread' => $threadType,
+            'msg' => $msg
+        ]);
+
+        sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $msg, $this->pdo);
+    }
 }
+
