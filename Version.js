@@ -212,8 +212,9 @@
 // 1.6.50: col_cad_comparison.php における getFirstValidFile の二重定義エラー（Cannot redeclare）を解消し、案件詳細画面へのアクセスを復旧
 // 1.6.51: Google Drive未連携時の全画面モーダルによるクリック遮断（無反応）バグを解消し、インライン非ブロッキング警告バナーへ刷新
 // 1.6.52: index.php のキャッシュ無効化ヘッダー付与および全画面オーバーレイの完全クリーンアップ
+// 1.6.53: Google Drive API接続にタイムアウト(3秒)とセッションキャッシュ(5分)を導入し、画面遷移時のハング・タイムアウトを完全解消
 
-window.APP_VERSION = "1.6.52";
+window.APP_VERSION = "1.6.53";
 const APP_LAST_UPDATED = '2026-09-29';
 
 

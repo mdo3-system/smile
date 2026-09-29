@@ -55,6 +55,10 @@ function get_google_drive_service() {
     }
 
     $client = new Google\Client();
+    $client->setHttpClient(new \GuzzleHttp\Client([
+        'timeout' => 3.0,
+        'connect_timeout' => 2.0,
+    ]));
     $client->setAuthConfig($credentials_path);
     $client->addScope(Google\Service\Drive::DRIVE);
 
@@ -439,16 +443,23 @@ function upload_to_google_drive($local_file_path, $file_name, $mime_type, $proje
  * Google Driveとの接続状態を実際にテストする
  * @return bool 接続成功ならtrue
  */
-function check_google_drive_connection() {
+function check_google_drive_connection($force = false) {
+    if (!$force && isset($_SESSION['gdrive_conn_checked_at']) && (time() - $_SESSION['gdrive_conn_checked_at'] < 300)) {
+        return !empty($_SESSION['gdrive_conn_status']);
+    }
+
     try {
         $service = get_google_drive_service();
-        // 疎通確認としてルートフォルダの情報を一件取得してみる
         $root_folder_id = getenv('GOOGLE_DRIVE_FOLDER_ID');
         if (!empty($root_folder_id)) {
             $service->files->get($root_folder_id, ['fields' => 'id', 'supportsAllDrives' => true]);
         }
+        $_SESSION['gdrive_conn_checked_at'] = time();
+        $_SESSION['gdrive_conn_status'] = true;
         return true;
     } catch (Exception $e) {
+        $_SESSION['gdrive_conn_checked_at'] = time();
+        $_SESSION['gdrive_conn_status'] = false;
         error_log("Google Drive connection test failed: " . $e->getMessage());
         return false;
     }

@@ -300,6 +300,6 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
 <!-- 初期保存データ及びスロットファイル情報の受け渡し用スクリプト -->
 <script>
 window.CAD_COMPARISON_PROJECT_ID = <?= json_encode($project_id) ?>;
-window.INITIAL_CAD_COMPARISON_DATA = <?= $saved_cad_comparison ? $saved_cad_comparison : 'null' ?>;
+window.INITIAL_CAD_COMPARISON_DATA = <?= json_encode($saved_cad_comparison, JSON_UNESCAPED_UNICODE) ?>;
 window.SLOT_DOC_FILES = <?= json_encode($slot_files, JSON_UNESCAPED_UNICODE) ?>;
 </script>
