@@ -211,8 +211,9 @@
 // 1.6.49: DRA-CAD 19 による自動DXFバッチ変換連携（COM/プロセス/VBScript）、JacConvert連携、および正規表現（GL+/▽/各階面積表）の抽出精度大幅強化
 // 1.6.50: col_cad_comparison.php における getFirstValidFile の二重定義エラー（Cannot redeclare）を解消し、案件詳細画面へのアクセスを復旧
 // 1.6.51: Google Drive未連携時の全画面モーダルによるクリック遮断（無反応）バグを解消し、インライン非ブロッキング警告バナーへ刷新
+// 1.6.52: index.php のキャッシュ無効化ヘッダー付与および全画面オーバーレイの完全クリーンアップ
 
-window.APP_VERSION = "1.6.51";
+window.APP_VERSION = "1.6.52";
 const APP_LAST_UPDATED = '2026-09-29';
 
 
