@@ -592,25 +592,20 @@ SMS送付する場合がございますので、ご依頼いただける際は�
     </script>
     <script src="assets/js/project_detail.js?v=<?= time() ?>"></script>
 
-    <!-- Google Drive 連携切れ警告モーダル (管理者のみ) -->
+    <!-- Google Drive 連携切れ警告バナー (管理者のみ・非ブロッキング) -->
     <?php if ($is_admin && !empty($drive_connection_error)): ?>
-    <div id="driveErrorModal" style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
-        <div style="background:#fff; border-radius:16px; padding:32px; max-width:500px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.4); border-top: 6px solid #ef4444;">
-            <div style="font-size:48px; margin-bottom:16px;">⚠️</div>
-            <h2 style="font-size:20px; margin-bottom:12px; color:#b91c1c; font-weight:bold;">Google Drive の連携が切れています</h2>
-            <p style="font-size:14px; color:#475569; line-height:1.8; margin-bottom:20px; text-align:left; background:#fef2f2; padding:15px; border-radius:8px;">
-                Google Drive との OAuth2 認証の有効期限が切れているか、連携が解除されています。<br>
-                このままでは見積書や請求書の発行、またはファイルの自動保存が正常に行われません。<br><br>
-                連携を回復するには、下の「再連携する」ボタンをクリックして再ログイン認証を行ってください。
-            </p>
-            <div style="display:flex; gap:10px; justify-content:center;">
-                <a href="google_auth.php" style="display:inline-block; padding:12px 30px; background:#ef4444; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer; text-decoration:none; box-shadow:0 4px 6px rgba(239,68,68,0.2);">
-                    🔄 再連携する (Googleログイン)
-                </a>
-                <button onclick="document.getElementById('driveErrorModal').style.display='none';" style="padding:12px 20px; background:#94a3b8; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer;">
-                    閉じる
-                </button>
+    <div style="background:#fef2f2; border:2px solid #ef4444; border-radius:8px; padding:12px 18px; margin: 15px auto; width: 98%; display:flex; justify-content:space-between; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">⚠️</span>
+            <div>
+                <strong style="color:#b91c1c; font-size:13px; display:block;">Google Drive の連携が切れています</strong>
+                <span style="color:#475569; font-size:11px;">ファイルの自動保存や見積書発行を正常に行うには再連携してください。</span>
             </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+            <a href="google_auth.php" target="_blank" style="padding:6px 14px; background:#ef4444; color:#fff; border-radius:4px; font-size:11px; font-weight:bold; text-decoration:none;">
+                🔄 再連携する (Googleログイン)
+            </a>
         </div>
     </div>
     <?php endif; ?>
