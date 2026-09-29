@@ -365,6 +365,9 @@ def compare_all():
     """
     複数図書（申請書、矩計図、面積表、立面図）の一括解析＆突合判定
     """
+    print("\n-----------------------------------------------------")
+    print("📥 [受信] 建築図書の照合リクエストを受信しました (/api/compare)")
+    
     files_map = {
         'app': request.files.get('app_doc'),          # 確認申請書
         'kanabakari': request.files.get('kanabakari'),# 矩計図
@@ -381,7 +384,9 @@ def compare_all():
 
             input_path = os.path.join(tmpdir, f.filename)
             f.save(input_path)
+            file_size_kb = round(os.path.getsize(input_path) / 1024, 1)
             fname_lower = f.filename.lower()
+            print(f"  ▶ [{doc_type}] 解析開始: {f.filename} ({file_size_kb} KB)")
 
             try:
                 if fname_lower.endswith('.pdf'):
@@ -394,12 +399,15 @@ def compare_all():
                 else:
                     data = {'error': f'未対応形式: {f.filename}'}
                 results[doc_type] = data
+                print(f"    ✓ [{doc_type}] 抽出完了: {data}")
             except Exception as e:
-                print(f"[Error parsing {doc_type}] {e}")
+                print(f"    ✗ [Error parsing {doc_type}] {e}")
                 results[doc_type] = {'error': str(e)}
 
     # 突合判定ロジック
     judgements = perform_comparison(results)
+    print("📊 [完了] 突合判定が完了しました。ブラウザへ結果を返却します。")
+    print("-----------------------------------------------------\n")
 
     return jsonify({
         'status': 'ok',

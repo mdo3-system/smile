@@ -93,18 +93,22 @@ async function runSlotAutoComparison() {
 
     try {
         const fd = new FormData();
-        const fetchTasks = [];
         let fetchedCount = 0;
+        const failedItems = [];
 
         // 1. 確認申請書
         if (fileAppManual) {
             fd.append("app_doc", fileAppManual);
             fetchedCount++;
         } else if (slotFiles.app) {
-            fetchTasks.push(
-                fetchDocBlob(projectId, slotFiles.app.file_category, slotFiles.app.file_name)
-                    .then(file => { if (file) { fd.append("app_doc", file); fetchedCount++; } })
-            );
+            if (progressEl) progressEl.innerHTML = `⏳ [1/3] 申請書 (${slotFiles.app.file_name}) をダウンロード中...`;
+            const file = await fetchDocBlob(projectId, slotFiles.app.file_category, slotFiles.app.file_name, slotFiles.app.id);
+            if (file) {
+                fd.append("app_doc", file);
+                fetchedCount++;
+            } else {
+                failedItems.push("確認申請書");
+            }
         }
 
         // 2. 矩計図
@@ -112,10 +116,14 @@ async function runSlotAutoComparison() {
             fd.append("kanabakari", fileKanaManual);
             fetchedCount++;
         } else if (slotFiles.kanabakari) {
-            fetchTasks.push(
-                fetchDocBlob(projectId, slotFiles.kanabakari.file_category, slotFiles.kanabakari.file_name)
-                    .then(file => { if (file) { fd.append("kanabakari", file); fetchedCount++; } })
-            );
+            if (progressEl) progressEl.innerHTML = `⏳ [1/3] 矩計図 (${slotFiles.kanabakari.file_name}) をダウンロード中...`;
+            const file = await fetchDocBlob(projectId, slotFiles.kanabakari.file_category, slotFiles.kanabakari.file_name, slotFiles.kanabakari.id);
+            if (file) {
+                fd.append("kanabakari", file);
+                fetchedCount++;
+            } else {
+                failedItems.push("矩計図");
+            }
         }
 
         // 3. 面積表
@@ -123,10 +131,14 @@ async function runSlotAutoComparison() {
             fd.append("area_calc", fileAreaManual);
             fetchedCount++;
         } else if (slotFiles.area) {
-            fetchTasks.push(
-                fetchDocBlob(projectId, slotFiles.area.file_category, slotFiles.area.file_name)
-                    .then(file => { if (file) { fd.append("area_calc", file); fetchedCount++; } })
-            );
+            if (progressEl) progressEl.innerHTML = `⏳ [1/3] 面積表 (${slotFiles.area.file_name}) をダウンロード中...`;
+            const file = await fetchDocBlob(projectId, slotFiles.area.file_category, slotFiles.area.file_name, slotFiles.area.id);
+            if (file) {
+                fd.append("area_calc", file);
+                fetchedCount++;
+            } else {
+                failedItems.push("面積表");
+            }
         }
 
         // 4. 立面図
@@ -134,14 +146,19 @@ async function runSlotAutoComparison() {
             fd.append("elevation", fileElevManual);
             fetchedCount++;
         } else if (slotFiles.elevation) {
-            fetchTasks.push(
-                fetchDocBlob(projectId, slotFiles.elevation.file_category, slotFiles.elevation.file_name)
-                    .then(file => { if (file) { fd.append("elevation", file); fetchedCount++; } })
-            );
+            if (progressEl) progressEl.innerHTML = `⏳ [1/3] 立面図 (${slotFiles.elevation.file_name}) をダウンロード中...`;
+            const file = await fetchDocBlob(projectId, slotFiles.elevation.file_category, slotFiles.elevation.file_name, slotFiles.elevation.id);
+            if (file) {
+                fd.append("elevation", file);
+                fetchedCount++;
+            } else {
+                failedItems.push("立面図");
+            }
         }
 
-        // すべての図書ファイルを非同期で取得
-        await Promise.all(fetchTasks);
+        if (fetchedCount === 0) {
+            throw new Error(`図書ファイルのダウンロードに失敗しました（${failedItems.join('、')}）。\nGoogle Drive連携またはネットワーク接続を確認するか、「手動でファイルを選択」をお試しください。`);
+        }
 
         if (progressEl) {
             progressEl.innerHTML = `⏳ [2/3] ローカル解析サービス（Port: 5005）へ送信中... (対象ファイル: ${fetchedCount}件)`;
@@ -183,18 +200,19 @@ async function runSlotAutoComparison() {
 }
 
 // サーバーAPIから図書バイナリを取得してFileオブジェクトに変換
-async function fetchDocBlob(projectId, category, filename) {
+async function fetchDocBlob(projectId, category, filename, fileId) {
     try {
-        const url = `api_get_project_doc_file.php?project_id=${projectId}&category=${encodeURIComponent(category)}`;
+        const param = fileId ? `file_id=${encodeURIComponent(fileId)}` : `category=${encodeURIComponent(category)}`;
+        const url = `api_get_project_doc_file.php?project_id=${encodeURIComponent(projectId)}&${param}`;
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) {
-            console.warn(`図書ファイル取得失敗 (${category}): HTTP ${res.status}`);
+            console.warn(`図書ファイル取得失敗 (${category || fileId}): HTTP ${res.status}`);
             return null;
         }
         const blob = await res.blob();
         return new File([blob], filename, { type: blob.type || 'application/octet-stream' });
     } catch (e) {
-        console.warn(`図書ファイルfetchエラー (${category}):`, e);
+        console.warn(`図書ファイルfetchエラー (${category || fileId}):`, e);
         return null;
     }
 }
