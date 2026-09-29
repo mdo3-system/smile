@@ -42,6 +42,7 @@
             <?php require __DIR__ . '/col_schedule.php'; ?>
             <?php require __DIR__ . '/col_estimator.php'; ?>
             <?php require __DIR__ . '/col_center_post_uploads.php'; ?>
+            <?php require __DIR__ . '/col_cad_comparison.php'; ?>
         </div>
 
         <!-- カラム3: 成果物一覧 ＋ 構造仕様 ＋ 依頼主アップロード図書 -->

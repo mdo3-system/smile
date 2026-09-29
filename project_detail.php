@@ -657,5 +657,9 @@ SMS送付する場合がございますので、ご依頼いただける際は�
         });
     }
     </script>
+    <?php if ($is_admin): ?>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <script src="assets/js/cad_comparison.js"></script>
+    <?php endif; ?>
 </body>
 </html>
