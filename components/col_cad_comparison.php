@@ -4,6 +4,42 @@
 // 管理者ダッシュボード 第2カラム（一次回答後アップロード図書の下）に配置
 
 $saved_cad_comparison = $project_info['cad_comparison_json'] ?? null;
+
+// スロットから最新図書ファイルのメタデータを検出
+$slot_files = [
+    'app' => null,          // 確認申請書
+    'kanabakari' => null,   // 矩計図
+    'area' => null,         // 面積表 / 求積図
+    'elevation' => null     // 立面図
+];
+
+// 1. 確認申請書
+if (!empty($files_by_cat['app_doc'])) {
+    $slot_files['app'] = $files_by_cat['app_doc'][0];
+}
+
+// 2. 矩計図 (cad_section, pdf_section, 専門図書カスタム等)
+if (!empty($files_by_cat['cad_section'])) {
+    $slot_files['kanabakari'] = $files_by_cat['cad_section'][0];
+} elseif (!empty($files_by_cat['pdf_section'])) {
+    $slot_files['kanabakari'] = $files_by_cat['pdf_section'][0];
+}
+
+// 3. 面積表 / 求積図 (pdf_area_calc, cad_plan_1f, pdf_plan)
+if (!empty($files_by_cat['pdf_area_calc'])) {
+    $slot_files['area'] = $files_by_cat['pdf_area_calc'][0];
+} elseif (!empty($files_by_cat['cad_plan_1f'])) {
+    $slot_files['area'] = $files_by_cat['cad_plan_1f'][0];
+} elseif (!empty($files_by_cat['pdf_plan'])) {
+    $slot_files['area'] = $files_by_cat['pdf_plan'][0];
+}
+
+// 4. 立面図 (cad_elevation, pdf_elevation)
+if (!empty($files_by_cat['cad_elevation'])) {
+    $slot_files['elevation'] = $files_by_cat['cad_elevation'][0];
+} elseif (!empty($files_by_cat['pdf_elevation'])) {
+    $slot_files['elevation'] = $files_by_cat['pdf_elevation'][0];
+}
 ?>
 
 <div class="box" id="cad_comparison_box" style="margin-top:15px; background:#f0fdf4; border:2px solid #22c55e; border-radius:6px; padding:12px;">
@@ -18,7 +54,7 @@ $saved_cad_comparison = $project_info['cad_comparison_json'] ?? null;
     </div>
 
     <div style="font-size:11px; color:#4b5563; margin-bottom:10px; line-height:1.5;">
-        確認申請書（PDF）、矩計図（かなばかり）、面積表、立面図（CAD/JWW/DXF/PDF）から高さ・面積・図枠情報を抽出し、整合性を自動照合します。
+        スロットにアップロードされた最新図書（確認申請書・矩計図・面積表・立面図）から高さ・面積・図枠情報を抽出し、自動照合します。
     </div>
 
     <!-- サービス未接続時のアラート (初期非表示) -->
@@ -28,38 +64,102 @@ $saved_cad_comparison = $project_info['cad_comparison_json'] ?? null;
         <button type="button" onclick="checkCadServiceStatus()" style="margin-top:4px; background:#f59e0b; color:white; border:none; border-radius:3px; padding:2px 8px; font-size:10px; cursor:pointer;">再接続を確認</button>
     </div>
 
-    <!-- アップロード & 照合コントロールエリア -->
-    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:10px; margin-bottom:12px;">
-        <div style="font-weight:bold; font-size:11px; color:#334155; margin-bottom:6px;">📂 照合対象ファイルの指定</div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:11px;">
-            <div>
-                <label style="font-weight:bold; color:#1e293b; display:block; margin-bottom:2px;">① 確認申請書 (PDF)</label>
-                <input type="file" id="cad_file_app" accept=".pdf" style="font-size:10px; width:100%; border:1px solid #cbd5e1; border-radius:3px; padding:2px;">
+    <!-- スロット検出状態 & ワンクリック照合ボタン -->
+    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:10px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:bold; font-size:12px; color:#1e293b;">📥 スロット内の最新提出図書</span>
+            <span style="font-size:10px; color:#64748b;">※手動ダウンロード不要で自動取得します</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size:11px; margin-bottom:10px;">
+            <!-- ① 確認申請書 -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">① 確認申請書</div>
+                <?php if ($slot_files['app']): ?>
+                    <div style="color:#059669; font-weight:bold; word-break:break-all;">
+                        📄 <?= htmlspecialchars($slot_files['app']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['app']['version'] ?></span>
+                    </div>
+                <?php else: ?>
+                    <div style="color:#94a3b8;">未提出</div>
+                <?php endif; ?>
             </div>
-            <div>
-                <label style="font-weight:bold; color:#1e293b; display:block; margin-bottom:2px;">② 矩計図 (PDF/DXF/JWW)</label>
-                <input type="file" id="cad_file_kana" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%; border:1px solid #cbd5e1; border-radius:3px; padding:2px;">
+
+            <!-- ② 矩計図 -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">② 矩計図 (かなばかり)</div>
+                <?php if ($slot_files['kanabakari']): ?>
+                    <div style="color:#059669; font-weight:bold; word-break:break-all;">
+                        📐 <?= htmlspecialchars($slot_files['kanabakari']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['kanabakari']['version'] ?></span>
+                    </div>
+                <?php else: ?>
+                    <div style="color:#94a3b8;">未提出</div>
+                <?php endif; ?>
             </div>
-            <div>
-                <label style="font-weight:bold; color:#1e293b; display:block; margin-bottom:2px;">③ 面積表・求積図 (PDF/DXF/JWW)</label>
-                <input type="file" id="cad_file_area" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%; border:1px solid #cbd5e1; border-radius:3px; padding:2px;">
+
+            <!-- ③ 面積表 -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">③ 面積表 / 求積図</div>
+                <?php if ($slot_files['area']): ?>
+                    <div style="color:#059669; font-weight:bold; word-break:break-all;">
+                        📊 <?= htmlspecialchars($slot_files['area']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['area']['version'] ?></span>
+                    </div>
+                <?php else: ?>
+                    <div style="color:#94a3b8;">未提出</div>
+                <?php endif; ?>
             </div>
-            <div>
-                <label style="font-weight:bold; color:#1e293b; display:block; margin-bottom:2px;">④ 立面図 (PDF/DXF/JWW)</label>
-                <input type="file" id="cad_file_elev" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%; border:1px solid #cbd5e1; border-radius:3px; padding:2px;">
+
+            <!-- ④ 立面図 -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">④ 立面図</div>
+                <?php if ($slot_files['elevation']): ?>
+                    <div style="color:#059669; font-weight:bold; word-break:break-all;">
+                        🏢 <?= htmlspecialchars($slot_files['elevation']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['elevation']['version'] ?></span>
+                    </div>
+                <?php else: ?>
+                    <div style="color:#94a3b8;">未提出</div>
+                <?php endif; ?>
             </div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; pt-2; border-top:1px dashed #e2e8f0; padding-top:8px;">
-            <button type="button" id="btn_run_cad_compare" onclick="runCadComparison()" style="background:#16a34a; hover:background:#15803d; color:white; border:none; border-radius:4px; padding:6px 14px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
-                <span>🚀 図書を自動照合・解析</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; border-top:1px solid #f1f5f9; padding-top:8px;">
+            <button type="button" id="btn_run_slot_compare" onclick="runSlotAutoComparison()" style="background:#16a34a; hover:background:#15803d; color:white; border:none; border-radius:4px; padding:7px 16px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+                <span>✨ 提出済み最新図書を一括自動取得して照合</span>
             </button>
-            <button type="button" id="btn_export_cad_pdf" onclick="exportCadComparisonPdf()" style="background:#2563eb; color:white; border:none; border-radius:4px; padding:6px 12px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            <button type="button" id="btn_export_cad_pdf" onclick="exportCadComparisonPdf()" style="background:#2563eb; color:white; border:none; border-radius:4px; padding:7px 12px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;">
                 <span>📄 A4照合票を出力</span>
             </button>
         </div>
-        <div id="cad_compare_progress" style="display:none; font-size:11px; color:#2563eb; font-weight:bold; margin-top:6px;">
-            ⏳ ファイルを解析中... (JWWのDXF自動変換およびテキスト抽出を実行しています)
+
+        <div id="cad_compare_progress" style="display:none; font-size:11px; color:#2563eb; font-weight:bold; margin-top:8px;">
+            ⏳ スロット図書を取得し、ローカル解析を実行しています (JWW変換・テキスト抽出中)...
+        </div>
+
+        <!-- 手動アップロード照合用トグル (アコーディオン) -->
+        <div style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:6px;">
+            <details style="font-size:11px;">
+                <summary style="cursor:pointer; color:#475569; font-weight:600;">📁 手動でファイルを選択してテスト照合する場合（クリックで展開）</summary>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:6px; background:#f8fafc; padding:8px; border-radius:4px;">
+                    <div>
+                        <label style="color:#475569; display:block;">① 申請書 (PDF):</label>
+                        <input type="file" id="cad_file_app" accept=".pdf" style="font-size:10px; width:100%;">
+                    </div>
+                    <div>
+                        <label style="color:#475569; display:block;">② 矩計図 (PDF/DXF/JWW):</label>
+                        <input type="file" id="cad_file_kana" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
+                    </div>
+                    <div>
+                        <label style="color:#475569; display:block;">③ 面積表 (PDF/DXF/JWW):</label>
+                        <input type="file" id="cad_file_area" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
+                    </div>
+                    <div>
+                        <label style="color:#475569; display:block;">④ 立面図 (PDF/DXF/JWW):</label>
+                        <input type="file" id="cad_file_elev" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
+                    </div>
+                    <div style="grid-column: span 2; text-align:right; margin-top:4px;">
+                        <button type="button" onclick="runManualCadComparison()" style="background:#475569; color:white; border:none; border-radius:3px; padding:4px 10px; font-size:10px; cursor:pointer;">選択したファイルで照合</button>
+                    </div>
+                </div>
+            </details>
         </div>
     </div>
 
@@ -197,8 +297,9 @@ $saved_cad_comparison = $project_info['cad_comparison_json'] ?? null;
     </div>
 </div>
 
-<!-- 初期保存データの受け渡し用スクリプト -->
+<!-- 初期保存データ及びスロットファイル情報の受け渡し用スクリプト -->
 <script>
 window.CAD_COMPARISON_PROJECT_ID = <?= json_encode($project_id) ?>;
 window.INITIAL_CAD_COMPARISON_DATA = <?= $saved_cad_comparison ? $saved_cad_comparison : 'null' ?>;
+window.SLOT_DOC_FILES = <?= json_encode($slot_files, JSON_UNESCAPED_UNICODE) ?>;
 </script>

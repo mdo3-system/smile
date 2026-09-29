@@ -1,6 +1,7 @@
 /**
  * assets/js/cad_comparison.js
  * 建築図書 (CAD/JWW/DXF/PDF) 整合性確認・照合クライアントロジック
+ * スロット最新ファイル一括自動取得 & ローカル解析連携
  */
 
 const CAD_LOCAL_API_URL = "http://localhost:5005";
@@ -55,22 +56,120 @@ async function checkCadServiceStatus() {
     }
 }
 
-// 図書の自動照合・解析を実行
-async function runCadComparison() {
+// 【メイン機能】スロットの最新提出図書を一括自動取得して照合
+async function runSlotAutoComparison() {
+    const slotFiles = window.SLOT_DOC_FILES || {};
+    const projectId = window.CAD_COMPARISON_PROJECT_ID;
+
+    if (!slotFiles.app && !slotFiles.kanabakari && !slotFiles.area && !slotFiles.elevation) {
+        alert("スロットに提出された図書（確認申請書・矩計図・面積表・立面図）がまだありません。\n図書がアップロードされた後に実行してください。");
+        return;
+    }
+
+    const progressEl = document.getElementById("cad_compare_progress");
+    const btnRun = document.getElementById("btn_run_slot_compare");
+    if (progressEl) progressEl.style.display = "block";
+    if (btnRun) btnRun.disabled = true;
+
+    try {
+        const fd = new FormData();
+        const fetchTasks = [];
+
+        // 1. 確認申請書
+        if (slotFiles.app) {
+            fetchTasks.push(
+                fetchDocBlob(projectId, slotFiles.app.file_category, slotFiles.app.file_name)
+                    .then(file => { if (file) fd.append("app_doc", file); })
+            );
+        }
+
+        // 2. 矩計図
+        if (slotFiles.kanabakari) {
+            fetchTasks.push(
+                fetchDocBlob(projectId, slotFiles.kanabakari.file_category, slotFiles.kanabakari.file_name)
+                    .then(file => { if (file) fd.append("kanabakari", file); })
+            );
+        }
+
+        // 3. 面積表
+        if (slotFiles.area) {
+            fetchTasks.push(
+                fetchDocBlob(projectId, slotFiles.area.file_category, slotFiles.area.file_name)
+                    .then(file => { if (file) fd.append("area_calc", file); })
+            );
+        }
+
+        // 4. 立面図
+        if (slotFiles.elevation) {
+            fetchTasks.push(
+                fetchDocBlob(projectId, slotFiles.elevation.file_category, slotFiles.elevation.file_name)
+                    .then(file => { if (file) fd.append("elevation", file); })
+            );
+        }
+
+        // すべての図書ファイルを非同期で取得
+        await Promise.all(fetchTasks);
+
+        // ローカル解析サービス (Port: 5005) へ一括送信
+        const res = await fetch(`${CAD_LOCAL_API_URL}/api/compare`, {
+            method: "POST",
+            mode: "cors",
+            body: fd
+        });
+
+        if (!res.ok) {
+            throw new Error(`解析サービスエラー (HTTP ${res.status})`);
+        }
+
+        const resData = await res.json();
+        if (resData.status === "ok") {
+            renderCadComparison(resData);
+            // サーバー側DBに自動保存
+            saveCadComparisonToDb(resData);
+            alert("スロット最新図書の自動解析および照合が完了しました！");
+        } else {
+            alert("解析エラー: " + (resData.error || "不明なエラー"));
+        }
+    } catch (err) {
+        console.error("スロット図書自動照合エラー:", err);
+        alert(`ローカル解析サービスとの通信に失敗しました。\n'start_cad_parser.bat' が起動しているか確認してください。\n詳細: ${err.message}`);
+    } finally {
+        if (progressEl) progressEl.style.display = "none";
+        if (btnRun) btnRun.disabled = false;
+    }
+}
+
+// サーバーAPIから図書バイナリを取得してFileオブジェクトに変換
+async function fetchDocBlob(projectId, category, filename) {
+    try {
+        const url = `api_get_project_doc_file.php?project_id=${projectId}&category=${encodeURIComponent(category)}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+            console.warn(`図書ファイル取得失敗 (${category}): HTTP ${res.status}`);
+            return null;
+        }
+        const blob = await res.blob();
+        return new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+    } catch (e) {
+        console.warn(`図書ファイルfetchエラー (${category}):`, e);
+        return null;
+    }
+}
+
+// 手動選択ファイルでの照合
+async function runManualCadComparison() {
     const fileApp = document.getElementById("cad_file_app")?.files[0];
     const fileKana = document.getElementById("cad_file_kana")?.files[0];
     const fileArea = document.getElementById("cad_file_area")?.files[0];
     const fileElev = document.getElementById("cad_file_elev")?.files[0];
 
     if (!fileApp && !fileKana && !fileArea && !fileElev) {
-        alert("照合対象の図書ファイル（確認申請書、矩計図、面積表、立面図のいずれか）を選択してください。");
+        alert("照合対象の図書ファイルを選択してください。");
         return;
     }
 
     const progressEl = document.getElementById("cad_compare_progress");
-    const btnRun = document.getElementById("btn_run_cad_compare");
     if (progressEl) progressEl.style.display = "block";
-    if (btnRun) btnRun.disabled = true;
 
     const fd = new FormData();
     if (fileApp) fd.append("app_doc", fileApp);
@@ -92,18 +191,16 @@ async function runCadComparison() {
         const resData = await res.json();
         if (resData.status === "ok") {
             renderCadComparison(resData);
-            // サーバー側DBに自動保存
             saveCadComparisonToDb(resData);
-            alert("図書の自動解析および照合が完了しました。");
+            alert("手動選択ファイルの解析・照合が完了しました。");
         } else {
             alert("解析エラー: " + (resData.error || "不明なエラー"));
         }
     } catch (err) {
-        console.error("CAD照合エラー:", err);
-        alert(`ローカル解析サービスとの通信に失敗しました。\n'start_cad_parser.bat' が起動しているか確認してください。\n詳細: ${err.message}`);
+        console.error("手動CAD照合エラー:", err);
+        alert(`解析サービスとの通信に失敗しました: ${err.message}`);
     } finally {
         if (progressEl) progressEl.style.display = "none";
-        if (btnRun) btnRun.disabled = false;
     }
 }
 
@@ -118,22 +215,20 @@ function renderCadComparison(data) {
     const formatNum = (val, unit) => (val !== null && val !== undefined) ? `${val} ${unit}` : '-';
     const formatStr = (val) => val ? String(val).trim() : '-';
 
-    // 1. 高さ情報
     const setElem = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.textContent = val;
     };
 
+    // 1. 高さ情報
     setElem("res_h_app_max", formatNum(app.max_height, "m"));
     setElem("res_h_kana_max", formatNum(kana.max_height, "m"));
     setElem("res_h_elev_max", formatNum(elev.max_height, "m"));
-
     setJudge("res_judge_h_max", [app.max_height, kana.max_height, elev.max_height]);
 
     setElem("res_h_app_eaves", formatNum(app.eaves_height, "m"));
     setElem("res_h_kana_eaves", formatNum(kana.eaves_height, "m"));
     setElem("res_h_elev_eaves", formatNum(elev.eaves_height, "m"));
-
     setJudge("res_judge_h_eaves", [app.eaves_height, kana.eaves_height, elev.eaves_height]);
 
     // 2. 面積情報
@@ -238,7 +333,6 @@ async function exportCadComparisonPdf() {
     const reportEl = document.getElementById("cad_comparison_report");
     if (!reportEl) return;
 
-    // html2pdf が未ロードなら動的ロード
     if (typeof html2pdf === "undefined") {
         await new Promise((resolve, reject) => {
             const script = document.createElement("script");
