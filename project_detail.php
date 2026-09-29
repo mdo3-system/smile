@@ -65,10 +65,14 @@ $drive_connection_error = false;
 if ($is_admin) {
     require_once __DIR__ . '/google_drive_client.php';
     if (check_google_drive_connection()) {
-        // 連携が正常な場合、ローカル保存されている未同期ファイルを Drive へ自動転送（データ移動）
-        sync_local_files_to_google_drive($pdo);
+        // 未同期のローカル保存ファイルがある場合のみ Drive への同期を実行
+        $stmtPending = $pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND drive_file_id LIKE 'uploads/%'");
+        $stmtPending->execute(['pid' => $project_id]);
+        if ($stmtPending->fetchColumn() > 0) {
+            sync_local_files_to_google_drive($pdo, $project_id);
+        }
     } else {
-        // 連携切れを検知した場合、警告モーダル表示用のフラグを立てる
+        // 連携切れを検知した場合、警告バナー表示用のフラグを立てる
         $drive_connection_error = true;
     }
 }
@@ -653,7 +657,6 @@ SMS送付する場合がございますので、ご依頼いただける際は�
     }
     </script>
     <?php if ($is_admin): ?>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
         <script src="assets/js/cad_comparison.js"></script>
     <?php endif; ?>
 </body>

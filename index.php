@@ -11,13 +11,16 @@ check_auth(['admin', 'client', 'accountant']);
 // Google Drive 接続チェック＆自動同期 (管理者のみ)
 // ==========================================
 $drive_connection_error = false;
-if ($_SESSION['role'] === 'admin') {
+if (($_SESSION['role'] ?? '') === 'admin') {
     require_once __DIR__ . '/google_drive_client.php';
     if (check_google_drive_connection()) {
-        // 連携が正常な場合、ローカル保存されている未同期ファイルを Drive へ自動転送（データ移動）
-        sync_local_files_to_google_drive($pdo);
+        // 未同期のローカル保存ファイルがある場合のみ Drive への同期を実行
+        $stmtPending = $pdo->query("SELECT COUNT(*) FROM project_files WHERE drive_file_id LIKE 'uploads/%'");
+        if ($stmtPending && $stmtPending->fetchColumn() > 0) {
+            sync_local_files_to_google_drive($pdo);
+        }
     } else {
-        // 連携切れを検知した場合、警告モーダル表示用のフラグを立てる
+        // 連携切れを検知した場合、警告バナー表示用のフラグを立てる
         $drive_connection_error = true;
     }
 }

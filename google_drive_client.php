@@ -444,8 +444,21 @@ function upload_to_google_drive($local_file_path, $file_name, $mime_type, $proje
  * @return bool 接続成功ならtrue
  */
 function check_google_drive_connection($force = false) {
-    if (!$force && isset($_SESSION['gdrive_conn_checked_at']) && (time() - $_SESSION['gdrive_conn_checked_at'] < 300)) {
-        return !empty($_SESSION['gdrive_conn_status']);
+    static $static_checked_at = null;
+    static $static_status = null;
+
+    if (!$force && $static_checked_at !== null && (time() - $static_checked_at < 300)) {
+        return $static_status;
+    }
+
+    $cache_file = sys_get_temp_dir() . '/thanks_work_gdrive_status.json';
+    if (!$force && file_exists($cache_file)) {
+        $data = json_decode(@file_get_contents($cache_file), true);
+        if (is_array($data) && isset($data['checked_at']) && (time() - $data['checked_at'] < 300)) {
+            $static_checked_at = $data['checked_at'];
+            $static_status = !empty($data['status']);
+            return $static_status;
+        }
     }
 
     try {
@@ -454,12 +467,14 @@ function check_google_drive_connection($force = false) {
         if (!empty($root_folder_id)) {
             $service->files->get($root_folder_id, ['fields' => 'id', 'supportsAllDrives' => true]);
         }
-        $_SESSION['gdrive_conn_checked_at'] = time();
-        $_SESSION['gdrive_conn_status'] = true;
+        $static_checked_at = time();
+        $static_status = true;
+        @file_put_contents($cache_file, json_encode(['checked_at' => $static_checked_at, 'status' => true]));
         return true;
     } catch (Exception $e) {
-        $_SESSION['gdrive_conn_checked_at'] = time();
-        $_SESSION['gdrive_conn_status'] = false;
+        $static_checked_at = time();
+        $static_status = false;
+        @file_put_contents($cache_file, json_encode(['checked_at' => $static_checked_at, 'status' => false]));
         error_log("Google Drive connection test failed: " . $e->getMessage());
         return false;
     }

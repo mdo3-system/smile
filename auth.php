@@ -110,4 +110,10 @@ function check_auth($allowed_roles = []) {
         header("HTTP/1.1 403 Forbidden");
         die("アクセス権限がありません。<br><a href='logout.php'>別のアカウントでログインする</a>");
     }
+
+    // セッションの読み取り・同期完了後、即座にセッションファイルをアンロックして並行処理を可能にする
+    if (session_status() === PHP_SESSION_ACTIVE && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+        session_write_close();
+    }
 }
+
