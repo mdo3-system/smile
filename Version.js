@@ -209,8 +209,9 @@
 // 1.6.47: JWWバイナリ直接ネイティブ解析パーサー（extract_from_jww_native・外部ツール不要・超高速化）およびDRA-CAD 19自動探索の追加
 // 1.6.48: ローカルCAD解析エージェントの詳細コンソールログ出力（パース進捗可視化）、スロット図書取得のfile_id優先化、およびリアルタイムダウンロード進捗UIの強化
 // 1.6.49: DRA-CAD 19 による自動DXFバッチ変換連携（COM/プロセス/VBScript）、JacConvert連携、および正規表現（GL+/▽/各階面積表）の抽出精度大幅強化
+// 1.6.50: col_cad_comparison.php における getFirstValidFile の二重定義エラー（Cannot redeclare）を解消し、案件詳細画面へのアクセスを復旧
 
-window.APP_VERSION = "1.6.49";
+window.APP_VERSION = "1.6.50";
 const APP_LAST_UPDATED = '2026-09-29';
 
 

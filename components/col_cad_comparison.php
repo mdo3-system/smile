@@ -14,17 +14,19 @@ $slot_files = [
 ];
 
 // 有効なファイル（他ファイルに記載でない、実ファイルIDが存在するもの）を探索するヘルパー
-function getFirstValidFile($files_by_cat, $cats) {
-    foreach ($cats as $cat) {
-        if (!empty($files_by_cat[$cat])) {
-            foreach ($files_by_cat[$cat] as $f) {
-                if (!empty($f['drive_file_id']) && $f['file_name'] !== '【他ファイルに記載】') {
-                    return $f;
+if (!function_exists('getFirstValidFile')) {
+    function getFirstValidFile($files_by_cat, $cats) {
+        foreach ($cats as $cat) {
+            if (!empty($files_by_cat[$cat])) {
+                foreach ($files_by_cat[$cat] as $f) {
+                    if (!empty($f['drive_file_id']) && $f['file_name'] !== '【他ファイルに記載】') {
+                        return $f;
+                    }
                 }
             }
         }
+        return null;
     }
-    return null;
 }
 
 // 1. 確認申請書
