@@ -203,8 +203,9 @@
 // 1.6.41: 建築図書整合性確認・自動照合機能（確認申請書PDF・矩計図CAD/PDF・面積表・立面図からの高さ・面積・図枠情報抽出、不一致判定、A4照合票PDF出力）およびローカルCAD/PDF解析エージェント（local_cad_parser.py/JacConvert連携）の実装
 // 1.6.42: スロット提出済み最新図書の全自動取得・一括照合連携（api_get_project_doc_file.php）およびワンクリック照合UIの強化
 // 1.6.43: ローカルCAD解析エージェントのPrivate Network Access / CORSヘッダー完全対応、127.0.0.1フォールバック接続、およびstart_cad_parser.batのパス固定改善
+// 1.6.44: start_cad_parser.bat への依存ライブラリ（ezdxf/pypdf/flask-cors等）自動インストール処理の追加およびエラー停止時の画面保持（pause）実装
 
-window.APP_VERSION = "1.6.43";
+window.APP_VERSION = "1.6.44";
 const APP_LAST_UPDATED = '2026-09-29';
 
 
