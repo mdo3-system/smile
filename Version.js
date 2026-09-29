@@ -204,8 +204,9 @@
 // 1.6.42: スロット提出済み最新図書の全自動取得・一括照合連携（api_get_project_doc_file.php）およびワンクリック照合UIの強化
 // 1.6.43: ローカルCAD解析エージェントのPrivate Network Access / CORSヘッダー完全対応、127.0.0.1フォールバック接続、およびstart_cad_parser.batのパス固定改善
 // 1.6.44: start_cad_parser.bat への依存ライブラリ（ezdxf/pypdf/flask-cors等）自動インストール処理の追加およびエラー停止時の画面保持（pause）実装
+// 1.6.45: start_cad_parser.bat の文字コード依存を排除するASCII英語化、および協力業者マスター（subcontractors_list.php）の動作・権限チェック
 
-window.APP_VERSION = "1.6.44";
+window.APP_VERSION = "1.6.45";
 const APP_LAST_UPDATED = '2026-09-29';
 
 
