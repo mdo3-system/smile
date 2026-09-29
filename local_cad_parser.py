@@ -33,7 +33,15 @@ except ImportError:
 
 app = Flask(__name__)
 # すべてのオリジンからのアクセスを許可 (ローカル/Web両方から連携可能)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    response.headers['Access-Control-Allow-Private-Network'] = 'true'
+    return response
 
 # JacConvert の実行可能ファイル候補
 JACCONVERT_CANDIDATES = [

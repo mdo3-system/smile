@@ -4,7 +4,8 @@
  * スロット最新ファイル一括自動取得 & ローカル解析連携
  */
 
-const CAD_LOCAL_API_URL = "http://localhost:5005";
+let activeCadApiUrl = "http://127.0.0.1:5005";
+const CAD_CANDIDATE_URLS = ["http://127.0.0.1:5005", "http://localhost:5005"];
 
 document.addEventListener("DOMContentLoaded", function () {
     // サービスの稼働確認
@@ -33,22 +34,30 @@ async function checkCadServiceStatus() {
     statusEl.style.background = "#e2e8f0";
     statusEl.style.color = "#475569";
 
-    try {
-        const res = await fetch(`${CAD_LOCAL_API_URL}/api/health`, {
-            method: "GET",
-            mode: "cors",
-            headers: { "Accept": "application/json" }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            statusEl.innerHTML = "🟢 ローカル解析サービス稼働中";
-            statusEl.style.background = "#dcfce7";
-            statusEl.style.color = "#15803d";
-            if (alertEl) alertEl.style.display = "none";
-        } else {
-            throw new Error("HTTP " + res.status);
+    let connected = false;
+    for (const url of CAD_CANDIDATE_URLS) {
+        try {
+            const res = await fetch(`${url}/api/health`, {
+                method: "GET",
+                mode: "cors",
+                headers: { "Accept": "application/json" }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                activeCadApiUrl = url;
+                connected = true;
+                statusEl.innerHTML = `🟢 ローカル解析サービス稼働中`;
+                statusEl.style.background = "#dcfce7";
+                statusEl.style.color = "#15803d";
+                if (alertEl) alertEl.style.display = "none";
+                break;
+            }
+        } catch (e) {
+            // 次の候補を試行
         }
-    } catch (err) {
+    }
+
+    if (!connected) {
         statusEl.innerHTML = "⚪ 未接続 (Port: 5005)";
         statusEl.style.background = "#fee2e2";
         statusEl.style.color = "#b91c1c";
@@ -111,7 +120,7 @@ async function runSlotAutoComparison() {
         await Promise.all(fetchTasks);
 
         // ローカル解析サービス (Port: 5005) へ一括送信
-        const res = await fetch(`${CAD_LOCAL_API_URL}/api/compare`, {
+        const res = await fetch(`${activeCadApiUrl}/api/compare`, {
             method: "POST",
             mode: "cors",
             body: fd
@@ -178,7 +187,7 @@ async function runManualCadComparison() {
     if (fileElev) fd.append("elevation", fileElev);
 
     try {
-        const res = await fetch(`${CAD_LOCAL_API_URL}/api/compare`, {
+        const res = await fetch(`${activeCadApiUrl}/api/compare`, {
             method: "POST",
             mode: "cors",
             body: fd
