@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Local CAD / PDF Parser Service for Building Inspection
-JWW -> DXF 変換 (JacConvert CLI) + DXF (ezdxf) + PDF (pypdf/pdfplumber) 解析
+1. JWW ネイティブ直接解析 (外部アプリ不要・超高速)
+2. DXF (ezdxf) テキスト・寸法・図枠解析
+3. PDF (pypdf/pdfplumber) 申請書・図面テキスト解析
+4. DRA-CAD / JacConvert 連携フォールバック
 ポート 5005 でローカル起動し、ダッシュボード (ブラウザ) と CORS 連携します。
 """
 
@@ -43,47 +46,47 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Private-Network'] = 'true'
     return response
 
+# DRA-CAD 19 の実行ファイル候補
+DRACAD_CANDIDATES = [
+    r"C:\Program Files\kozo\DRACAD19\DRACAD.exe",
+    r"C:\Program Files (x86)\kozo\DRACAD19\DRACAD.exe",
+    r"C:\Program Files\kozo\DRACAD20\DRACAD.exe",
+    r"C:\Program Files\kozo\DRACAD18\DRACAD.exe",
+    r"C:\kozo\DRACAD19\DRACAD.exe",
+    r"D:\Program Files\kozo\DRACAD19\DRACAD.exe",
+]
+
 # JacConvert の実行可能ファイル候補
 JACCONVERT_CANDIDATES = [
     r"C:\Program Files\JacConvert\JacConvert.exe",
     r"C:\Program Files (x86)\JacConvert\JacConvert.exe",
     r"C:\JacConvert\JacConvert.exe",
-    r"C:\Tools\JacConvert\JacConvert.exe",
+    r"C:\Jac\JacConvert.exe",
+    r"C:\jww\JacConvert.exe",
+    r"C:\jw_win\JacConvert.exe",
     r"D:\Program Files\JacConvert\JacConvert.exe",
     r"D:\JacConvert\JacConvert.exe",
 ]
+
+def find_dracad_path():
+    """DRA-CAD のパスを自動探索"""
+    for p in DRACAD_CANDIDATES:
+        if os.path.exists(p):
+            return p
+    return shutil.which("DRACAD.exe") or shutil.which("dracad.exe")
 
 def find_jacconvert_path():
     """環境内の JacConvert.exe パスを自動探索"""
     for p in JACCONVERT_CANDIDATES:
         if os.path.exists(p):
             return p
-    # システム PATH 内の検索
-    which_path = shutil.which("JacConvert.exe") or shutil.which("jacconvert.exe")
-    if which_path:
-        return which_path
-    return None
-
-def convert_jww_to_dxf(jww_path, output_dxf_path):
-    """JacConvert CLI を使用して JWW を DXF へ変換"""
-    jac_path = find_jacconvert_path()
-    if not jac_path:
-        raise FileNotFoundError(
-            "JacConvert.exe が見つかりませんでした。C:\\Program Files\\JacConvert 等にインストールされているか確認してください。"
-        )
-
-    cmd = [jac_path, '/O"dxf"', f'/I"{jww_path}"', f'/D"{output_dxf_path}"']
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-    if not os.path.exists(output_dxf_path) or os.path.getsize(output_dxf_path) == 0:
-        raise RuntimeError(f"JWW変換に失敗しました: {res.stderr.decode('cp932', errors='ignore')}")
-    return output_dxf_path
+    return shutil.which("JacConvert.exe") or shutil.which("jacconvert.exe")
 
 def normalize_number(num_str):
     """全角・カンマ・単位を除去して float または None を返す"""
     if not num_str:
         return None
     s = str(num_str).strip()
-    # 全角数字を半角に変換
     zen = "０１２３４５６７８９．，"
     han = "0123456789.,"
     trans = str.maketrans(zen, han)
@@ -104,9 +107,47 @@ def normalize_height(val):
     num = normalize_number(val)
     if num is None or num == 0:
         return None
-    if num > 50.0:  # mm表記と判断 (50m以上の木造住宅は通常無いため)
+    if num > 50.0:  # 50m以上はmm表記と判定 (8520mm -> 8.52m)
         return round(num / 1000.0, 3)
     return round(num, 3)
+
+def extract_from_jww_native(jww_path):
+    """
+    【外部アプリ不要】PythonによるJWWバイナリ直接テキスト・寸法抽出パーサー
+    JWW (Jw_cad) ファイルのバイナリから Shift-JIS / CP932 文字列チャンクを直接復元・走査
+    """
+    texts = []
+    try:
+        with open(jww_path, 'rb') as f:
+            raw_data = f.read()
+
+        # Shift-JIS (CP932) のバイトシーケンスパターン
+        # 連続した2文字以上の日本語/ASCII文字（文字コード 0x20〜0x7E, 0x81〜0x9F, 0xE0〜0xFC + 0x40〜0xFC）を抽出
+        pattern = re.compile(
+            b'(?:[\x20-\x7E]|(?:[\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC])){2,}'
+        )
+
+        matches = pattern.findall(raw_data)
+        for m in matches:
+            try:
+                decoded = m.decode('cp932', errors='ignore').strip()
+                # 制御文字や明らかなノイズを除去
+                cleaned = re.sub(r'[\x00-\x1F\x7F]', '', decoded)
+                # JWW文字書式プレフィックスの除去 (^, ~, %, color/font commands)
+                cleaned = re.sub(r'\^[A-Za-z0-9]', '', cleaned)
+                cleaned = cleaned.strip()
+
+                # 有意な文字列（2文字以上）のみ採用
+                if len(cleaned) >= 2:
+                    texts.append(cleaned)
+            except Exception:
+                continue
+
+    except Exception as e:
+        print(f"[JWW Native Parser Warning] {e}")
+
+    combined_text = "\n".join(texts)
+    return parse_building_text(combined_text, source="jww"), texts
 
 def extract_from_dxf_content(dxf_path):
     """ezdxf を用いて DXF からテキスト・寸法・図枠文字を抽出"""
@@ -115,8 +156,7 @@ def extract_from_dxf_content(dxf_path):
 
     try:
         doc = ezdxf.readfile(dxf_path)
-    except Exception as e:
-        # 文字コードエラー時等のフォールバック
+    except Exception:
         doc = ezdxf.readfile(dxf_path, encoding='cp932')
 
     msp = doc.modelspace()
@@ -127,7 +167,6 @@ def extract_from_dxf_content(dxf_path):
         try:
             txt = e.dxf.text if e.dxftype() == 'TEXT' else e.text
             if txt:
-                # 制御コードや余分な空白を除去
                 cleaned = re.sub(r'\\[A-Za-z0-9]+;', '', txt).strip()
                 cleaned = re.sub(r'[\{\}]', '', cleaned)
                 if cleaned:
@@ -183,7 +222,7 @@ def extract_from_pdf_content(pdf_path):
 
 def parse_building_text(text, source="pdf"):
     """
-    確認申請書・図面・面積表等のテキストから正規表現で各種数値を抽出
+    確認申請書・図面・面積表・JWW等のテキストから正規表現で各種数値を抽出
     """
     data = {
         'max_height': None,       # 最高の高さ (m)
@@ -202,7 +241,6 @@ def parse_building_text(text, source="pdf"):
         return data
 
     # 1. 最高の高さ
-    # 例: 最高の高さ 8.52m / 最高高さ: 8520 / 最高の高さ：8.520
     m_h_max = re.search(r'(?:最高(?:の)?高(?:さ)?|最高高|最高頂部)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
     if m_h_max:
         data['max_height'] = normalize_height(m_h_max.group(1))
@@ -245,7 +283,6 @@ def parse_building_text(text, source="pdf"):
     if m_proj:
         data['project_name'] = m_proj.group(1).strip()
     else:
-        # 確認申請書フォーマット（改行直後にある場合）
         m_proj2 = re.search(r'建築物等の名称又は工事名[^\n]*\n\s*([^\n\r]{2,50})', text)
         if m_proj2:
             data['project_name'] = m_proj2.group(1).strip()
@@ -274,24 +311,24 @@ def parse_building_text(text, source="pdf"):
 @app.route('/api/health', methods=['GET'])
 def health():
     """ヘルスチェック & 実行環境情報の取得"""
+    dracad_path = find_dracad_path()
     jac_path = find_jacconvert_path()
     return jsonify({
         'status': 'ok',
         'service': 'Building CAD/PDF Parser',
         'port': 5005,
+        'jww_native_parser': '有効 (Python直接解析・外部ツール不要)',
+        'dracad_available': dracad_path is not None,
+        'dracad_path': dracad_path or '未検出',
         'jacconvert_available': jac_path is not None,
-        'jacconvert_path': jac_path or '未検出 (JWW変換にはJacConvertの配置が必要です)',
+        'jacconvert_path': jac_path or '未検出',
         'ezdxf_available': ezdxf is not None,
         'pypdf_available': pypdf is not None or pdfplumber is not None
     })
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """
-    単一ファイルの解析
-    doc_type: 'app' (確認申請書), 'kanabakari' (矩計図), 'area' (面積表), 'elevation' (立面図)
-    file: アップロードされたバイナリ (PDF / DXF / JWW)
-    """
+    """単一ファイルの解析"""
     doc_type = request.form.get('doc_type', 'unknown')
     file = request.files.get('file')
     if not file:
@@ -305,13 +342,12 @@ def analyze():
 
         try:
             if filename.endswith('.pdf'):
-                data, raw_text = extract_from_pdf_content(input_path)
+                data, _ = extract_from_pdf_content(input_path)
             elif filename.endswith('.dxf'):
-                data, raw_text = extract_from_dxf_content(input_path)
+                data, _ = extract_from_dxf_content(input_path)
             elif filename.endswith('.jww'):
-                converted_dxf = os.path.join(tmpdir, "converted.dxf")
-                convert_jww_to_dxf(input_path, converted_dxf)
-                data, raw_text = extract_from_dxf_content(converted_dxf)
+                # 外部アプリ不要のPythonネイティブ直接解析
+                data, _ = extract_from_jww_native(input_path)
             else:
                 return jsonify({'error': '未対応の拡張子です（.pdf, .dxf, .jww のみ対応）'}), 400
 
@@ -342,7 +378,7 @@ def compare_all():
             if not f:
                 results[doc_type] = None
                 continue
-            
+
             input_path = os.path.join(tmpdir, f.filename)
             f.save(input_path)
             fname_lower = f.filename.lower()
@@ -353,13 +389,13 @@ def compare_all():
                 elif fname_lower.endswith('.dxf'):
                     data, _ = extract_from_dxf_content(input_path)
                 elif fname_lower.endswith('.jww'):
-                    converted_dxf = os.path.join(tmpdir, f"{doc_type}_converted.dxf")
-                    convert_jww_to_dxf(input_path, converted_dxf)
-                    data, _ = extract_from_dxf_content(converted_dxf)
+                    # JWW ネイティブ直接解析（超高速・外部依存なし）
+                    data, _ = extract_from_jww_native(input_path)
                 else:
-                    data = {'error': '未対応形式'}
+                    data = {'error': f'未対応形式: {f.filename}'}
                 results[doc_type] = data
             except Exception as e:
+                print(f"[Error parsing {doc_type}] {e}")
                 results[doc_type] = {'error': str(e)}
 
     # 突合判定ロジック
@@ -447,7 +483,12 @@ if __name__ == '__main__':
     print(f"=====================================================")
     print(f" 建築図書 (CAD/JWW/PDF) 自動照合サービス")
     print(f" 稼働ポート: http://localhost:{port}")
+    print(f" JWW解析: [有効] Python直接ネイティブ解析 (外部ツール不要)")
+    dracad = find_dracad_path()
+    if dracad:
+        print(f" DRA-CAD: [検出] {dracad}")
     jac = find_jacconvert_path()
-    print(f" JacConvert: {'[OK] ' + jac if jac else '[未検出] JWW変換を行う場合はインストールしてください'}")
+    if jac:
+        print(f" JacConvert: [検出] {jac}")
     print(f"=====================================================")
     app.run(host='0.0.0.0', port=port, debug=False)

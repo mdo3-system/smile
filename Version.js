@@ -206,8 +206,9 @@
 // 1.6.44: start_cad_parser.bat への依存ライブラリ（ezdxf/pypdf/flask-cors等）自動インストール処理の追加およびエラー停止時の画面保持（pause）実装
 // 1.6.45: start_cad_parser.bat の文字コード依存を排除するASCII英語化、および協力業者マスター（subcontractors_list.php）の動作・権限チェック
 // 1.6.46: スロット自動照合時の詳細プログレス表示（ステップ1/2/3）、credentials付与、および手動選択ファイルとのハイブリッド統合
+// 1.6.47: JWWバイナリ直接ネイティブ解析パーサー（extract_from_jww_native・外部ツール不要・超高速化）およびDRA-CAD 19自動探索の追加
 
-window.APP_VERSION = "1.6.46";
+window.APP_VERSION = "1.6.47";
 const APP_LAST_UPDATED = '2026-09-29';
 
 
