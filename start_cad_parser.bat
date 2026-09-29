@@ -8,9 +8,9 @@ echo ====================================================
 echo.
 echo [1/2] Checking and installing required Python packages...
 
-py -3 -m pip install flask flask-cors ezdxf pypdf pdfplumber > nul 2>&1
+py -3 -m pip install flask flask-cors ezdxf pypdf pdfplumber pywin32 > nul 2>&1
 if errorlevel 1 (
-    python -m pip install flask flask-cors ezdxf pypdf pdfplumber
+    python -m pip install flask flask-cors ezdxf pypdf pdfplumber pywin32
 )
 
 echo.

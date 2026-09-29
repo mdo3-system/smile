@@ -111,6 +111,98 @@ def normalize_height(val):
         return round(num / 1000.0, 3)
     return round(num, 3)
 
+def convert_jww_to_dxf_via_dracad(jww_path, dxf_path):
+    """
+    DRA-CAD 19 の COM オートメーションまたはプロセス呼び出しを用いて JWW を DXF に自動変換
+    """
+    abs_jww = os.path.abspath(jww_path)
+    abs_dxf = os.path.abspath(dxf_path)
+
+    # 1. COM Automation による高速自動変換
+    try:
+        import win32com.client
+        progids = ["DRACAD.Application", "DRACAD19.Application", "DRACAD20.Application", "DRACAD18.Application"]
+        for progid in progids:
+            try:
+                cad = win32com.client.Dispatch(progid)
+                if cad:
+                    print(f"    [DRA-CAD] COMオートメーション接続成功 ({progid})")
+                    doc = None
+                    try:
+                        doc = cad.Documents.Open(abs_jww)
+                    except Exception:
+                        try:
+                            doc = cad.Open(abs_jww)
+                        except Exception:
+                            pass
+                    
+                    if doc:
+                        try:
+                            doc.SaveAs(abs_dxf)
+                        except Exception:
+                            try:
+                                doc.SaveAs(abs_dxf, 2) # DXF format
+                            except Exception:
+                                pass
+                        try:
+                            doc.Close(False)
+                        except Exception:
+                            pass
+                        
+                        if os.path.exists(abs_dxf) and os.path.getsize(abs_dxf) > 0:
+                            print(f"    ✓ [DRA-CAD] DXF自動変換成功: {os.path.basename(abs_dxf)}")
+                            return True
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # 2. DRA-CAD 実行ファイル経由のバッチ変換（VBScript / WScript 連携）
+    dracad_exe = find_dracad_path()
+    if dracad_exe and os.path.exists(dracad_exe):
+        try:
+            vbs_content = f'''
+On Error Resume Next
+Set cad = CreateObject("DRACAD.Application")
+If cad Is Nothing Then Set cad = CreateObject("DRACAD19.Application")
+If Not cad Is Nothing Then
+    Set doc = cad.Documents.Open("{abs_jww.replace('\\', '\\\\')}")
+    If doc Is Nothing Then Set doc = cad.Open("{abs_jww.replace('\\', '\\\\')}")
+    If Not doc Is Nothing Then
+        doc.SaveAs "{abs_dxf.replace('\\', '\\\\')}"
+        doc.Close False
+    End If
+    cad.Quit
+End If
+'''
+            vbs_path = os.path.join(tempfile.gettempdir(), "_dracad_conv.vbs")
+            with open(vbs_path, "w", encoding="shift_jis") as vf:
+                vf.write(vbs_content)
+            
+            subprocess.run(["cscript.exe", "//nologo", vbs_path], capture_output=True, timeout=15)
+            if os.path.exists(abs_dxf) and os.path.getsize(abs_dxf) > 0:
+                print(f"    ✓ [DRA-CAD VBS] DXF自動変換成功: {os.path.basename(abs_dxf)}")
+                return True
+        except Exception:
+            pass
+
+    return False
+
+def convert_jww_to_dxf_via_jacconvert(jww_path, dxf_path):
+    """JacConvert CLI による JWW -> DXF 変換"""
+    jac = find_jacconvert_path()
+    if not jac or not os.path.exists(jac):
+        return False
+    try:
+        cmd = [jac, f"-f{os.path.abspath(jww_path)}", f"-o{os.path.abspath(dxf_path)}", "-c", "-q"]
+        subprocess.run(cmd, capture_output=True, timeout=10)
+        if os.path.exists(dxf_path) and os.path.getsize(dxf_path) > 0:
+            print(f"    ✓ [JacConvert] DXF自動変換成功: {os.path.basename(dxf_path)}")
+            return True
+    except Exception:
+        pass
+    return False
+
 def extract_from_jww_native(jww_path):
     """
     【外部アプリ不要】PythonによるJWWバイナリ直接テキスト・寸法抽出パーサー
@@ -394,8 +486,19 @@ def compare_all():
                 elif fname_lower.endswith('.dxf'):
                     data, _ = extract_from_dxf_content(input_path)
                 elif fname_lower.endswith('.jww'):
-                    # JWW ネイティブ直接解析（超高速・外部依存なし）
-                    data, _ = extract_from_jww_native(input_path)
+                    # 1. DRA-CAD 19 による自動DXF変換を最優先試行
+                    converted_dxf = os.path.join(tmpdir, os.path.splitext(f.filename)[0] + "_dracad.dxf")
+                    success = convert_jww_to_dxf_via_dracad(input_path, converted_dxf)
+                    if not success:
+                        # 2. JacConvert による変換試行
+                        success = convert_jww_to_dxf_via_jacconvert(input_path, converted_dxf)
+                    
+                    if success and os.path.exists(converted_dxf):
+                        print(f"    ✓ [{doc_type}] DXF変換成功 ➔ 高精度DXF解析を実行します")
+                        data, _ = extract_from_dxf_content(converted_dxf)
+                    else:
+                        print(f"    ℹ [{doc_type}] DXF自動変換スキップ ➔ Python直接ネイティブ解析を実行します")
+                        data, _ = extract_from_jww_native(input_path)
                 else:
                     data = {'error': f'未対応形式: {f.filename}'}
                 results[doc_type] = data
@@ -491,12 +594,14 @@ if __name__ == '__main__':
     print(f"=====================================================")
     print(f" 建築図書 (CAD/JWW/PDF) 自動照合サービス")
     print(f" 稼働ポート: http://localhost:{port}")
-    print(f" JWW解析: [有効] Python直接ネイティブ解析 (外部ツール不要)")
     dracad = find_dracad_path()
     if dracad:
-        print(f" DRA-CAD: [検出] {dracad}")
+        print(f" DRA-CAD: [検出] 自動DXF変換連携 有効 ({dracad})")
+    else:
+        print(f" DRA-CAD: [COM/プロセス探索]")
     jac = find_jacconvert_path()
     if jac:
         print(f" JacConvert: [検出] {jac}")
+    print(f" JWW解析: [有効] DRA-CAD/JacConvert DXF変換 ➔ Pythonネイティブ解析")
     print(f"=====================================================")
     app.run(host='0.0.0.0', port=port, debug=False)
