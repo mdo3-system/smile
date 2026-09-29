@@ -3,16 +3,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once __DIR__ . '/session_config.php';
-require_once __DIR__ . '/db_connect.php';
 
-// 管理者ユーザーのセッションファイルを作成してシミュレート
-$session_id = 'test_diag_admin_sess_' . time();
-session_id($session_id);
-session_start();
 $_SESSION['user_id'] = 1;
 $_SESSION['role'] = 'admin';
 $_SESSION['contact_name'] = '管理者';
 $_SESSION['email'] = 'admin@example.com';
+$session_id = session_id();
 session_write_close();
 
 $base_url = 'https://thanks.work/system';
@@ -21,7 +17,7 @@ $cookie_header = "PHPSESSID={$session_id}";
 function test_url($url, $cookie) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Cookie: {$cookie}"]);
+    curl_setopt($ch, CURLOPT_COOKIE, $cookie);
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     
@@ -40,7 +36,7 @@ function test_url($url, $cookie) {
     }
 }
 
-echo "=== DIAGNOSTIC HTTP TEST ===\n";
+echo "=== DIAGNOSTIC HTTP TEST (WITH VALID SESSION) ===\n";
 test_url("{$base_url}/index.php", $cookie_header);
 test_url("{$base_url}/project_detail.php?id=46", $cookie_header);
 test_url("{$base_url}/project_detail.php?id=61", $cookie_header);
