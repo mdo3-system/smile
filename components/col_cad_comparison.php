@@ -13,33 +13,31 @@ $slot_files = [
     'elevation' => null     // 立面図
 ];
 
+// 有効なファイル（他ファイルに記載でない、実ファイルIDが存在するもの）を探索するヘルパー
+function getFirstValidFile($files_by_cat, $cats) {
+    foreach ($cats as $cat) {
+        if (!empty($files_by_cat[$cat])) {
+            foreach ($files_by_cat[$cat] as $f) {
+                if (!empty($f['drive_file_id']) && $f['file_name'] !== '【他ファイルに記載】') {
+                    return $f;
+                }
+            }
+        }
+    }
+    return null;
+}
+
 // 1. 確認申請書
-if (!empty($files_by_cat['app_doc'])) {
-    $slot_files['app'] = $files_by_cat['app_doc'][0];
-}
+$slot_files['app'] = getFirstValidFile($files_by_cat, ['app_doc']);
 
-// 2. 矩計図 (cad_section, pdf_section, 専門図書カスタム等)
-if (!empty($files_by_cat['cad_section'])) {
-    $slot_files['kanabakari'] = $files_by_cat['cad_section'][0];
-} elseif (!empty($files_by_cat['pdf_section'])) {
-    $slot_files['kanabakari'] = $files_by_cat['pdf_section'][0];
-}
+// 2. 矩計図
+$slot_files['kanabakari'] = getFirstValidFile($files_by_cat, ['cad_section', 'pdf_section', 'cad_design_all', 'all_in_one_zip']);
 
-// 3. 面積表 / 求積図 (pdf_area_calc, cad_plan_1f, pdf_plan)
-if (!empty($files_by_cat['pdf_area_calc'])) {
-    $slot_files['area'] = $files_by_cat['pdf_area_calc'][0];
-} elseif (!empty($files_by_cat['cad_plan_1f'])) {
-    $slot_files['area'] = $files_by_cat['cad_plan_1f'][0];
-} elseif (!empty($files_by_cat['pdf_plan'])) {
-    $slot_files['area'] = $files_by_cat['pdf_plan'][0];
-}
+// 3. 面積表 / 求積図
+$slot_files['area'] = getFirstValidFile($files_by_cat, ['pdf_area_calc', 'cad_plan_1f', 'pdf_plan', 'cad_design_all', 'all_in_one_zip']);
 
-// 4. 立面図 (cad_elevation, pdf_elevation)
-if (!empty($files_by_cat['cad_elevation'])) {
-    $slot_files['elevation'] = $files_by_cat['cad_elevation'][0];
-} elseif (!empty($files_by_cat['pdf_elevation'])) {
-    $slot_files['elevation'] = $files_by_cat['pdf_elevation'][0];
-}
+// 4. 立面図
+$slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'pdf_elevation', 'cad_design_all', 'all_in_one_zip']);
 ?>
 
 <div class="box" id="cad_comparison_box" style="margin-top:15px; background:#f0fdf4; border:2px solid #22c55e; border-radius:6px; padding:12px;">

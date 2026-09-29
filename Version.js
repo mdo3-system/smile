@@ -205,8 +205,9 @@
 // 1.6.43: ローカルCAD解析エージェントのPrivate Network Access / CORSヘッダー完全対応、127.0.0.1フォールバック接続、およびstart_cad_parser.batのパス固定改善
 // 1.6.44: start_cad_parser.bat への依存ライブラリ（ezdxf/pypdf/flask-cors等）自動インストール処理の追加およびエラー停止時の画面保持（pause）実装
 // 1.6.45: start_cad_parser.bat の文字コード依存を排除するASCII英語化、および協力業者マスター（subcontractors_list.php）の動作・権限チェック
+// 1.6.46: スロット自動照合時の詳細プログレス表示（ステップ1/2/3）、credentials付与、および手動選択ファイルとのハイブリッド統合
 
-window.APP_VERSION = "1.6.45";
+window.APP_VERSION = "1.6.46";
 const APP_LAST_UPDATED = '2026-09-29';
 
 

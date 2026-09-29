@@ -70,54 +70,82 @@ async function runSlotAutoComparison() {
     const slotFiles = window.SLOT_DOC_FILES || {};
     const projectId = window.CAD_COMPARISON_PROJECT_ID;
 
-    if (!slotFiles.app && !slotFiles.kanabakari && !slotFiles.area && !slotFiles.elevation) {
-        alert("スロットに提出された図書（確認申請書・矩計図・面積表・立面図）がまだありません。\n図書がアップロードされた後に実行してください。");
+    const fileAppManual = document.getElementById("cad_file_app")?.files[0];
+    const fileKanaManual = document.getElementById("cad_file_kana")?.files[0];
+    const fileAreaManual = document.getElementById("cad_file_area")?.files[0];
+    const fileElevManual = document.getElementById("cad_file_elev")?.files[0];
+
+    const hasAnySlot = !!(slotFiles.app || slotFiles.kanabakari || slotFiles.area || slotFiles.elevation);
+    const hasAnyManual = !!(fileAppManual || fileKanaManual || fileAreaManual || fileElevManual);
+
+    if (!hasAnySlot && !hasAnyManual) {
+        alert("スロットに提出された図書（確認申請書・矩計図・面積表・立面図）がまだありません。\n図書がアップロードされた後に実行するか、下部の「手動でファイルを選択」から指定してください。");
         return;
     }
 
     const progressEl = document.getElementById("cad_compare_progress");
     const btnRun = document.getElementById("btn_run_slot_compare");
-    if (progressEl) progressEl.style.display = "block";
+    if (progressEl) {
+        progressEl.style.display = "block";
+        progressEl.innerHTML = "⏳ [1/3] 提出図書ファイルをダウンロード中...";
+    }
     if (btnRun) btnRun.disabled = true;
 
     try {
         const fd = new FormData();
         const fetchTasks = [];
+        let fetchedCount = 0;
 
         // 1. 確認申請書
-        if (slotFiles.app) {
+        if (fileAppManual) {
+            fd.append("app_doc", fileAppManual);
+            fetchedCount++;
+        } else if (slotFiles.app) {
             fetchTasks.push(
                 fetchDocBlob(projectId, slotFiles.app.file_category, slotFiles.app.file_name)
-                    .then(file => { if (file) fd.append("app_doc", file); })
+                    .then(file => { if (file) { fd.append("app_doc", file); fetchedCount++; } })
             );
         }
 
         // 2. 矩計図
-        if (slotFiles.kanabakari) {
+        if (fileKanaManual) {
+            fd.append("kanabakari", fileKanaManual);
+            fetchedCount++;
+        } else if (slotFiles.kanabakari) {
             fetchTasks.push(
                 fetchDocBlob(projectId, slotFiles.kanabakari.file_category, slotFiles.kanabakari.file_name)
-                    .then(file => { if (file) fd.append("kanabakari", file); })
+                    .then(file => { if (file) { fd.append("kanabakari", file); fetchedCount++; } })
             );
         }
 
         // 3. 面積表
-        if (slotFiles.area) {
+        if (fileAreaManual) {
+            fd.append("area_calc", fileAreaManual);
+            fetchedCount++;
+        } else if (slotFiles.area) {
             fetchTasks.push(
                 fetchDocBlob(projectId, slotFiles.area.file_category, slotFiles.area.file_name)
-                    .then(file => { if (file) fd.append("area_calc", file); })
+                    .then(file => { if (file) { fd.append("area_calc", file); fetchedCount++; } })
             );
         }
 
         // 4. 立面図
-        if (slotFiles.elevation) {
+        if (fileElevManual) {
+            fd.append("elevation", fileElevManual);
+            fetchedCount++;
+        } else if (slotFiles.elevation) {
             fetchTasks.push(
                 fetchDocBlob(projectId, slotFiles.elevation.file_category, slotFiles.elevation.file_name)
-                    .then(file => { if (file) fd.append("elevation", file); })
+                    .then(file => { if (file) { fd.append("elevation", file); fetchedCount++; } })
             );
         }
 
         // すべての図書ファイルを非同期で取得
         await Promise.all(fetchTasks);
+
+        if (progressEl) {
+            progressEl.innerHTML = `⏳ [2/3] ローカル解析サービス（Port: 5005）へ送信中... (対象ファイル: ${fetchedCount}件)`;
+        }
 
         // ローカル解析サービス (Port: 5005) へ一括送信
         const res = await fetch(`${activeCadApiUrl}/api/compare`, {
@@ -127,7 +155,12 @@ async function runSlotAutoComparison() {
         });
 
         if (!res.ok) {
-            throw new Error(`解析サービスエラー (HTTP ${res.status})`);
+            const errText = await res.text().catch(() => "");
+            throw new Error(`解析サービスエラー (HTTP ${res.status}): ${errText}`);
+        }
+
+        if (progressEl) {
+            progressEl.innerHTML = "⏳ [3/3] 照合結果を集計・保存中...";
         }
 
         const resData = await res.json();
@@ -135,15 +168,16 @@ async function runSlotAutoComparison() {
             renderCadComparison(resData);
             // サーバー側DBに自動保存
             saveCadComparisonToDb(resData);
-            alert("スロット最新図書の自動解析および照合が完了しました！");
+            if (progressEl) progressEl.innerHTML = "✅ 自動照合が完了しました！";
+            setTimeout(() => { if (progressEl) progressEl.style.display = "none"; }, 3000);
+            alert("図書の自動解析および照合が完了しました！");
         } else {
             alert("解析エラー: " + (resData.error || "不明なエラー"));
         }
     } catch (err) {
         console.error("スロット図書自動照合エラー:", err);
-        alert(`ローカル解析サービスとの通信に失敗しました。\n'start_cad_parser.bat' が起動しているか確認してください。\n詳細: ${err.message}`);
+        alert(`照合処理中にエラーが発生しました。\n\n詳細: ${err.message}\n\n※'start_cad_parser.bat' の黒い画面が開いているか確認してください。`);
     } finally {
-        if (progressEl) progressEl.style.display = "none";
         if (btnRun) btnRun.disabled = false;
     }
 }
@@ -152,7 +186,7 @@ async function runSlotAutoComparison() {
 async function fetchDocBlob(projectId, category, filename) {
     try {
         const url = `api_get_project_doc_file.php?project_id=${projectId}&category=${encodeURIComponent(category)}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) {
             console.warn(`図書ファイル取得失敗 (${category}): HTTP ${res.status}`);
             return null;
