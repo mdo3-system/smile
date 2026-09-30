@@ -657,7 +657,7 @@ SMS送付する場合がございますので、ご依頼いただける際は�
     }
     </script>
     <?php if ($is_admin): ?>
-        <script src="assets/js/cad_comparison.js"></script>
+        <script src="assets/js/cad_comparison.js?v=<?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : 'v1.6.59' ?>"></script>
     <?php endif; ?>
 </body>
 </html>

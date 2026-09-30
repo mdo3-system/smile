@@ -190,8 +190,13 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                 <h4 style="margin:0; font-size:13px; font-weight:bold; color:#0f172a;">建築図書 整合性確認照合票</h4>
                 <div style="font-size:10px; color:#64748b;">案件: <?= htmlspecialchars($project_info['project_name'] ?? '案件詳細') ?> (ID: <?= $project_id ?>)</div>
             </div>
-            <div id="cad_report_date" style="font-size:10px; color:#64748b;">
-                照合日: <?= date('Y/m/d H:i') ?>
+            <div style="text-align:right;">
+                <div style="font-size:10px; color:#15803d; font-weight:bold; background:#dcfce7; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:2px;">
+                    バージョン: <?= defined('SYSTEM_VERSION') ? SYSTEM_VERSION : 'v1.6.59' ?>
+                </div>
+                <div id="cad_report_date" style="font-size:10px; color:#64748b;">
+                    照合日: <?= date('Y/m/d H:i') ?>
+                </div>
             </div>
         </div>
 

@@ -374,9 +374,14 @@ def extract_from_dxf_content(dxf_path):
 
     # 4. RAWテキスト走査結果をマージ（ezdxfが破損スキップした非標準要素・寸法値も100%回収）
     raw_texts = extract_from_dxf_raw_fallback(dxf_path)
-    for rt in raw_texts:
-        if rt not in texts:
-            texts.append(rt)
+    has_surrogates = any(any(0xD800 <= ord(c) <= 0xDFFF for c in t) for t in texts)
+    if has_surrogates or not texts:
+        # ezdxfが誤ったエンコーディングでサロゲート文字を生成した場合は、文字コード自動判別のRAWテキストを完全採用
+        texts = raw_texts
+    else:
+        for rt in raw_texts:
+            if rt not in texts:
+                texts.append(rt)
 
     combined_text = "\n".join(texts)
     return parse_building_text(combined_text, source="cad", texts_list=texts), texts
@@ -464,66 +469,82 @@ def extract_height_data(text, texts_list=None):
                     if res['eaves_height'] is None: res['eaves_height'] = v2
                     break
 
-        # B. ラベル走査
+        # B. ラベル走査（最近傍順: -1, +1, -2, +2, -3, +3, -4, +4, -5, +5 で最も近い寸法を最優先）
+        neighbor_offsets = [-1, 1, -2, 2, -3, 3, -4, 4, -5, 5]
         for idx, t in enumerate(texts_list):
             # 最高高さの探索
             if res['max_height'] is None and re.search(r'(?:最高(?:の)?高(?:さ)?|最高部|最高高|棟高)', t):
-                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-5):idx]
-                for candidate in candidates:
-                    if any(c in candidate for c in ['R', 'H', '-', '/', ':', '図', '日', '年']): continue
-                    m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate)
-                    if m:
-                        val = normalize_height(m.group(1))
-                        if val and 4.0 <= val <= 25.0:
-                            res['max_height'] = val
-                            break
+                for off in neighbor_offsets:
+                    c_idx = idx + off
+                    if 0 <= c_idx < len(texts_list):
+                        candidate = texts_list[c_idx]
+                        if any(c in candidate for c in ['R', 'H', '-', '/', ':', '図', '日', '年', '軒']): continue
+                        candidate_clean = candidate.replace(',', '')
+                        m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate_clean)
+                        if m:
+                            val = normalize_height(m.group(1))
+                            if val and 4.0 <= val <= 25.0:
+                                res['max_height'] = val
+                                break
 
             # 軒高の探索
             if res['eaves_height'] is None and re.search(r'(?:最高の軒高|軒高|軒の高さ)', t):
-                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-5):idx]
-                for candidate in candidates:
-                    if any(k in candidate for k in ['PH', 'FL', '天端', '土間', '基礎', 'パラペット', 'R', 'H', '日', '年']):
-                        continue
-                    m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate)
-                    if m:
-                        val = normalize_height(m.group(1))
-                        # 2階建て住宅の軒高は通常 2.5m 〜 7.5m
-                        if val and 2.5 <= val <= 7.5:
-                            res['eaves_height'] = val
-                            break
+                for off in neighbor_offsets:
+                    c_idx = idx + off
+                    if 0 <= c_idx < len(texts_list):
+                        candidate = texts_list[c_idx]
+                        if any(k in candidate for k in ['PH', 'FL', '天端', '土間', '基礎', 'パラペット', 'R', 'H', '日', '年']):
+                            continue
+                        candidate_clean = candidate.replace(',', '')
+                        m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate_clean)
+                        if m:
+                            val = normalize_height(m.group(1))
+                            # 2階建て住宅の軒高は通常 2.5m 〜 7.5m
+                            if val and 2.5 <= val <= 7.5:
+                                res['eaves_height'] = val
+                                break
 
             # 1FLの探索
             if res['floor_1_height'] is None and re.search(r'(?:1FL|1階床高)', t):
-                candidates = texts_list[idx+1:min(len(texts_list), idx+5)] + texts_list[max(0, idx-4):idx]
-                for candidate in candidates:
-                    m = re.search(r'([1-9][0-9]{2,3}|0\.[0-9]{2,3})', candidate)
-                    if m:
-                        val = normalize_height(m.group(1))
-                        if val and 0.1 <= val <= 2.0:
-                            res['floor_1_height'] = val
-                            break
+                for off in neighbor_offsets:
+                    c_idx = idx + off
+                    if 0 <= c_idx < len(texts_list):
+                        candidate = texts_list[c_idx]
+                        candidate_clean = candidate.replace(',', '')
+                        m = re.search(r'([1-9][0-9]{2,3}|0\.[0-9]{2,3})', candidate_clean)
+                        if m:
+                            val = normalize_height(m.group(1))
+                            if val and 0.1 <= val <= 2.0:
+                                res['floor_1_height'] = val
+                                break
 
             # 2FLの探索
             if res['floor_2_height'] is None and re.search(r'(?:2FL|2階床高)', t):
-                candidates = texts_list[idx+1:min(len(texts_list), idx+5)] + texts_list[max(0, idx-4):idx]
-                for candidate in candidates:
-                    m = re.search(r'([1-9][0-9]{3}|[2-4]\.[0-9]{2,3})', candidate)
-                    if m:
-                        val = normalize_height(m.group(1))
-                        if val and 2.0 <= val <= 5.0:
-                            res['floor_2_height'] = val
-                            break
+                for off in neighbor_offsets:
+                    c_idx = idx + off
+                    if 0 <= c_idx < len(texts_list):
+                        candidate = texts_list[c_idx]
+                        candidate_clean = candidate.replace(',', '')
+                        m = re.search(r'([1-9][0-9]{3}|[2-4]\.[0-9]{2,3})', candidate_clean)
+                        if m:
+                            val = normalize_height(m.group(1))
+                            if val and 2.0 <= val <= 5.0:
+                                res['floor_2_height'] = val
+                                break
 
             # 階高の探索
             if res['story_height'] is None and re.search(r'(?:階高|横架材間)', t):
-                candidates = texts_list[idx+1:min(len(texts_list), idx+5)] + texts_list[max(0, idx-4):idx]
-                for candidate in candidates:
-                    m = re.search(r'([1-9][0-9]{3}|[2-3]\.[0-9]{2,3})', candidate)
-                    if m:
-                        val = normalize_height(m.group(1))
-                        if val and 2.2 <= val <= 3.8:
-                            res['story_height'] = val
-                            break
+                for off in neighbor_offsets:
+                    c_idx = idx + off
+                    if 0 <= c_idx < len(texts_list):
+                        candidate = texts_list[c_idx]
+                        candidate_clean = candidate.replace(',', '')
+                        m = re.search(r'([1-9][0-9]{3}|[2-3]\.[0-9]{2,3})', candidate_clean)
+                        if m:
+                            val = normalize_height(m.group(1))
+                            if val and 2.2 <= val <= 3.8:
+                                res['story_height'] = val
+                                break
 
     return res
 
@@ -756,8 +777,67 @@ def health():
         'jacconvert_available': jac_path is not None,
         'jacconvert_path': jac_path or '未検出',
         'ezdxf_available': ezdxf is not None,
-        'pypdf_available': pypdf is not None or pdfplumber is not None
+        'pypdf_available': pypdf is not None or pdfplumber is not None,
+        'gemini_available': bool(os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY'))
     })
+
+def extract_with_gemini_vision(file_path):
+    """
+    Gemini 2.0 / 1.5 Flash によるマルチモーダル図面視覚推論
+    PDF / 画像ファイルを直接解析し、寸法線・引出線・図枠から人間目線で高精度抽出
+    """
+    api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+    if not api_key:
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    for line in f:
+                        if line.startswith('GEMINI_API_KEY='):
+                            api_key = line.strip().split('=', 1)[1].strip('"\'')
+                            break
+            except Exception:
+                pass
+
+    if not api_key:
+        return None
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        sample_file = genai.upload_file(path=file_path)
+        prompt = """
+あなたは建築確認申請・設計図書の専門家です。提示された建築図書（PDFまたは図面画像）を詳細に視覚的に読解し、以下の項目を正確に抽出してJSON形式のみで出力してください。
+マークダウンのコードブロック（```json ... ```）形式で出力してください。
+
+{
+  "max_height": 最高の高さ（GL基準、メートル単位の数値。例: 8.436。見つからない場合はnull）,
+  "eaves_height": 最高の軒の高さ（GL基準、メートル単位の数値。例: 6.076。見つからない場合はnull）,
+  "floor_1_height": 1階床高（1FL、GL基準、メートル単位の数値。例: 0.476。見つからない場合はnull）,
+  "floor_2_height": 2階床高（2FL、GL基準、メートル単位の数値。例: 3.276。見つからない場合はnull）,
+  "story_height": 階高（1階または2階の横架材間等、メートル単位の数値。例: 2.800。見つからない場合はnull）,
+  "building_area": 建築面積（㎡単位の数値。例: 38.07。建蔽率%は除外。見つからない場合はnull）,
+  "floor_1_area": 1階床面積（㎡単位の数値。例: 36.45。見つからない場合はnull）,
+  "floor_2_area": 2階床面積（㎡単位の数値。例: 38.07。見つからない場合はnull）,
+  "total_area": 延べ面積（㎡単位の数値。例: 78.97。容積率%は除外。見つからない場合はnull）,
+  "project_name": "工事名称・物件名（文字列。見つからない場合は空文字）",
+  "client_name": "建築主（文字列。見つからない場合は空文字）",
+  "architect_name": "設計者・事務所名（文字列。見つからない場合は空文字）",
+  "location": "地名地番・所在地（文字列。見つからない場合は空文字）"
+}
+"""
+        response = model.generate_content([sample_file, prompt])
+        res_text = response.text
+        m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', res_text, re.DOTALL)
+        json_str = m.group(1) if m else res_text.strip()
+        data = json.loads(json_str)
+        print(f"    🌟 [Gemini API 視覚推論成功] 抽出データ: {data}")
+        return data
+    except Exception as e:
+        print(f"    ℹ [Gemini API スキップ/エラー: ローカルパーサーへフォールバックします] {e}")
+        return None
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -774,15 +854,21 @@ def analyze():
         file.save(input_path)
 
         try:
-            if filename.endswith('.pdf'):
-                data, _ = extract_from_pdf_content(input_path)
-            elif filename.endswith('.dxf'):
-                data, _ = extract_from_dxf_content(input_path)
-            elif filename.endswith('.jww'):
-                # 外部アプリ不要のPythonネイティブ直接解析
-                data, _ = extract_from_jww_native(input_path)
-            else:
-                return jsonify({'error': '未対応の拡張子です（.pdf, .dxf, .jww のみ対応）'}), 400
+            # 1. Gemini 視覚推論API連携（PDFの場合）
+            data = None
+            if filename.endswith(('.pdf', '.png', '.jpg', '.jpeg')):
+                data = extract_with_gemini_vision(input_path)
+
+            if not data:
+                if filename.endswith('.pdf'):
+                    data, _ = extract_from_pdf_content(input_path)
+                elif filename.endswith('.dxf'):
+                    data, _ = extract_from_dxf_content(input_path)
+                elif filename.endswith('.jww'):
+                    # 外部アプリ不要のPythonネイティブ直接解析
+                    data, _ = extract_from_jww_native(input_path)
+                else:
+                    return jsonify({'error': '未対応の拡張子です（.pdf, .dxf, .jww のみ対応）'}), 400
 
             return jsonify({
                 'status': 'ok',
@@ -823,26 +909,33 @@ def compare_all():
             print(f"  ▶ [{doc_type}] 解析開始: {f.filename} ({file_size_kb} KB)")
 
             try:
-                if fname_lower.endswith('.pdf'):
-                    data, _ = extract_from_pdf_content(input_path)
-                elif fname_lower.endswith('.dxf'):
-                    data, _ = extract_from_dxf_content(input_path)
-                elif fname_lower.endswith('.jww'):
-                    # 1. DRA-CAD 19 による自動DXF変換を最優先試行
-                    converted_dxf = os.path.join(tmpdir, os.path.splitext(f.filename)[0] + "_dracad.dxf")
-                    success = convert_jww_to_dxf_via_dracad(input_path, converted_dxf)
-                    if not success:
-                        # 2. JacConvert による変換試行
-                        success = convert_jww_to_dxf_via_jacconvert(input_path, converted_dxf)
-                    
-                    if success and os.path.exists(converted_dxf):
-                        print(f"    ✓ [{doc_type}] DXF変換成功 ➔ 高精度DXF解析を実行します")
-                        data, _ = extract_from_dxf_content(converted_dxf)
+                # 1. Gemini 視覚推論API連携の試行（PDFまたは画像）
+                data = None
+                if fname_lower.endswith(('.pdf', '.png', '.jpg', '.jpeg')):
+                    data = extract_with_gemini_vision(input_path)
+
+                # 2. ローカル高精度解析（Gemini未設定時またはフォールバック）
+                if not data:
+                    if fname_lower.endswith('.pdf'):
+                        data, _ = extract_from_pdf_content(input_path)
+                    elif fname_lower.endswith('.dxf'):
+                        data, _ = extract_from_dxf_content(input_path)
+                    elif fname_lower.endswith('.jww'):
+                        # 1. DRA-CAD 19 による自動DXF変換を最優先試行
+                        converted_dxf = os.path.join(tmpdir, os.path.splitext(f.filename)[0] + "_dracad.dxf")
+                        success = convert_jww_to_dxf_via_dracad(input_path, converted_dxf)
+                        if not success:
+                            # 2. JacConvert による変換試行
+                            success = convert_jww_to_dxf_via_jacconvert(input_path, converted_dxf)
+                        
+                        if success and os.path.exists(converted_dxf):
+                            print(f"    ✓ [{doc_type}] DXF変換成功 ➔ 高精度DXF解析を実行します")
+                            data, _ = extract_from_dxf_content(converted_dxf)
+                        else:
+                            print(f"    ℹ [{doc_type}] DXF自動変換スキップ ➔ Python直接ネイティブ解析を実行します")
+                            data, _ = extract_from_jww_native(input_path)
                     else:
-                        print(f"    ℹ [{doc_type}] DXF自動変換スキップ ➔ Python直接ネイティブ解析を実行します")
-                        data, _ = extract_from_jww_native(input_path)
-                else:
-                    data = {'error': f'未対応形式: {f.filename}'}
+                        data = {'error': f'未対応形式: {f.filename}'}
                 results[doc_type] = data
                 print(f"    ✓ [{doc_type}] 抽出完了: {data}")
             except Exception as e:

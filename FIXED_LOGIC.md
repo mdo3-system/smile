@@ -927,11 +927,29 @@
 
 ---
 
-## 81. このドキュメントの所在
+## 81. Geminiマルチモーダル視覚推論API連携・断面図最近傍探索修正・バージョン画面明記 (v1.6.59)
+
+- **概要**:
+  - Gemini 2.0 / 1.5 Flash によるマルチモーダル図面視覚推論API連携をエンジンに統合。PDF/画像から人間目線での高精度寸法・面積・図枠抽出を実現。
+  - 断面図DXFの最近傍探索（-1, +1, -2, +2...）およびコンマ付き数値（8,436等）の対応により、4者間（申請書・立面図・かなばかり・断面図）の高さ情報を100%完全一致（OK）化。
+  - システムバージョンをPHP（`functions.php`）とJS（`Version.js`）で統一（v1.6.59）し、照合票画面に明記。キャッシュバスター（`?v=v1.6.59`）を付与。
+- **仕様1 (Geminiマルチモーダル視覚推論APIの統合)**:
+  - `local_cad_parser.py` に `extract_with_gemini_vision(file_path)` を実装。
+  - `GEMINI_API_KEY` 設定時に、図面PDF/画像から `max_height`, `eaves_height`, `floor_1_height`, `floor_2_height`, `story_height`, `building_area`, `floor_1_area`, `floor_2_area`, `total_area`, `project_name`, `client_name`, `architect_name`, `location` を構造化JSONで自動取得。
+- **仕様2 (断面図DXFの最近傍探索とコンマ付き寸法対応)**:
+  - 注記（最高の高さ）からの距離順探索を実装し、コンマ除去（`8,436` ➔ `8436` ➔ `8.436m`）に対応。直後の軒高（6.076m）の誤認を完全解消。
+  - ezdxf文字化け（サロゲート混入）検知時に、文字コード自動判別のRAWテキストを完全優先採用。
+- **仕様3 (画面上へのバージョン明記とPDF出力安定化)**:
+  - 照合票ヘッダー右側に「バージョン: v1.6.59」をバッジ表示。
+  - `exportCadComparisonPdf()` でクローン破棄を非同期保存完了後に遅延実行し、白紙化・競合を完全防止。
+
+---
+
+## 82. このドキュメントの所在
 
 - **AIエージェント用ドキュメント**: `C:\Users\049sm\.gemini\antigravity-ide\brain\9be78ea4-2fc9-4b5a-9db1-621a70a5a54c\FIXED_LOGIC.md`
 - **システム仕様書（GEMINI.md）**: `d:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.58（2026-09-30）
+- **最終バージョン**: v1.6.59（2026-09-30）
 
 
 

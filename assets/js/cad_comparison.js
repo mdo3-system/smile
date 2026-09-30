@@ -495,12 +495,15 @@ async function exportCadComparisonPdf() {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        await html2pdf().set(opt).from(clone).save();
+        const worker = html2pdf().set(opt).from(clone);
+        await worker.save();
 
-        // 完了後にクローンを削除
-        if (clone.parentNode) {
-            clone.parentNode.removeChild(clone);
-        }
+        // 描画とファイルダウンロードの完了を確実に待機してからクローンを削除（競合による白紙化を完全防止）
+        setTimeout(() => {
+            if (clone.parentNode) {
+                clone.parentNode.removeChild(clone);
+            }
+        }, 1500);
     } catch (err) {
         console.error("PDF出力エラー:", err);
         // フォールバック: ブラウザの標準印刷ダイアログ
