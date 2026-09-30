@@ -25,7 +25,7 @@ def test_metadata_noise_filtering():
     print("test_metadata_noise_filtering PASSED")
 
 def test_area_neighbor():
-    t_list = ['求積表', '建築面積', '80.00', '延床面積', '400.00', '1階床面積', '200.00', '2階床面積', '200.00']
+    t_list = ['求積表', '建築面積', '80.00㎡', '延床面積', '400.00㎡', '1階床面積', '200.00㎡', '2階床面積', '200.00㎡']
     res = extract_area_data('', texts_list=t_list)
     assert res['building_area'] == 80.0
     assert res['total_area'] == 400.0

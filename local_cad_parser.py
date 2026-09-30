@@ -407,7 +407,7 @@ def extract_from_pdf_content(pdf_path):
     return parse_building_text(full_text, source="pdf"), full_text
 
 def extract_height_data(text, texts_list=None):
-    """高さ・軒高の高精度抽出（正規表現 + 近傍走査）"""
+    """高さ・軒高の高精度抽出（正規表現 + 近傍走査 + PHFL除外）"""
     res = {'max_height': None, 'eaves_height': None}
     if not text and not texts_list:
         return res
@@ -424,38 +424,54 @@ def extract_height_data(text, texts_list=None):
 
     # 2. 矩計図等の近傍走査（テキストリストがある場合）
     if texts_list:
+        # A. 連続する寸法値のペアリング探索（最高高さ8.436と軒高6.076が連続しているパターン）
+        for i in range(len(texts_list) - 1):
+            t1 = texts_list[i].strip()
+            t2 = texts_list[i+1].strip()
+            # 日付や記号混じりを除外
+            if any(c in t1 or c in t2 for c in ['R', 'H', '-', '/', ':', '図', '日', '年', 'G']):
+                continue
+            v1 = normalize_height(t1)
+            v2 = normalize_height(t2)
+            if v1 and v2:
+                # v1 が最高高さ(7.0〜15.0m), v2 が軒高(5.0〜7.5m)
+                if 7.0 <= v1 <= 15.0 and 5.0 <= v2 <= 7.5:
+                    if res['max_height'] is None: res['max_height'] = v1
+                    if res['eaves_height'] is None: res['eaves_height'] = v2
+                    break
+
+        # B. ラベル走査
         for idx, t in enumerate(texts_list):
             # 最高高さの探索
             if res['max_height'] is None and re.search(r'(?:最高(?:の)?高(?:さ)?|最高部|最高高|棟高)', t):
-                # 直後を優先探索、なければ直前を探索
-                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-3):idx]
+                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-5):idx]
                 for candidate in candidates:
+                    if any(c in candidate for c in ['R', 'H', '-', '/', ':', '図', '日', '年']): continue
                     m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate)
                     if m:
                         val = normalize_height(m.group(1))
-                        if val and 4.0 <= val <= 30.0:
+                        if val and 4.0 <= val <= 25.0:
                             res['max_height'] = val
                             break
 
             # 軒高の探索
-            if res['eaves_height'] is None and re.search(r'(?:軒(?:の)?高(?:さ)?|軒高)', t):
-                # 直後を優先探索、なければ直前を探索
-                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-3):idx]
+            if res['eaves_height'] is None and re.search(r'(?:最高の軒高|軒高|軒の高さ)', t):
+                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-5):idx]
                 for candidate in candidates:
+                    if any(k in candidate for k in ['PH', 'FL', '天端', '土間', '基礎', 'パラペット', 'R', 'H', '日', '年']):
+                        continue
                     m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate)
                     if m:
                         val = normalize_height(m.group(1))
-                        # 軒高は2.5m以上で、最高高さが既に判明していればそれ未満であること
-                        if val and 2.5 <= val <= 25.0:
-                            if res['max_height'] and val >= res['max_height']:
-                                continue
+                        # 2階建て住宅の軒高は通常 2.5m 〜 7.5m
+                        if val and 2.5 <= val <= 7.5:
                             res['eaves_height'] = val
                             break
 
     return res
 
 def extract_area_data(text, texts_list=None):
-    """面積情報の高精度抽出（正規表現 + 近傍走査）"""
+    """面積情報の高精度抽出（確認申請書特化 + CAD m^ u2 単位解析 + 近傍走査）"""
     res = {
         'building_area': None,
         'floor_1_area': None,
@@ -465,50 +481,90 @@ def extract_area_data(text, texts_list=None):
     if not text and not texts_list:
         return res
 
-    # 1. texts_list 近傍走査（CADやテーブル配置）
+    # 1. 確認申請書（PDF）の専用抽出パターン（【10.建築面積】、【11.延べ面積】）
+    if text:
+        # 建築面積: 【10.建築面積】...【イ.建築物全体】（ 38.07 ）
+        m_b_app = re.search(r'【10\.建築面積】[\s\S]{0,150}?【イ\.建築物全体】[^\d]*([0-9\.,]+)', text)
+        if m_b_app:
+            v = normalize_number(m_b_app.group(1))
+            if v: res['building_area'] = round(v, 2)
+
+        # 延べ面積: 【11.延べ面積】...【イ.建築物全体】（ 78.97 ）または 【2.延べ面積】 78.97 ㎡
+        m_t_app = re.search(r'【11\.延べ面積】[\s\S]{0,150}?【イ\.建築物全体】[^\d]*([0-9\.,]+)', text)
+        if not m_t_app:
+            m_t_app = re.search(r'【2\.延べ面積】\s*([0-9\.,]+)\s*㎡', text)
+        if m_t_app:
+            v = normalize_number(m_t_app.group(1))
+            if v: res['total_area'] = round(v, 2)
+
+    # 2. texts_list からの面積走査
     if texts_list:
+        # A. 単位(m^ u2, ㎡, m2)付き確定面積の走査（最優先）
+        m2_vals = []
+        for t in texts_list:
+            m = re.search(r'([0-9\.,]+)\s*(?:m\^?\s*u?2|㎡|m2)', t)
+            if m:
+                v = normalize_number(m.group(1))
+                if v and 15.0 <= v <= 3000.0 and v not in m2_vals:
+                    m2_vals.append(v)
+
+        if m2_vals:
+            # 延べ面積は最大値 (例: 78.97)
+            if res['total_area'] is None:
+                res['total_area'] = round(max(m2_vals), 2)
+
+            # 建築面積は延べ面積より小さい値で、1階床面積に相当するもの (例: 38.07)
+            if res['building_area'] is None:
+                for v in m2_vals:
+                    if 20.0 <= v <= 200.0 and v < res['total_area']:
+                        if v > res['total_area'] * 0.75:
+                            continue
+                        res['building_area'] = round(v, 2)
+                        break
+
+        # B. ラベル走査による補完（単位付きで見つからなかった項目のフォールバック）
         for idx, t in enumerate(texts_list):
             if res['building_area'] is None and re.search(r'^(?:建築面積|建面積)$', t.strip()):
                 for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
                     v = normalize_number(cand)
-                    if v and 10.0 <= v <= 2000.0:
+                    if v and 10.0 <= v <= 1000.0:
                         res['building_area'] = round(v, 2)
                         break
 
             if res['total_area'] is None and re.search(r'^(?:延べ面積|延床面積|延面積)$', t.strip()):
                 for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
                     v = normalize_number(cand)
-                    if v and 10.0 <= v <= 5000.0:
+                    if v and 10.0 <= v <= 1500.0:
                         res['total_area'] = round(v, 2)
                         break
 
-            if res['floor_1_area'] is None and re.search(r'^(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)$', t.strip()):
+            if res['floor_1_area'] is None and re.search(r'(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)', t):
                 for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
                     v = normalize_number(cand)
-                    if v and 10.0 <= v <= 2000.0:
+                    if v and 10.0 <= v <= 1000.0:
                         res['floor_1_area'] = round(v, 2)
                         break
 
-            if res['floor_2_area'] is None and re.search(r'^(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)$', t.strip()):
+            if res['floor_2_area'] is None and re.search(r'(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)', t):
                 for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
                     v = normalize_number(cand)
-                    if v and 10.0 <= v <= 2000.0:
+                    if v and 10.0 <= v <= 1000.0:
                         res['floor_2_area'] = round(v, 2)
                         break
 
-    # 2. テキスト全体からの正規表現マッチ
+    # 3. 一般的な正規表現マッチ（パーセント % / ％ は完全除外）
     if text:
         if res['building_area'] is None:
-            m_b = re.search(r'建築面積[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+            m_b = re.search(r'建築面積[^\d\n\r:：]*[:：\s]*[（\(]?\s*([0-9\.,]+)\s*[）\)]?(?:\s*(?:㎡|m2|m\^?\s*u?2))?(?![\s]*[%％])', text)
             if m_b:
                 val = normalize_number(m_b.group(1))
-                if val is not None: res['building_area'] = round(val, 2)
+                if val is not None and val < 3000: res['building_area'] = round(val, 2)
 
         if res['total_area'] is None:
-            m_t = re.search(r'(?:延べ面積|延床面積|延面積)[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+            m_t = re.search(r'(?:延べ面積|延床面積|延面積)[^\d\n\r:：]*[:：\s]*[（\(]?\s*([0-9\.,]+)\s*[）\)]?(?:\s*(?:㎡|m2|m\^?\s*u?2))?(?![\s]*[%％])', text)
             if m_t:
                 val = normalize_number(m_t.group(1))
-                if val is not None: res['total_area'] = round(val, 2)
+                if val is not None and val < 5000: res['total_area'] = round(val, 2)
 
         if res['floor_1_area'] is None:
             m_f1 = re.search(r'(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
