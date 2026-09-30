@@ -72,14 +72,15 @@ async function runSlotAutoComparison() {
 
     const fileAppManual = document.getElementById("cad_file_app")?.files[0];
     const fileKanaManual = document.getElementById("cad_file_kana")?.files[0];
+    const fileSecManual = document.getElementById("cad_file_sec")?.files[0];
     const fileAreaManual = document.getElementById("cad_file_area")?.files[0];
     const fileElevManual = document.getElementById("cad_file_elev")?.files[0];
 
-    const hasAnySlot = !!(slotFiles.app || slotFiles.kanabakari || slotFiles.area || slotFiles.elevation);
-    const hasAnyManual = !!(fileAppManual || fileKanaManual || fileAreaManual || fileElevManual);
+    const hasAnySlot = !!(slotFiles.app || slotFiles.kanabakari || slotFiles.section || slotFiles.area || slotFiles.elevation);
+    const hasAnyManual = !!(fileAppManual || fileKanaManual || fileSecManual || fileAreaManual || fileElevManual);
 
     if (!hasAnySlot && !hasAnyManual) {
-        alert("スロットに提出された図書（確認申請書・矩計図・面積表・立面図）がまだありません。\n図書がアップロードされた後に実行するか、下部の「手動でファイルを選択」から指定してください。");
+        alert("スロットに提出された図書（確認申請書・矩計図・断面図・面積表・立面図）がまだありません。\n図書がアップロードされた後に実行するか、下部の「手動でファイルを選択」から指定してください。");
         return;
     }
 
@@ -126,7 +127,22 @@ async function runSlotAutoComparison() {
             }
         }
 
-        // 3. 面積表
+        // 3. 断面図
+        if (fileSecManual) {
+            fd.append("cross_section", fileSecManual);
+            fetchedCount++;
+        } else if (slotFiles.section) {
+            if (progressEl) progressEl.innerHTML = `⏳ [1/3] 断面図 (${slotFiles.section.file_name}) をダウンロード中...`;
+            const file = await fetchDocBlob(projectId, slotFiles.section.file_category, slotFiles.section.file_name, slotFiles.section.id);
+            if (file) {
+                fd.append("cross_section", file);
+                fetchedCount++;
+            } else {
+                failedItems.push("断面図");
+            }
+        }
+
+        // 4. 面積表
         if (fileAreaManual) {
             fd.append("area_calc", fileAreaManual);
             fetchedCount++;
@@ -141,7 +157,7 @@ async function runSlotAutoComparison() {
             }
         }
 
-        // 4. 立面図
+        // 5. 立面図
         if (fileElevManual) {
             fd.append("elevation", fileElevManual);
             fetchedCount++;
@@ -221,10 +237,11 @@ async function fetchDocBlob(projectId, category, filename, fileId) {
 async function runManualCadComparison() {
     const fileApp = document.getElementById("cad_file_app")?.files[0];
     const fileKana = document.getElementById("cad_file_kana")?.files[0];
+    const fileSec = document.getElementById("cad_file_sec")?.files[0];
     const fileArea = document.getElementById("cad_file_area")?.files[0];
     const fileElev = document.getElementById("cad_file_elev")?.files[0];
 
-    if (!fileApp && !fileKana && !fileArea && !fileElev) {
+    if (!fileApp && !fileKana && !fileSec && !fileArea && !fileElev) {
         alert("照合対象の図書ファイルを選択してください。");
         return;
     }
@@ -235,6 +252,7 @@ async function runManualCadComparison() {
     const fd = new FormData();
     if (fileApp) fd.append("app_doc", fileApp);
     if (fileKana) fd.append("kanabakari", fileKana);
+    if (fileSec) fd.append("cross_section", fileSec);
     if (fileArea) fd.append("area_calc", fileArea);
     if (fileElev) fd.append("elevation", fileElev);
 
@@ -270,6 +288,7 @@ function renderCadComparison(data) {
     const results = data.results || {};
     const app = results.app || {};
     const kana = results.kanabakari || {};
+    const sec = results.section || {};
     const area = results.area || {};
     const elev = results.elevation || {};
 
@@ -281,16 +300,41 @@ function renderCadComparison(data) {
         if (el) el.textContent = val;
     };
 
-    // 1. 高さ情報
+    // 1. 高さ情報（申請書・立面図・矩計図・断面図 4者照合）
+    // 最高の高さ
     setElem("res_h_app_max", formatNum(app.max_height, "m"));
-    setElem("res_h_kana_max", formatNum(kana.max_height, "m"));
     setElem("res_h_elev_max", formatNum(elev.max_height, "m"));
-    setJudge("res_judge_h_max", [app.max_height, kana.max_height, elev.max_height]);
+    setElem("res_h_kana_max", formatNum(kana.max_height, "m"));
+    setElem("res_h_sec_max", formatNum(sec.max_height, "m"));
+    setJudge("res_judge_h_max", [app.max_height, elev.max_height, kana.max_height, sec.max_height]);
 
+    // 最高の軒の高さ
     setElem("res_h_app_eaves", formatNum(app.eaves_height, "m"));
-    setElem("res_h_kana_eaves", formatNum(kana.eaves_height, "m"));
     setElem("res_h_elev_eaves", formatNum(elev.eaves_height, "m"));
-    setJudge("res_judge_h_eaves", [app.eaves_height, kana.eaves_height, elev.eaves_height]);
+    setElem("res_h_kana_eaves", formatNum(kana.eaves_height, "m"));
+    setElem("res_h_sec_eaves", formatNum(sec.eaves_height, "m"));
+    setJudge("res_judge_h_eaves", [app.eaves_height, elev.eaves_height, kana.eaves_height, sec.eaves_height]);
+
+    // 1階床高 (1FL)
+    setElem("res_h_app_1fl", formatNum(app.floor_1_height, "m"));
+    setElem("res_h_elev_1fl", formatNum(elev.floor_1_height, "m"));
+    setElem("res_h_kana_1fl", formatNum(kana.floor_1_height, "m"));
+    setElem("res_h_sec_1fl", formatNum(sec.floor_1_height, "m"));
+    setJudge("res_judge_h_1fl", [app.floor_1_height, elev.floor_1_height, kana.floor_1_height, sec.floor_1_height]);
+
+    // 2階床高 (2FL)
+    setElem("res_h_app_2fl", formatNum(app.floor_2_height, "m"));
+    setElem("res_h_elev_2fl", formatNum(elev.floor_2_height, "m"));
+    setElem("res_h_kana_2fl", formatNum(kana.floor_2_height, "m"));
+    setElem("res_h_sec_2fl", formatNum(sec.floor_2_height, "m"));
+    setJudge("res_judge_h_2fl", [app.floor_2_height, elev.floor_2_height, kana.floor_2_height, sec.floor_2_height]);
+
+    // 階高 (1階/2階)
+    setElem("res_h_app_story", formatNum(app.story_height, "m"));
+    setElem("res_h_elev_story", formatNum(elev.story_height, "m"));
+    setElem("res_h_kana_story", formatNum(kana.story_height, "m"));
+    setElem("res_h_sec_story", formatNum(sec.story_height, "m"));
+    setJudge("res_judge_h_story", [app.story_height, elev.story_height, kana.story_height, sec.story_height]);
 
     // 2. 面積情報
     setElem("res_a_app_build", formatNum(app.building_area, "㎡"));
@@ -311,23 +355,23 @@ function renderCadComparison(data) {
 
     // 3. 物件・図枠情報
     setElem("res_info_app_proj", formatStr(app.project_name));
-    setElem("res_info_cad_proj", formatStr(elev.project_name || kana.project_name));
-    setTextJudge("res_judge_info_proj", app.project_name, elev.project_name || kana.project_name);
+    setElem("res_info_cad_proj", formatStr(elev.project_name || kana.project_name || sec.project_name));
+    setTextJudge("res_judge_info_proj", app.project_name, elev.project_name || kana.project_name || sec.project_name);
 
     setElem("res_info_app_client", formatStr(app.client_name));
-    setElem("res_info_cad_client", formatStr(elev.client_name || kana.client_name));
-    setTextJudge("res_judge_info_client", app.client_name, elev.client_name || kana.client_name);
+    setElem("res_info_cad_client", formatStr(elev.client_name || kana.client_name || sec.client_name));
+    setTextJudge("res_judge_info_client", app.client_name, elev.client_name || kana.client_name || sec.client_name);
 
     setElem("res_info_app_arch", formatStr(app.architect_name));
-    setElem("res_info_cad_arch", formatStr(elev.architect_name || kana.architect_name));
-    setTextJudge("res_judge_info_arch", app.architect_name, elev.architect_name || kana.architect_name);
+    setElem("res_info_cad_arch", formatStr(elev.architect_name || kana.architect_name || sec.architect_name));
+    setTextJudge("res_judge_info_arch", app.architect_name, elev.architect_name || kana.architect_name || sec.architect_name);
 
     setElem("res_info_app_loc", formatStr(app.location));
-    setElem("res_info_cad_loc", formatStr(elev.location || kana.location));
-    setTextJudge("res_judge_info_loc", app.location, elev.location || kana.location);
+    setElem("res_info_cad_loc", formatStr(elev.location || kana.location || sec.location));
+    setTextJudge("res_judge_info_loc", app.location, elev.location || kana.location || sec.location);
 }
 
-// 数値の判定 (許容誤差 0.01)
+// 数値の判定 (許容誤差 0.01m)
 function setJudge(elemId, values) {
     const el = document.getElementById(elemId);
     if (!el) return;
@@ -343,9 +387,10 @@ function setJudge(elemId, values) {
     const isAllMatch = validVals.every(v => Math.abs(v - first) <= 0.01);
 
     if (isAllMatch) {
-        el.innerHTML = "<span style='color:#16a34a;'>✅ 一致 (OK)</span>";
+        el.innerHTML = "<span style='color:#16a34a; font-weight:bold;'>✅ 一致 (OK)</span>";
     } else {
-        el.innerHTML = "<span style='color:#dc2626;'>⚠️ 不一致</span>";
+        const uniqueVals = Array.from(new Set(validVals.map(v => Number(v).toFixed(3)))).join(" ≠ ");
+        el.innerHTML = `<span style='color:#dc2626; font-weight:bold; background:#fee2e2; padding:2px 6px; border-radius:3px;'>⚠️ 不整合<br><small style='font-size:9px;'>(${uniqueVals})</small></span>`;
     }
 }
 
@@ -364,9 +409,9 @@ function setTextJudge(elemId, txt1, txt2) {
     const clean2 = String(txt2).replace(/\s+/g, "");
 
     if (clean1.includes(clean2) || clean2.includes(clean1)) {
-        el.innerHTML = "<span style='color:#16a34a;'>✅ 一致</span>";
+        el.innerHTML = "<span style='color:#16a34a; font-weight:bold;'>✅ 一致</span>";
     } else {
-        el.innerHTML = "<span style='color:#dc2626;'>⚠️ 相違</span>";
+        el.innerHTML = "<span style='color:#dc2626; font-weight:bold; background:#fee2e2; padding:2px 6px; border-radius:3px;'>⚠️ 相違</span>";
     }
 }
 
@@ -389,28 +434,84 @@ async function saveCadComparisonToDb(data) {
     }
 }
 
-// A4 帳票 PDF 出力
+// A4 帳票 PDF 出力（白紙化完全対策: クローンDOM＋スタイル完全展開で描画）
 async function exportCadComparisonPdf() {
     const reportEl = document.getElementById("cad_comparison_report");
     if (!reportEl) return;
 
-    if (typeof html2pdf === "undefined") {
-        await new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
+    const btnExport = document.getElementById("btn_export_cad_pdf");
+    const originalBtnText = btnExport ? btnExport.innerHTML : "";
+    if (btnExport) {
+        btnExport.disabled = true;
+        btnExport.innerHTML = "<span>⏳ PDF生成中...</span>";
     }
 
-    const opt = {
-        margin: [8, 8, 8, 8],
-        filename: `建築図書_整合性照合票_案件${window.CAD_COMPARISON_PROJECT_ID || ''}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    try {
+        if (typeof html2pdf === "undefined") {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
 
-    html2pdf().set(opt).from(reportEl).save();
+        // 白紙化対策: 要素をクローンし、オフスクリーン（最前面・画面内・絶対配置）で固定幅スタイルを展開
+        const clone = reportEl.cloneNode(true);
+        clone.id = "cad_comparison_report_pdf_clone";
+        clone.style.position = "fixed";
+        clone.style.top = "0";
+        clone.style.left = "0";
+        clone.style.width = "750px";
+        clone.style.maxWidth = "750px";
+        clone.style.background = "#ffffff";
+        clone.style.color = "#000000";
+        clone.style.zIndex = "999999";
+        clone.style.margin = "0";
+        clone.style.boxShadow = "none";
+        clone.style.border = "none";
+        clone.style.padding = "20px";
+        clone.style.fontFamily = "'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif";
+
+        document.body.appendChild(clone);
+
+        // クローン要素内のレンダリング待機 (100ms)
+        await new Promise(r => setTimeout(r, 100));
+
+        const opt = {
+            margin: [6, 6, 6, 6],
+            filename: `建築図書_整合性照合票_案件${window.CAD_COMPARISON_PROJECT_ID || ''}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: 794,
+                backgroundColor: '#ffffff'
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        await html2pdf().set(opt).from(clone).save();
+
+        // 完了後にクローンを削除
+        if (clone.parentNode) {
+            clone.parentNode.removeChild(clone);
+        }
+    } catch (err) {
+        console.error("PDF出力エラー:", err);
+        // フォールバック: ブラウザの標準印刷ダイアログ
+        if (confirm("PDF自動生成でエラーが発生しました。ブラウザの印刷ダイアログからPDF保存しますか？")) {
+            window.print();
+        }
+    } finally {
+        if (btnExport) {
+            btnExport.disabled = false;
+            btnExport.innerHTML = originalBtnText;
+        }
+    }
 }
+

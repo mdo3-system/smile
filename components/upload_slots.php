@@ -83,6 +83,7 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
         <?= renderUploadSlot('3F・PH・RF 平面図 (CAD)', 'cad_plan_3f', false, '該当する場合のみ') ?>
         <?= renderUploadSlot('立面図 (CAD)', 'cad_elevation', true, '各方向の立面図') ?>
         <?= renderUploadSlot('矩計図 (CAD)', 'cad_section', false, '必要に応じて提出') ?>
+        <?= renderUploadSlot('断面図 (CAD)', 'cad_cross_section', false, '必要に応じて提出') ?>
         
         <!-- 動的スロット追加先 -->
         <div id="dynamic_cad_slots_container"></div>

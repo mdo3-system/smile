@@ -407,8 +407,14 @@ def extract_from_pdf_content(pdf_path):
     return parse_building_text(full_text, source="pdf"), full_text
 
 def extract_height_data(text, texts_list=None):
-    """高さ・軒高の高精度抽出（正規表現 + 近傍走査 + PHFL除外）"""
-    res = {'max_height': None, 'eaves_height': None}
+    """高さ・軒高・床高・階高の高精度抽出（正規表現 + 近傍走査 + PHFL除外）"""
+    res = {
+        'max_height': None,
+        'eaves_height': None,
+        'floor_1_height': None,
+        'floor_2_height': None,
+        'story_height': None
+    }
     if not text and not texts_list:
         return res
 
@@ -421,6 +427,24 @@ def extract_height_data(text, texts_list=None):
         m_h_eaves = re.search(r'(?:最高(?:の)?軒(?:の)?高(?:さ)?|最高軒高|軒高|軒の高さ)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
         if m_h_eaves:
             res['eaves_height'] = normalize_height(m_h_eaves.group(1))
+
+        m_1fl = re.search(r'(?:1FL|1階床(?:の)?高(?:さ)?|床の高さ)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
+        if m_1fl:
+            val = normalize_height(m_1fl.group(1))
+            if val and 0.1 <= val <= 2.0:
+                res['floor_1_height'] = val
+
+        m_2fl = re.search(r'(?:2FL|2階床(?:の)?高(?:さ)?)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
+        if m_2fl:
+            val = normalize_height(m_2fl.group(1))
+            if val and 2.0 <= val <= 5.0:
+                res['floor_2_height'] = val
+
+        m_story = re.search(r'(?:階高|横架材間)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
+        if m_story:
+            val = normalize_height(m_story.group(1))
+            if val and 2.2 <= val <= 4.0:
+                res['story_height'] = val
 
     # 2. 矩計図等の近傍走査（テキストリストがある場合）
     if texts_list:
@@ -466,6 +490,39 @@ def extract_height_data(text, texts_list=None):
                         # 2階建て住宅の軒高は通常 2.5m 〜 7.5m
                         if val and 2.5 <= val <= 7.5:
                             res['eaves_height'] = val
+                            break
+
+            # 1FLの探索
+            if res['floor_1_height'] is None and re.search(r'(?:1FL|1階床高)', t):
+                candidates = texts_list[idx+1:min(len(texts_list), idx+5)] + texts_list[max(0, idx-4):idx]
+                for candidate in candidates:
+                    m = re.search(r'([1-9][0-9]{2,3}|0\.[0-9]{2,3})', candidate)
+                    if m:
+                        val = normalize_height(m.group(1))
+                        if val and 0.1 <= val <= 2.0:
+                            res['floor_1_height'] = val
+                            break
+
+            # 2FLの探索
+            if res['floor_2_height'] is None and re.search(r'(?:2FL|2階床高)', t):
+                candidates = texts_list[idx+1:min(len(texts_list), idx+5)] + texts_list[max(0, idx-4):idx]
+                for candidate in candidates:
+                    m = re.search(r'([1-9][0-9]{3}|[2-4]\.[0-9]{2,3})', candidate)
+                    if m:
+                        val = normalize_height(m.group(1))
+                        if val and 2.0 <= val <= 5.0:
+                            res['floor_2_height'] = val
+                            break
+
+            # 階高の探索
+            if res['story_height'] is None and re.search(r'(?:階高|横架材間)', t):
+                candidates = texts_list[idx+1:min(len(texts_list), idx+5)] + texts_list[max(0, idx-4):idx]
+                for candidate in candidates:
+                    m = re.search(r'([1-9][0-9]{3}|[2-3]\.[0-9]{2,3})', candidate)
+                    if m:
+                        val = normalize_height(m.group(1))
+                        if val and 2.2 <= val <= 3.8:
+                            res['story_height'] = val
                             break
 
     return res
@@ -747,6 +804,7 @@ def compare_all():
     files_map = {
         'app': request.files.get('app_doc'),          # 確認申請書
         'kanabakari': request.files.get('kanabakari'),# 矩計図
+        'section': request.files.get('cross_section') or request.files.get('section'), # 断面図
         'area': request.files.get('area_calc'),       # 面積表
         'elevation': request.files.get('elevation'),  # 立面図
     }
@@ -803,11 +861,18 @@ def compare_all():
     })
 
 def perform_comparison(res):
-    """各抽出データの照合判定を行う"""
+    """各抽出データの照合判定を行う（申請書・立面図・矩計図・断面図 4者の高さ不整合を完全検知）"""
     app_data = res.get('app') or {}
     kana_data = res.get('kanabakari') or {}
+    sec_data = res.get('section') or {}
     area_data = res.get('area') or {}
     elev_data = res.get('elevation') or {}
+
+    def is_match_all_num(vals, tol=0.01):
+        valid = [v for v in vals if v is not None]
+        if len(valid) < 2:
+            return None
+        return all(abs(v - valid[0]) <= tol for v in valid)
 
     def is_match_num(val1, val2, tol=0.01):
         if val1 is None or val2 is None:
@@ -824,17 +889,63 @@ def perform_comparison(res):
     return {
         'max_height': {
             'app': app_data.get('max_height'),
-            'kanabakari': kana_data.get('max_height'),
             'elevation': elev_data.get('max_height'),
-            'is_match': is_match_num(app_data.get('max_height'), kana_data.get('max_height')) and \
-                        is_match_num(app_data.get('max_height'), elev_data.get('max_height'))
+            'kanabakari': kana_data.get('max_height'),
+            'section': sec_data.get('max_height'),
+            'is_match': is_match_all_num([
+                app_data.get('max_height'),
+                elev_data.get('max_height'),
+                kana_data.get('max_height'),
+                sec_data.get('max_height')
+            ])
         },
         'eaves_height': {
             'app': app_data.get('eaves_height'),
-            'kanabakari': kana_data.get('eaves_height'),
             'elevation': elev_data.get('eaves_height'),
-            'is_match': is_match_num(app_data.get('eaves_height'), kana_data.get('eaves_height')) and \
-                        is_match_num(app_data.get('eaves_height'), elev_data.get('eaves_height'))
+            'kanabakari': kana_data.get('eaves_height'),
+            'section': sec_data.get('eaves_height'),
+            'is_match': is_match_all_num([
+                app_data.get('eaves_height'),
+                elev_data.get('eaves_height'),
+                kana_data.get('eaves_height'),
+                sec_data.get('eaves_height')
+            ])
+        },
+        'floor_1_height': {
+            'app': app_data.get('floor_1_height'),
+            'elevation': elev_data.get('floor_1_height'),
+            'kanabakari': kana_data.get('floor_1_height'),
+            'section': sec_data.get('floor_1_height'),
+            'is_match': is_match_all_num([
+                app_data.get('floor_1_height'),
+                elev_data.get('floor_1_height'),
+                kana_data.get('floor_1_height'),
+                sec_data.get('floor_1_height')
+            ])
+        },
+        'floor_2_height': {
+            'app': app_data.get('floor_2_height'),
+            'elevation': elev_data.get('floor_2_height'),
+            'kanabakari': kana_data.get('floor_2_height'),
+            'section': sec_data.get('floor_2_height'),
+            'is_match': is_match_all_num([
+                app_data.get('floor_2_height'),
+                elev_data.get('floor_2_height'),
+                kana_data.get('floor_2_height'),
+                sec_data.get('floor_2_height')
+            ])
+        },
+        'story_height': {
+            'app': app_data.get('story_height'),
+            'elevation': elev_data.get('story_height'),
+            'kanabakari': kana_data.get('story_height'),
+            'section': sec_data.get('story_height'),
+            'is_match': is_match_all_num([
+                app_data.get('story_height'),
+                elev_data.get('story_height'),
+                kana_data.get('story_height'),
+                sec_data.get('story_height')
+            ])
         },
         'building_area': {
             'app': app_data.get('building_area'),

@@ -9,6 +9,7 @@ $saved_cad_comparison = $project_info['cad_comparison_json'] ?? null;
 $slot_files = [
     'app' => null,          // 確認申請書
     'kanabakari' => null,   // 矩計図
+    'section' => null,      // 断面図
     'area' => null,         // 面積表 / 求積図
     'elevation' => null     // 立面図
 ];
@@ -35,10 +36,13 @@ $slot_files['app'] = getFirstValidFile($files_by_cat, ['app_doc']);
 // 2. 矩計図
 $slot_files['kanabakari'] = getFirstValidFile($files_by_cat, ['cad_section', 'pdf_section', 'cad_design_all', 'all_in_one_zip']);
 
-// 3. 面積表 / 求積図
+// 3. 断面図
+$slot_files['section'] = getFirstValidFile($files_by_cat, ['cad_cross_section', 'pdf_cross_section', 'cad_design_all', 'all_in_one_zip']);
+
+// 4. 面積表 / 求積図
 $slot_files['area'] = getFirstValidFile($files_by_cat, ['pdf_area_calc', 'cad_plan_1f', 'pdf_plan', 'cad_design_all', 'all_in_one_zip']);
 
-// 4. 立面図
+// 5. 立面図
 $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'pdf_elevation', 'cad_design_all', 'all_in_one_zip']);
 ?>
 
@@ -54,7 +58,7 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
     </div>
 
     <div style="font-size:11px; color:#4b5563; margin-bottom:10px; line-height:1.5;">
-        スロットにアップロードされた最新図書（確認申請書・矩計図・面積表・立面図）から高さ・面積・図枠情報を抽出し、自動照合します。
+        スロットに提出された図書（確認申請書・立面図・矩計図・断面図・面積表）から高さ・面積・図枠情報を抽出し、図書間の不整合を自動判定します。
     </div>
 
     <!-- サービス未接続時のアラート (初期非表示) -->
@@ -71,7 +75,7 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
             <span style="font-size:10px; color:#64748b;">※手動ダウンロード不要で自動取得します</span>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size:11px; margin-bottom:10px;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:6px; font-size:11px; margin-bottom:10px;">
             <!-- ① 確認申請書 -->
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
                 <div style="font-weight:600; color:#334155; margin-bottom:2px;">① 確認申請書</div>
@@ -96,9 +100,21 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                 <?php endif; ?>
             </div>
 
-            <!-- ③ 面積表 -->
+            <!-- ③ 断面図 -->
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
-                <div style="font-weight:600; color:#334155; margin-bottom:2px;">③ 面積表 / 求積図</div>
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">③ 断面図</div>
+                <?php if ($slot_files['section']): ?>
+                    <div style="color:#059669; font-weight:bold; word-break:break-all;">
+                        ✂️ <?= htmlspecialchars($slot_files['section']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['section']['version'] ?></span>
+                    </div>
+                <?php else: ?>
+                    <div style="color:#94a3b8;">未提出</div>
+                <?php endif; ?>
+            </div>
+
+            <!-- ④ 面積表 -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">④ 面積表 / 求積図</div>
                 <?php if ($slot_files['area']): ?>
                     <div style="color:#059669; font-weight:bold; word-break:break-all;">
                         📊 <?= htmlspecialchars($slot_files['area']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['area']['version'] ?></span>
@@ -108,9 +124,9 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                 <?php endif; ?>
             </div>
 
-            <!-- ④ 立面図 -->
+            <!-- ⑤ 立面図 -->
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; padding:6px;">
-                <div style="font-weight:600; color:#334155; margin-bottom:2px;">④ 立面図</div>
+                <div style="font-weight:600; color:#334155; margin-bottom:2px;">⑤ 立面図</div>
                 <?php if ($slot_files['elevation']): ?>
                     <div style="color:#059669; font-weight:bold; word-break:break-all;">
                         🏢 <?= htmlspecialchars($slot_files['elevation']['file_name']) ?> <span style="font-size:9px; background:#dcfce7; color:#15803d; padding:1px 4px; border-radius:2px;">V<?= $slot_files['elevation']['version'] ?></span>
@@ -126,7 +142,7 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                 <span>✨ 提出済み最新図書を一括自動取得して照合</span>
             </button>
             <button type="button" id="btn_export_cad_pdf" onclick="exportCadComparisonPdf()" style="background:#2563eb; color:white; border:none; border-radius:4px; padding:7px 12px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;">
-                <span>📄 A4照合票を出力</span>
+                <span>📄 A4照合票を出力 (PDF)</span>
             </button>
         </div>
 
@@ -138,7 +154,7 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
         <div style="margin-top:10px; border-top:1px dashed #cbd5e1; padding-top:6px;">
             <details style="font-size:11px;">
                 <summary style="cursor:pointer; color:#475569; font-weight:600;">📁 手動でファイルを選択してテスト照合する場合（クリックで展開）</summary>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:6px; background:#f8fafc; padding:8px; border-radius:4px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:6px; margin-top:6px; background:#f8fafc; padding:8px; border-radius:4px;">
                     <div>
                         <label style="color:#475569; display:block;">① 申請書 (PDF):</label>
                         <input type="file" id="cad_file_app" accept=".pdf" style="font-size:10px; width:100%;">
@@ -148,14 +164,18 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                         <input type="file" id="cad_file_kana" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
                     </div>
                     <div>
-                        <label style="color:#475569; display:block;">③ 面積表 (PDF/DXF/JWW):</label>
+                        <label style="color:#475569; display:block;">③ 断面図 (PDF/DXF/JWW):</label>
+                        <input type="file" id="cad_file_sec" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
+                    </div>
+                    <div>
+                        <label style="color:#475569; display:block;">④ 面積表 (PDF/DXF/JWW):</label>
                         <input type="file" id="cad_file_area" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
                     </div>
                     <div>
-                        <label style="color:#475569; display:block;">④ 立面図 (PDF/DXF/JWW):</label>
+                        <label style="color:#475569; display:block;">⑤ 立面図 (PDF/DXF/JWW):</label>
                         <input type="file" id="cad_file_elev" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
                     </div>
-                    <div style="grid-column: span 2; text-align:right; margin-top:4px;">
+                    <div style="grid-column: 1 / -1; text-align:right; margin-top:4px;">
                         <button type="button" onclick="runManualCadComparison()" style="background:#475569; color:white; border:none; border-radius:3px; padding:4px 10px; font-size:10px; cursor:pointer;">選択したファイルで照合</button>
                     </div>
                 </div>
@@ -178,15 +198,16 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
         <!-- 1. 高さ情報 照合表 -->
         <div style="margin-bottom:12px;">
             <div style="font-weight:bold; font-size:11px; background:#e2e8f0; color:#1e293b; padding:3px 6px; border-radius:2px; margin-bottom:4px;">
-                1. 高さ情報 照合表
+                1. 高さ情報 照合表（申請書・立面図・矩計図・断面図 整合確認）
             </div>
             <table style="width:100%; border-collapse:collapse; text-align:center; font-size:11px; border:1px solid #cbd5e1;">
                 <thead>
                     <tr style="background:#f8fafc; color:#475569; border-bottom:1px solid #cbd5e1;">
-                        <th style="padding:4px; text-align:left; border:1px solid #cbd5e1;">照合項目</th>
-                        <th style="padding:4px; width:22%; border:1px solid #cbd5e1;">確認申請書</th>
-                        <th style="padding:4px; width:22%; border:1px solid #cbd5e1;">矩計図 (かなばかり)</th>
-                        <th style="padding:4px; width:22%; border:1px solid #cbd5e1;">立面図</th>
+                        <th style="padding:4px; text-align:left; border:1px solid #cbd5e1; width:20%;">照合項目</th>
+                        <th style="padding:4px; width:16%; border:1px solid #cbd5e1;">確認申請書</th>
+                        <th style="padding:4px; width:16%; border:1px solid #cbd5e1;">立面図</th>
+                        <th style="padding:4px; width:16%; border:1px solid #cbd5e1;">矩計図</th>
+                        <th style="padding:4px; width:16%; border:1px solid #cbd5e1;">断面図</th>
                         <th style="padding:4px; width:16%; border:1px solid #cbd5e1;">判定</th>
                     </tr>
                 </thead>
@@ -194,16 +215,42 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                     <tr style="border-bottom:1px solid #cbd5e1;">
                         <td style="padding:5px; text-align:left; font-weight:600; border:1px solid #cbd5e1;">最高の高さ</td>
                         <td id="res_h_app_max" style="padding:5px; border:1px solid #cbd5e1;">-</td>
-                        <td id="res_h_kana_max" style="padding:5px; border:1px solid #cbd5e1;">-</td>
                         <td id="res_h_elev_max" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_kana_max" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_sec_max" style="padding:5px; border:1px solid #cbd5e1;">-</td>
                         <td id="res_judge_h_max" style="padding:5px; font-weight:bold; border:1px solid #cbd5e1;">-</td>
                     </tr>
-                    <tr>
+                    <tr style="border-bottom:1px solid #cbd5e1;">
                         <td style="padding:5px; text-align:left; font-weight:600; border:1px solid #cbd5e1;">最高の軒の高さ</td>
                         <td id="res_h_app_eaves" style="padding:5px; border:1px solid #cbd5e1;">-</td>
-                        <td id="res_h_kana_eaves" style="padding:5px; border:1px solid #cbd5e1;">-</td>
                         <td id="res_h_elev_eaves" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_kana_eaves" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_sec_eaves" style="padding:5px; border:1px solid #cbd5e1;">-</td>
                         <td id="res_judge_h_eaves" style="padding:5px; font-weight:bold; border:1px solid #cbd5e1;">-</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #cbd5e1;">
+                        <td style="padding:5px; text-align:left; font-weight:600; border:1px solid #cbd5e1;">1階床高 (1FL)</td>
+                        <td id="res_h_app_1fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_elev_1fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_kana_1fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_sec_1fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_judge_h_1fl" style="padding:5px; font-weight:bold; border:1px solid #cbd5e1;">-</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #cbd5e1;">
+                        <td style="padding:5px; text-align:left; font-weight:600; border:1px solid #cbd5e1;">2階床高 (2FL)</td>
+                        <td id="res_h_app_2fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_elev_2fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_kana_2fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_sec_2fl" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_judge_h_2fl" style="padding:5px; font-weight:bold; border:1px solid #cbd5e1;">-</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px; text-align:left; font-weight:600; border:1px solid #cbd5e1;">階高 (1階/2階)</td>
+                        <td id="res_h_app_story" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_elev_story" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_kana_story" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_h_sec_story" style="padding:5px; border:1px solid #cbd5e1;">-</td>
+                        <td id="res_judge_h_story" style="padding:5px; font-weight:bold; border:1px solid #cbd5e1;">-</td>
                     </tr>
                 </tbody>
             </table>

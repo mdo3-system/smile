@@ -86,12 +86,40 @@ EOF
     assert data['eaves_height'] == 6.076
     print("test_dxf_raw_fallback PASSED")
 
+def test_perform_comparison_4way():
+    from local_cad_parser import perform_comparison
+    # 正常系: 4者すべて一致
+    res_ok = {
+        'app': {'max_height': 8.436, 'eaves_height': 6.076, 'floor_1_height': 0.476},
+        'elevation': {'max_height': 8.436, 'eaves_height': 6.076, 'floor_1_height': 0.476},
+        'kanabakari': {'max_height': 8.436, 'eaves_height': 6.076, 'floor_1_height': 0.476},
+        'section': {'max_height': 8.436, 'eaves_height': 6.076, 'floor_1_height': 0.476}
+    }
+    j_ok = perform_comparison(res_ok)
+    assert j_ok['max_height']['is_match'] is True
+    assert j_ok['eaves_height']['is_match'] is True
+    assert j_ok['floor_1_height']['is_match'] is True
+
+    # 異常系: 断面図の最高の高さだけ食い違い (不整合検知)
+    res_ng = {
+        'app': {'max_height': 8.436, 'eaves_height': 6.076},
+        'elevation': {'max_height': 8.436, 'eaves_height': 6.076},
+        'kanabakari': {'max_height': 8.436, 'eaves_height': 6.076},
+        'section': {'max_height': 8.500, 'eaves_height': 6.076}
+    }
+    j_ng = perform_comparison(res_ng)
+    assert j_ng['max_height']['is_match'] is False, "Should detect height mismatch"
+    assert j_ng['eaves_height']['is_match'] is True
+    print("test_perform_comparison_4way PASSED")
+
 if __name__ == '__main__':
     test_height_neighbor()
     test_height_text()
     test_metadata_noise_filtering()
     test_area_neighbor()
+    test_perform_comparison_4way()
     import tempfile
     with tempfile.TemporaryDirectory() as td:
         test_dxf_raw_fallback(td)
     print("ALL TESTS PASSED SUCCESSFULLY!")
+

@@ -36,7 +36,7 @@ $money_categories = [
     'est_initial' => '初期 御見積書', 'est_post' => '本見積 御見積書', 'est_add' => '追加 御見積書', 'inv_primary' => '一次回答 請求書', 'inv_final' => '最終 御請求書'
 ];
 $file_categories_left_pdf = [
-    'pdf_plan' => '見積用PDF (平面図)', 'pdf_elevation' => '見積用PDF (立面図)', 'pdf_layout' => '見積用PDF (配置図)', 'pdf_section' => '見積用PDF (矩計図 ※必要時)'
+    'pdf_plan' => '見積用PDF (平面図)', 'pdf_elevation' => '見積用PDF (立面図)', 'pdf_layout' => '見積用PDF (配置図)', 'pdf_section' => '見積用PDF (矩計図 ※必要時)', 'pdf_cross_section' => '見積用PDF (断面図 ※必要時)'
 ];
 $file_categories_left_cad = [
     'cad_layout' => '配置図',
@@ -47,6 +47,7 @@ $file_categories_left_cad = [
     'cad_plan_rf' => 'RF平面図',
     'cad_elevation' => '立面図',
     'cad_section' => '矩計図',
+    'cad_cross_section' => '断面図',
     'app_doc' => '確認申請書（2〜5面）',
     'soil_report' => '地盤調査報告書',
     'soil_impr' => '地盤改良設計書',

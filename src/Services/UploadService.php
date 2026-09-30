@@ -410,7 +410,7 @@ class UploadService
             // ============================
             // 後出し図書充足トリガー：一次回答日の自動起算
             // ============================
-            if (in_array($fileCategory, ['app_doc', 'soil_report', 'cad_design_all', 'cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_elevation', 'cad_section', 'all_in_one_zip'])) {
+            if (in_array($fileCategory, ['app_doc', 'soil_report', 'cad_design_all', 'cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_elevation', 'cad_section', 'cad_cross_section', 'all_in_one_zip'])) {
                 $stmtStatus = $this->pdo->prepare("SELECT status, req_permit, req_opt_kisohari FROM projects WHERE id = :id");
                 $stmtStatus->execute(['id' => $projectId]);
                 $pj = $stmtStatus->fetch(PDO::FETCH_ASSOC);

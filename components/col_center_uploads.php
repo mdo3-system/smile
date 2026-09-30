@@ -16,6 +16,7 @@
         'cad_plan_2f' => '2F平面図 ※正式依頼時必須',
         'cad_elevation' => '立面図 ※正式依頼時必須',
         'cad_section' => '矩計図 ※正式依頼時必須',
+        'cad_cross_section' => '断面図',
     ];
     $common_docs = [];
     foreach ($default_common_docs as $k => $v) {
