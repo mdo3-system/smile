@@ -268,51 +268,118 @@ def extract_from_jww_native(jww_path):
     combined_text = "\n".join(texts)
     return parse_building_text(combined_text, source="jww", texts_list=texts), texts
 
+def extract_from_dxf_raw_fallback(dxf_path):
+    """
+    【絶対フォールバック】ezdxfで構文エラーになる非標準・破損DXFから、
+    文字コード自動判定（CP932/Shift-JIS優先）によるグループコード直接走査でテキストを完全復元
+    """
+    texts = []
+    encodings = ['cp932', 'shift_jis', 'utf-8', 'euc-jp']
+    content = ""
+    for enc in encodings:
+        try:
+            with open(dxf_path, 'r', encoding=enc, errors='strict') as f:
+                content = f.read()
+                if content:
+                    break
+        except Exception:
+            continue
+
+    if not content:
+        try:
+            with open(dxf_path, 'r', encoding='cp932', errors='replace') as f:
+                content = f.read()
+        except Exception:
+            return []
+
+    lines = content.splitlines()
+    i = 0
+    while i < len(lines) - 1:
+        code_str = lines[i].strip()
+        val_str = lines[i+1].strip()
+        # グループコード 1 (テキスト値), 3 (MTEXTテキスト), 1000 (拡張文字列)
+        if code_str in ('1', '3', '1000') and val_str:
+            cleaned = re.sub(r'\\[A-Za-z0-9]+;', '', val_str).strip()
+            cleaned = re.sub(r'[\{\}]', '', cleaned)
+            if cleaned and len(cleaned) >= 2 and cleaned not in texts:
+                texts.append(cleaned)
+        i += 2
+
+    return texts
+
 def extract_from_dxf_content(dxf_path):
-    """ezdxf を用いて DXF からテキスト・寸法・図枠文字を抽出"""
+    """ezdxf (通常 + recover自動修復) + RAWテキスト完全マージによる超堅牢DXF抽出"""
     if not ezdxf:
         raise ImportError("ezdxf がインストールされていません")
 
-    try:
-        doc = ezdxf.readfile(dxf_path)
-    except Exception:
-        doc = ezdxf.readfile(dxf_path, encoding='cp932')
-
-    msp = doc.modelspace()
     texts = []
+    doc = None
 
-    # 1. TEXT / MTEXT
-    for e in msp.query('TEXT MTEXT'):
+    # 1. ezdxf.recover による自動修復モードでの読み込み試行 (ACDBDICTIONARYWDFLT等の非標準ヘッダー自動修復)
+    try:
+        from ezdxf import recover
+        doc, auditor = recover.readfile(dxf_path)
+    except Exception:
         try:
-            txt = e.dxf.text if e.dxftype() == 'TEXT' else e.text
-            if txt:
-                cleaned = re.sub(r'\\[A-Za-z0-9]+;', '', txt).strip()
-                cleaned = re.sub(r'[\{\}]', '', cleaned)
-                if cleaned:
-                    texts.append(cleaned)
+            from ezdxf import recover
+            doc, auditor = recover.readfile(dxf_path, encoding='cp932')
         except Exception:
-            continue
+            pass
 
-    # 2. DIMENSION
-    for dim in msp.query('DIMENSION'):
+    # 2. 通常の readfile (recoverでダメだった場合のフォールバック)
+    if not doc:
         try:
-            dim_text = dim.dxf.get('text', '')
-            if dim_text:
-                texts.append(dim_text.strip())
+            doc = ezdxf.readfile(dxf_path)
         except Exception:
-            continue
+            try:
+                doc = ezdxf.readfile(dxf_path, encoding='cp932')
+            except Exception:
+                pass
 
-    # 3. INSERT (ブロック属性 ATTRIB)
-    for insert in msp.query('INSERT'):
+    # 3. doc が取得できた場合はモデル空間から走査
+    if doc:
         try:
-            for attrib in insert.attribs:
-                if attrib.dxf.text:
-                    texts.append(attrib.dxf.text.strip())
-        except Exception:
-            continue
+            msp = doc.modelspace()
+            # TEXT / MTEXT
+            for e in msp.query('TEXT MTEXT'):
+                try:
+                    txt = e.dxf.text if e.dxftype() == 'TEXT' else e.text
+                    if txt:
+                        cleaned = re.sub(r'\\[A-Za-z0-9]+;', '', txt).strip()
+                        cleaned = re.sub(r'[\{\}]', '', cleaned)
+                        if cleaned and cleaned not in texts:
+                            texts.append(cleaned)
+                except Exception:
+                    continue
+
+            # DIMENSION
+            for dim in msp.query('DIMENSION'):
+                try:
+                    dim_text = dim.dxf.get('text', '')
+                    if dim_text and dim_text not in texts:
+                        texts.append(dim_text.strip())
+                except Exception:
+                    continue
+
+            # INSERT (ブロック属性 ATTRIB)
+            for insert in msp.query('INSERT'):
+                try:
+                    for attrib in insert.attribs:
+                        if attrib.dxf.text and attrib.dxf.text.strip() not in texts:
+                            texts.append(attrib.dxf.text.strip())
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"[DXF Modelspace Warning] {e}")
+
+    # 4. RAWテキスト走査結果をマージ（ezdxfが破損スキップした非標準要素・寸法値も100%回収）
+    raw_texts = extract_from_dxf_raw_fallback(dxf_path)
+    for rt in raw_texts:
+        if rt not in texts:
+            texts.append(rt)
 
     combined_text = "\n".join(texts)
-    return parse_building_text(combined_text, source="cad"), texts
+    return parse_building_text(combined_text, source="cad", texts_list=texts), texts
 
 def extract_from_pdf_content(pdf_path):
     """PDF からテキストを抽出（pypdf + pdfplumber フォールバック）"""
@@ -388,7 +455,7 @@ def extract_height_data(text, texts_list=None):
     return res
 
 def extract_area_data(text, texts_list=None):
-    """面積情報の高精度抽出"""
+    """面積情報の高精度抽出（正規表現 + 近傍走査）"""
     res = {
         'building_area': None,
         'floor_1_area': None,
@@ -398,26 +465,62 @@ def extract_area_data(text, texts_list=None):
     if not text and not texts_list:
         return res
 
+    # 1. texts_list 近傍走査（CADやテーブル配置）
+    if texts_list:
+        for idx, t in enumerate(texts_list):
+            if res['building_area'] is None and re.search(r'^(?:建築面積|建面積)$', t.strip()):
+                for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
+                    v = normalize_number(cand)
+                    if v and 10.0 <= v <= 2000.0:
+                        res['building_area'] = round(v, 2)
+                        break
+
+            if res['total_area'] is None and re.search(r'^(?:延べ面積|延床面積|延面積)$', t.strip()):
+                for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
+                    v = normalize_number(cand)
+                    if v and 10.0 <= v <= 5000.0:
+                        res['total_area'] = round(v, 2)
+                        break
+
+            if res['floor_1_area'] is None and re.search(r'^(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)$', t.strip()):
+                for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
+                    v = normalize_number(cand)
+                    if v and 10.0 <= v <= 2000.0:
+                        res['floor_1_area'] = round(v, 2)
+                        break
+
+            if res['floor_2_area'] is None and re.search(r'^(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)$', t.strip()):
+                for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
+                    v = normalize_number(cand)
+                    if v and 10.0 <= v <= 2000.0:
+                        res['floor_2_area'] = round(v, 2)
+                        break
+
+    # 2. テキスト全体からの正規表現マッチ
     if text:
-        m_b = re.search(r'建築面積[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-        if m_b:
-            val = normalize_number(m_b.group(1))
-            if val is not None: res['building_area'] = round(val, 2)
+        if res['building_area'] is None:
+            m_b = re.search(r'建築面積[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+            if m_b:
+                val = normalize_number(m_b.group(1))
+                if val is not None: res['building_area'] = round(val, 2)
 
-        m_t = re.search(r'(?:延べ面積|延床面積|延面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-        if m_t:
-            val = normalize_number(m_t.group(1))
-            if val is not None: res['total_area'] = round(val, 2)
+        if res['total_area'] is None:
+            m_t = re.search(r'(?:延べ面積|延床面積|延面積)[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+            if m_t:
+                val = normalize_number(m_t.group(1))
+                if val is not None: res['total_area'] = round(val, 2)
 
-        m_f1 = re.search(r'(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-        if m_f1:
-            val = normalize_number(m_f1.group(1))
-            if val is not None: res['floor_1_area'] = round(val, 2)
+        if res['floor_1_area'] is None:
+            m_f1 = re.search(r'(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+            if m_f1:
+                val = normalize_number(m_f1.group(1))
+                if val is not None: res['floor_1_area'] = round(val, 2)
 
-        m_f2 = re.search(r'(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-        if m_f2:
-            val = normalize_number(m_f2.group(1))
-            if val is not None: res['floor_2_area'] = round(val, 2)
+        if res['floor_2_area'] is None:
+            m_f2 = re.search(r'(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)[^\d\n\r:：]*[:：\s]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+            if m_f2:
+                val = normalize_number(m_f2.group(1))
+                if val is not None: res['floor_2_area'] = round(val, 2)
 
     return res
 

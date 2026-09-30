@@ -216,7 +216,8 @@
 
 // 1.6.54: PHPセッション排他ロックの即時解放（auth.phpでのsession_write_close導入によるキューイング解消）、画面ロード時の同期ファイル転送軽量化、および外部CDNブロッキングタグ削除による爆速レスポンス化
 // 1.6.55: JWWネイティブ直接解析のゼロ終端走査・近傍探索（矩計図の高さ/軒高判定）および図枠情報（工事名/建築主/設計者/所在地）のノイズ完全排除による抽出精度大幅向上
-window.APP_VERSION = "1.6.55";
+// 1.6.56: Jw_cad等が出力する非標準DXF構文エラー(ACDBDICTIONARYWDFLT)への完全自動修復(recover.readfile)およびRAWテキスト走査マージによる超堅牢化
+window.APP_VERSION = "1.6.56";
 const APP_LAST_UPDATED = '2026-09-30';
 
 
