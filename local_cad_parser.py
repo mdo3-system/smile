@@ -48,6 +48,8 @@ def add_cors_headers(response):
 
 # DRA-CAD 19 の実行ファイル候補
 DRACAD_CANDIDATES = [
+    r"C:\Program Files\DRA-CAD19\DRAWIN.exe",
+    r"C:\Program Files\DRA-CAD19\DRACAD.exe",
     r"C:\Program Files\kozo\DRACAD19\DRACAD.exe",
     r"C:\Program Files (x86)\kozo\DRACAD19\DRACAD.exe",
     r"C:\Program Files\kozo\DRACAD20\DRACAD.exe",
@@ -203,34 +205,59 @@ def convert_jww_to_dxf_via_jacconvert(jww_path, dxf_path):
         pass
     return False
 
+def clean_jww_text_item(s):
+    """JWWテキストのクリーニングとノイズ判定"""
+    if not s:
+        return ""
+    # 制御文字除去
+    cleaned = re.sub(r'[\x00-\x1F\x7F\x80]', '', s).strip()
+    # フォント名プレフィックス除去
+    cleaned = re.sub(r'^.*?ゴシック[\(\@\*\$\d\s]*', '', cleaned)
+    cleaned = re.sub(r'^.*?明朝[\(\@\*\$\d\s]*', '', cleaned)
+    # JWW書式文字除去 (^, ~, %, color/font commands)
+    cleaned = re.sub(r'^\^[A-Za-z0-9]', '', cleaned)
+    cleaned = cleaned.strip()
+    if len(cleaned) < 2:
+        return ""
+    # 記号のみ、または短い英数字記号ゴミ（I@, `m, ffff, M@等）を除外
+    if re.fullmatch(r'[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]+', cleaned):
+        return ""
+    if re.fullmatch(r'[A-Za-z0-9@\._\-~]{1,4}', cleaned):
+        return ""
+    return cleaned
+
 def extract_from_jww_native(jww_path):
     """
     【外部アプリ不要】PythonによるJWWバイナリ直接テキスト・寸法抽出パーサー
-    JWW (Jw_cad) ファイルのバイナリから Shift-JIS / CP932 文字列チャンクを直接復元・走査
+    ゼロ終端チャンク分割 + 高度ノイズ除去 + 近傍走査により高精度抽出
     """
     texts = []
     try:
         with open(jww_path, 'rb') as f:
             raw_data = f.read()
 
-        # Shift-JIS (CP932) のバイトシーケンスパターン
-        # 連続した2文字以上の日本語/ASCII文字（文字コード 0x20〜0x7E, 0x81〜0x9F, 0xE0〜0xFC + 0x40〜0xFC）を抽出
-        pattern = re.compile(
-            b'(?:[\x20-\x7E]|(?:[\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC])){2,}'
-        )
-
-        matches = pattern.findall(raw_data)
-        for m in matches:
+        # ゼロ終端 (0x00) によるチャンク分割走査
+        chunks = raw_data.split(b'\x00')
+        for c in chunks:
+            if len(c) < 2:
+                continue
             try:
-                decoded = m.decode('cp932', errors='ignore').strip()
-                # 制御文字や明らかなノイズを除去
-                cleaned = re.sub(r'[\x00-\x1F\x7F]', '', decoded)
-                # JWW文字書式プレフィックスの除去 (^, ~, %, color/font commands)
-                cleaned = re.sub(r'\^[A-Za-z0-9]', '', cleaned)
-                cleaned = cleaned.strip()
+                decoded = c.decode('cp932')
+                cleaned = clean_jww_text_item(decoded)
+                if cleaned:
+                    texts.append(cleaned)
+            except Exception:
+                continue
 
-                # 有意な文字列（2文字以上）のみ採用
-                if len(cleaned) >= 2:
+        # 念のため連続バイト列パターンでも追加走査（取りこぼし防止）
+        pattern = re.compile(
+            b'(?:[\x20-\x7E]|(?:[\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC])){3,}'
+        )
+        for m in pattern.findall(raw_data):
+            try:
+                decoded = m.decode('cp932')
+                cleaned = clean_jww_text_item(decoded)
+                if cleaned and cleaned not in texts:
                     texts.append(cleaned)
             except Exception:
                 continue
@@ -239,7 +266,7 @@ def extract_from_jww_native(jww_path):
         print(f"[JWW Native Parser Warning] {e}")
 
     combined_text = "\n".join(texts)
-    return parse_building_text(combined_text, source="jww"), texts
+    return parse_building_text(combined_text, source="jww", texts_list=texts), texts
 
 def extract_from_dxf_content(dxf_path):
     """ezdxf を用いて DXF からテキスト・寸法・図枠文字を抽出"""
@@ -312,92 +339,190 @@ def extract_from_pdf_content(pdf_path):
 
     return parse_building_text(full_text, source="pdf"), full_text
 
-def parse_building_text(text, source="pdf"):
-    """
-    確認申請書・図面・面積表・JWW等のテキストから正規表現で各種数値を抽出
-    """
-    data = {
-        'max_height': None,       # 最高の高さ (m)
-        'eaves_height': None,     # 最高の軒の高さ (m)
-        'building_area': None,    # 建築面積 (㎡)
-        'floor_1_area': None,     # 1階床面積 (㎡)
-        'floor_2_area': None,     # 2階床面積 (㎡)
-        'total_area': None,       # 延べ面積 (㎡)
-        'project_name': "",       # 工事名称
-        'client_name': "",        # 建築主
-        'architect_name': "",     # 設計者
-        'location': "",           # 敷地の地名地番・所在地
+def extract_height_data(text, texts_list=None):
+    """高さ・軒高の高精度抽出（正規表現 + 近傍走査）"""
+    res = {'max_height': None, 'eaves_height': None}
+    if not text and not texts_list:
+        return res
+
+    # 1. テキスト全体からの正規表現マッチ
+    if text:
+        m_h_max = re.search(r'(?:最高(?:の)?高(?:さ)?|最高部|最高高|最高頂部|棟高|最高棟高)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
+        if m_h_max:
+            res['max_height'] = normalize_height(m_h_max.group(1))
+
+        m_h_eaves = re.search(r'(?:最高(?:の)?軒(?:の)?高(?:さ)?|最高軒高|軒高|軒の高さ)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
+        if m_h_eaves:
+            res['eaves_height'] = normalize_height(m_h_eaves.group(1))
+
+    # 2. 矩計図等の近傍走査（テキストリストがある場合）
+    if texts_list:
+        for idx, t in enumerate(texts_list):
+            # 最高高さの探索
+            if res['max_height'] is None and re.search(r'(?:最高(?:の)?高(?:さ)?|最高部|最高高|棟高)', t):
+                # 直後を優先探索、なければ直前を探索
+                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-3):idx]
+                for candidate in candidates:
+                    m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate)
+                    if m:
+                        val = normalize_height(m.group(1))
+                        if val and 4.0 <= val <= 30.0:
+                            res['max_height'] = val
+                            break
+
+            # 軒高の探索
+            if res['eaves_height'] is None and re.search(r'(?:軒(?:の)?高(?:さ)?|軒高)', t):
+                # 直後を優先探索、なければ直前を探索
+                candidates = texts_list[idx+1:min(len(texts_list), idx+6)] + texts_list[max(0, idx-3):idx]
+                for candidate in candidates:
+                    m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate)
+                    if m:
+                        val = normalize_height(m.group(1))
+                        # 軒高は2.5m以上で、最高高さが既に判明していればそれ未満であること
+                        if val and 2.5 <= val <= 25.0:
+                            if res['max_height'] and val >= res['max_height']:
+                                continue
+                            res['eaves_height'] = val
+                            break
+
+    return res
+
+def extract_area_data(text, texts_list=None):
+    """面積情報の高精度抽出"""
+    res = {
+        'building_area': None,
+        'floor_1_area': None,
+        'floor_2_area': None,
+        'total_area': None
+    }
+    if not text and not texts_list:
+        return res
+
+    if text:
+        m_b = re.search(r'建築面積[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+        if m_b:
+            val = normalize_number(m_b.group(1))
+            if val is not None: res['building_area'] = round(val, 2)
+
+        m_t = re.search(r'(?:延べ面積|延床面積|延面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+        if m_t:
+            val = normalize_number(m_t.group(1))
+            if val is not None: res['total_area'] = round(val, 2)
+
+        m_f1 = re.search(r'(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+        if m_f1:
+            val = normalize_number(m_f1.group(1))
+            if val is not None: res['floor_1_area'] = round(val, 2)
+
+        m_f2 = re.search(r'(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
+        if m_f2:
+            val = normalize_number(m_f2.group(1))
+            if val is not None: res['floor_2_area'] = round(val, 2)
+
+    return res
+
+def extract_metadata_data(text, texts_list=None):
+    """図枠情報（工事名称・建築主・設計者・所在地）の高精度抽出＆ノイズ完全排除"""
+    res = {
+        'project_name': "",
+        'client_name': "",
+        'architect_name': "",
+        'location': ""
     }
 
-    if not text:
+    # 1. texts_list がある場合（CAD / JWW 等の文字列リスト走査）
+    if texts_list:
+        # 工事名称
+        for t in texts_list:
+            m = re.search(r'([^\n\r]{2,30}(?:様邸|邸)[\s　]*(?:新築|増築|改築)?(?:住宅)?(?:工事|計画)?)', t)
+            if m and len(m.group(1).strip()) >= 5:
+                res['project_name'] = m.group(1).strip()
+                # 建築主も同時に取得
+                m_cli = re.search(r'([^\n\r]{2,15})(?:様邸|邸)', m.group(1))
+                if m_cli and not res['client_name']:
+                    res['client_name'] = re.sub(r'[\s　]+', '', m_cli.group(1))
+                break
+
+        # 設計者 (具体的な会社名・事務所名を優先)
+        arch_candidates = []
+        for t in texts_list:
+            if ('株式会社' in t or '有限会社' in t or '合同会社' in t) and any(k in t for k in ['設計', '建築', '企画', '工房', 'スタジオ', 'オフィス']):
+                arch_candidates.insert(0, t.strip())
+            elif any(k in t for k in ['建築士事務所', '設計事務所', '設計室', 'アトリエ']) and len(t.strip()) >= 6:
+                # 明らかなノイズ（英記号のみ）を除外
+                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', t.strip()):
+                    arch_candidates.append(t.strip())
+
+        if arch_candidates:
+            res['architect_name'] = arch_candidates[0]
+
+        # 所在地 (都道府県から始まる住所表記)
+        for t in texts_list:
+            m_addr = re.search(r'((?:東京都|北海道|(?:京都|大阪)府|.{2,3}県)[^\n\r]{2,40}(?:市|区|町|村)[^\n\r]{1,30})', t)
+            if m_addr:
+                res['location'] = m_addr.group(1).strip()
+                break
+
+    # 2. テキスト全体からのフォールバック（PDF申請書や不足項目の補完）
+    if text:
+        if not res['project_name']:
+            m_proj = re.search(r'(?:建築物等の名称(?:又は工事名)?|工事名称|工事名)[：:\s]+([^\n\r]{2,50})', text)
+            if m_proj:
+                cand = m_proj.group(1).strip()
+                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', cand):
+                    res['project_name'] = cand
+
+        if not res['client_name']:
+            m_client = re.search(r'(?:建築主(?:の氏名)?|お施主様名?|施主名?)[：:\s]+([^\n\r]{2,30})', text)
+            if m_client:
+                cand = m_client.group(1).strip()
+                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', cand):
+                    res['client_name'] = cand
+
+        if not res['architect_name']:
+            m_arch = re.search(r'(?:設計者(?:氏名)?|設計事務所|設計監理)[：:\s]+([^\n\r]{2,50})', text)
+            if m_arch:
+                cand = m_arch.group(1).strip()
+                # ffff や M@ などの英記号ノイズを除外
+                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', cand):
+                    res['architect_name'] = cand
+
+        if not res['location']:
+            m_loc = re.search(r'(?:地名地番|敷地の位置|敷地の所在地|建設地|工事場所)[：:\s]+([^\n\r]{2,60})', text)
+            if m_loc:
+                cand = m_loc.group(1).strip()
+                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', cand):
+                    res['location'] = cand
+
+    return res
+
+def parse_building_text(text, source="pdf", texts_list=None):
+    """
+    建築図書テキスト解析の統合ディスパッチャー
+    SRPに基づき、高さ・面積・メタデータの抽出関数を協調実行
+    """
+    data = {
+        'max_height': None,
+        'eaves_height': None,
+        'building_area': None,
+        'floor_1_area': None,
+        'floor_2_area': None,
+        'total_area': None,
+        'project_name': "",
+        'client_name': "",
+        'architect_name': "",
+        'location': "",
+    }
+    if not text and not texts_list:
         return data
 
-    # 1. 最高の高さ
-    m_h_max = re.search(r'(?:最高(?:の)?高(?:さ)?|最高高|最高頂部)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
-    if m_h_max:
-        data['max_height'] = normalize_height(m_h_max.group(1))
+    heights = extract_height_data(text, texts_list=texts_list)
+    areas = extract_area_data(text, texts_list=texts_list)
+    metadata = extract_metadata_data(text, texts_list=texts_list)
 
-    # 2. 最高の軒の高さ
-    m_h_eaves = re.search(r'(?:最高(?:の)?軒(?:の)?高(?:さ)?|軒高|軒の高さ)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:m|mm|M|MM))?', text)
-    if m_h_eaves:
-        data['eaves_height'] = normalize_height(m_h_eaves.group(1))
-
-    # 3. 建築面積
-    m_b_area = re.search(r'建築面積[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-    if m_b_area:
-        val = normalize_number(m_b_area.group(1))
-        if val is not None:
-            data['building_area'] = round(val, 2)
-
-    # 4. 延べ面積
-    m_t_area = re.search(r'(?:延べ面積|延床面積|延面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-    if m_t_area:
-        val = normalize_number(m_t_area.group(1))
-        if val is not None:
-            data['total_area'] = round(val, 2)
-
-    # 5. 1階床面積
-    m_f1_area = re.search(r'(?:1階(?:床)?面積|１階(?:床)?面積|1F(?:床)?面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-    if m_f1_area:
-        val = normalize_number(m_f1_area.group(1))
-        if val is not None:
-            data['floor_1_area'] = round(val, 2)
-
-    # 6. 2階床面積
-    m_f2_area = re.search(r'(?:2階(?:床)?面積|２階(?:床)?面積|2F(?:床)?面積)[^\d\n\r]*([0-9\.,]+)(?:\s*(?:㎡|m2|M2))?', text)
-    if m_f2_area:
-        val = normalize_number(m_f2_area.group(1))
-        if val is not None:
-            data['floor_2_area'] = round(val, 2)
-
-    # 7. 建築物等の名称又は工事名 / 工事名称
-    m_proj = re.search(r'(?:建築物等の名称(?:又は工事名)?|工事名称|工事名)[：:\s]+([^\n\r]{2,50})', text)
-    if m_proj:
-        data['project_name'] = m_proj.group(1).strip()
-    else:
-        m_proj2 = re.search(r'建築物等の名称又は工事名[^\n]*\n\s*([^\n\r]{2,50})', text)
-        if m_proj2:
-            data['project_name'] = m_proj2.group(1).strip()
-
-    # 8. 建築主 / 建築主の氏名
-    m_client = re.search(r'(?:建築主(?:の氏名)?|お施主様名?|施主名?)[：:\s]+([^\n\r]{2,30})', text)
-    if m_client:
-        data['client_name'] = m_client.group(1).strip()
-    else:
-        m_client2 = re.search(r'建築主\s*氏名[^\n]*\n\s*([^\n\r]{2,30})', text)
-        if m_client2:
-            data['client_name'] = m_client2.group(1).strip()
-
-    # 9. 設計者 / 設計事務所
-    m_arch = re.search(r'(?:設計者(?:氏名)?|設計事務所|設計監理)[：:\s]+([^\n\r]{2,50})', text)
-    if m_arch:
-        data['architect_name'] = m_arch.group(1).strip()
-
-    # 10. 敷地の地名地番 / 所在地
-    m_loc = re.search(r'(?:地名地番|敷地の位置|敷地の所在地|建設地|工事場所)[：:\s]+([^\n\r]{2,60})', text)
-    if m_loc:
-        data['location'] = m_loc.group(1).strip()
-
+    data.update(heights)
+    data.update(areas)
+    data.update(metadata)
     return data
 
 @app.route('/api/health', methods=['GET'])
