@@ -50,6 +50,29 @@ if (isset($_GET['token'])) {
             $_SESSION['parent_id'] = $user['parent_id'];
             $_SESSION['email_notification_enabled'] = $user['email_notification_enabled'];
             
+            // 24時間永続ログイントークン (Remember Token) の発行
+            $remember_token = bin2hex(random_bytes(32));
+            $stmtRemember = $pdo->prepare("UPDATE users SET remember_token = :token, remember_token_expires = DATE_ADD(NOW(), INTERVAL 24 HOUR) WHERE id = :id");
+            $stmtRemember->execute([
+                'token' => $remember_token,
+                'id'    => $user['id']
+            ]);
+
+            // HTTPS環境判定
+            $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
+            // クッキーに remember_token を24時間保存
+            setcookie('remember_token', $remember_token, [
+                'expires'  => time() + 86400,
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => $is_https,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+
             // トークンパラメータを除去したURLへリダイレクトしてログインセッションを保持
             $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
             header("Location: " . $clean_url);
@@ -64,9 +87,74 @@ if (isset($_GET['token'])) {
 // 2. ログインチェックおよびロール判定関数
 function check_auth($allowed_roles = []) {
     global $pdo;
+
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
+    // セッションが切れている場合、24時間保持トークン (remember_token) Cookieからの自動復元を試行
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-        header("Location: login.php");
-        exit;
+        if (!empty($_COOKIE['remember_token']) && isset($pdo)) {
+            $cookie_token = trim($_COOKIE['remember_token']);
+            $stmtToken = $pdo->prepare("
+                SELECT * FROM users 
+                WHERE remember_token = :token 
+                AND remember_token_expires > NOW()
+            ");
+            $stmtToken->execute(['token' => $cookie_token]);
+            $remembered_user = $stmtToken->fetch();
+
+            if ($remembered_user) {
+                // セッションを完全復元
+                $_SESSION['user_id'] = $remembered_user['id'];
+                $_SESSION['role'] = $remembered_user['role'];
+                $_SESSION['contact_name'] = $remembered_user['contact_name'];
+                $_SESSION['allowed_project_id'] = $remembered_user['allowed_project_id'];
+                $_SESSION['parent_id'] = $remembered_user['parent_id'];
+                $_SESSION['email_notification_enabled'] = $remembered_user['email_notification_enabled'];
+
+                // トークン有効期限を現在から24時間後へスライディング延長
+                $stmtExtend = $pdo->prepare("UPDATE users SET remember_token_expires = DATE_ADD(NOW(), INTERVAL 24 HOUR) WHERE id = :id");
+                $stmtExtend->execute(['id' => $remembered_user['id']]);
+
+                setcookie('remember_token', $cookie_token, [
+                    'expires'  => time() + 86400,
+                    'path'     => '/',
+                    'domain'   => '',
+                    'secure'   => $is_https,
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+            } else {
+                // 無効または期限切れのトークンクッキーを消去
+                setcookie('remember_token', '', [
+                    'expires'  => time() - 3600,
+                    'path'     => '/',
+                    'domain'   => '',
+                    'secure'   => $is_https,
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+                header("Location: login.php");
+                exit;
+            }
+        } else {
+            header("Location: login.php");
+            exit;
+        }
+    } else {
+        // セッションが有効な場合も、remember_token Cookieの有効期限をスライディング延長
+        if (!empty($_COOKIE['remember_token']) && isset($pdo)) {
+            $cookie_token = trim($_COOKIE['remember_token']);
+            setcookie('remember_token', $cookie_token, [
+                'expires'  => time() + 86400,
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => $is_https,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+        }
     }
 
     // 常にDBから最新情報を取得してセッションを同期、および最終アクティブ日時を更新
