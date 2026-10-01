@@ -3,7 +3,7 @@
 // 【正式依頼モーダル】依頼種別に応じた図書アップロードスロット
 
 if (!function_exists('renderUploadSlot')) {
-    function renderUploadSlot($label, $name, $isRequired = true, $note = '') {
+    function renderUploadSlot($label, $name, $isRequired = true, $note = '', $accept = '.pdf,.zip,.jww,.dxf,.jw_,,.fcbz') {
         $reqSpan = $isRequired ? '<span style="color:red;">*</span>' : '<span style="color:#d97706; font-size:10px;">(後出し可)</span>';
         $requiredAttr = $isRequired ? 'required' : '';
         $noteHtml = $note ? "<div style='font-size:10px; color:#64748b; margin-top:3px;'>{$note}</div>" : '';
@@ -13,7 +13,7 @@ if (!function_exists('renderUploadSlot')) {
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
             {$noteHtml}
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[{$name}][]" accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').checked && (this.required=false);">
+                <input type="file" name="upload_files[{$name}][]" accept="{$accept}" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').checked && (this.required=false);">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="if ({$jsRequired}) { document.getElementById('file_{$name}').required = !this.checked; }"> 他ﾌｧｲﾙに記載
                 </label>
@@ -72,18 +72,19 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
 <div id="upload_slots_container">
 
     <!-- ============================================
-         【共通】意匠CADデータ（全依頼で必須）
+         【共通】意匠図書データ（全依頼で必須・PDF/CAD）
     ============================================ -->
     <div style="margin-bottom:15px; border:2px solid #ef4444; padding:12px; border-radius:6px; background:#fef2f2;">
-        <strong style="display:block; margin-bottom:8px; color:#b91c1c;">🔴 【必須】意匠CADデータ（正式依頼時に必ず必要）</strong>
-        <div style="font-size:11px; color:#6b7280; margin-bottom:10px;">JWW/DXF/FCBZ等のCADデータをアップロードしてください。個別図面でも一括ZIPでも構いません。</div>
-        <?= renderUploadSlot('配置図 (CAD)', 'cad_layout', true, 'JWW/DXF/FCBZ形式') ?>
-        <?= renderUploadSlot('1F平面図 (CAD)', 'cad_plan_1f', true, 'JWW/DXF/FCBZ形式') ?>
-        <?= renderUploadSlot('2F平面図 (CAD)', 'cad_plan_2f', false, '平屋の場合は不要（送信時に確認します）') ?>
-        <?= renderUploadSlot('3F・PH・RF 平面図 (CAD)', 'cad_plan_3f', false, '該当する場合のみ') ?>
-        <?= renderUploadSlot('立面図 (CAD)', 'cad_elevation', true, '各方向の立面図') ?>
-        <?= renderUploadSlot('矩計図 (CAD)', 'cad_section', false, '必要に応じて提出') ?>
-        <?= renderUploadSlot('断面図 (CAD)', 'cad_cross_section', false, '必要に応じて提出') ?>
+        <strong style="display:block; margin-bottom:8px; color:#b91c1c;">🔴 【必須】意匠図書データ（PDF / CAD）</strong>
+        <div style="font-size:11px; color:#6b7280; margin-bottom:10px;">Goodnotes等の確認用PDF、またはJWW/DXF等のCADデータをアップロードしてください。個別図面でも一括ZIPでも構いません。</div>
+        <?= renderUploadSlot('配置図 (PDF/CAD)', 'cad_layout', true, 'PDFまたはJWW/DXF/FCBZ形式') ?>
+        <?= renderUploadSlot('1F平面図 (PDF/CAD)', 'cad_plan_1f', true, 'PDFまたはJWW/DXF/FCBZ形式') ?>
+        <?= renderUploadSlot('2F平面図 (PDF/CAD)', 'cad_plan_2f', false, '平屋の場合は不要（送信時に確認します）') ?>
+        <?= renderUploadSlot('3F・PH・RF 平面図 (PDF/CAD)', 'cad_plan_3f', false, '該当する場合のみ') ?>
+        <?= renderUploadSlot('立面図 (PDF/CAD)', 'cad_elevation', true, '各方向の立面図（PDFまたはCAD）') ?>
+        <?= renderUploadSlot('矩計図 (PDF/CAD)', 'cad_section', false, '必要に応じて提出（PDFまたはCAD）') ?>
+        <?= renderUploadSlot('断面図 (PDF/CAD)', 'cad_cross_section', false, '必要に応じて提出（PDFまたはCAD）') ?>
+        <?= renderUploadSlot('面積表 / 求積図 (PDF/画像)', 'pdf_area_calc', false, '※CAD不可（PDFまたはPNG/JPG画像のみ受付）', '.pdf,.png,.jpg,.jpeg') ?>
         
         <!-- 動的スロット追加先 -->
         <div id="dynamic_cad_slots_container"></div>

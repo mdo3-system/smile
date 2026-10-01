@@ -168,8 +168,8 @@ $slot_files['elevation'] = getFirstValidFile($files_by_cat, ['cad_elevation', 'p
                         <input type="file" id="cad_file_sec" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
                     </div>
                     <div>
-                        <label style="color:#475569; display:block;">④ 面積表 (PDF/DXF/JWW):</label>
-                        <input type="file" id="cad_file_area" accept=".pdf,.dxf,.jww" style="font-size:10px; width:100%;">
+                        <label style="color:#475569; display:block;">④ 面積表 (PDF/画像 ※CAD不可):</label>
+                        <input type="file" id="cad_file_area" accept=".pdf,.png,.jpg,.jpeg" style="font-size:10px; width:100%;">
                     </div>
                     <div>
                         <label style="color:#475569; display:block;">⑤ 立面図 (PDF/DXF/JWW):</label>

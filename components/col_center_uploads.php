@@ -11,12 +11,13 @@
 
     // 1. 共通図書
     $default_common_docs = [
-        'cad_layout' => '配置図 ※正式依頼時必須',
-        'cad_plan_1f' => '1F平面図 ※正式依頼時必須',
-        'cad_plan_2f' => '2F平面図 ※正式依頼時必須',
-        'cad_elevation' => '立面図 ※正式依頼時必須',
-        'cad_section' => '矩計図 ※正式依頼時必須',
-        'cad_cross_section' => '断面図',
+        'cad_layout' => '配置図 (PDF/CAD) ※正式依頼時必須',
+        'cad_plan_1f' => '1F平面図 (PDF/CAD) ※正式依頼時必須',
+        'cad_plan_2f' => '2F平面図 (PDF/CAD) ※正式依頼時必須',
+        'cad_elevation' => '立面図 (PDF/CAD) ※正式依頼時必須',
+        'cad_section' => '矩計図 (PDF/CAD) ※正式依頼時必須',
+        'cad_cross_section' => '断面図 (PDF/CAD)',
+        'pdf_area_calc' => '面積表 / 求積図 (PDF/画像 ※CAD不可)',
     ];
     $common_docs = [];
     foreach ($default_common_docs as $k => $v) {

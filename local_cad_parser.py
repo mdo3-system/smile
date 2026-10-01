@@ -409,7 +409,8 @@ def extract_from_pdf_content(pdf_path):
         except Exception:
             pass
 
-    return parse_building_text(full_text, source="pdf"), full_text
+    texts_list = [line.strip() for line in full_text.splitlines() if line.strip()]
+    return parse_building_text(full_text, source="pdf", texts_list=texts_list), full_text
 
 def extract_height_data(text, texts_list=None):
     """高さ・軒高・床高・階高の高精度抽出（正規表現 + 近傍走査 + PHFL除外）"""
@@ -575,32 +576,45 @@ def extract_area_data(text, texts_list=None):
             v = normalize_number(m_t_app.group(1))
             if v: res['total_area'] = round(v, 2)
 
-    # 2. texts_list からの面積走査
+        # 確認申請書 各階床面積: F1階 36.45, F2階 38.07
+        m_f1_app = re.search(r'(?:F1|1F|1階|１階)[^\d\n\r]{0,30}?([0-9\.,]+)', text)
+        if m_f1_app:
+            v = normalize_number(m_f1_app.group(1))
+            if v and 10.0 <= v <= 1000.0: res['floor_1_area'] = round(v, 2)
+
+        m_f2_app = re.search(r'(?:F2|2F|2階|２階)[^\d\n\r]{0,30}?([0-9\.,]+)', text)
+        if m_f2_app:
+            v = normalize_number(m_f2_app.group(1))
+            if v and 10.0 <= v <= 1000.0: res['floor_2_area'] = round(v, 2)
+
+    # 2. texts_list および text からの面積走査
+    # A. 単位(m^ u2, ㎡, m2)付き確定面積の走査（最優先）
+    raw_m2_vals = []
+    if text:
+        for m in re.finditer(r'([0-9\.,]+)\s*(?:m\^?\s*u?2|㎡|m2)', text):
+            v = normalize_number(m.group(1))
+            if v and 10.0 <= v <= 3000.0:
+                raw_m2_vals.append(v)
     if texts_list:
-        # A. 単位(m^ u2, ㎡, m2)付き確定面積の走査（最優先）
-        m2_vals = []
         for t in texts_list:
             m = re.search(r'([0-9\.,]+)\s*(?:m\^?\s*u?2|㎡|m2)', t)
             if m:
                 v = normalize_number(m.group(1))
-                if v and 15.0 <= v <= 3000.0 and v not in m2_vals:
-                    m2_vals.append(v)
+                if v and 10.0 <= v <= 3000.0:
+                    raw_m2_vals.append(v)
 
-        if m2_vals:
-            # 延べ面積は最大値 (例: 78.97)
-            if res['total_area'] is None:
-                res['total_area'] = round(max(m2_vals), 2)
+    m2_vals = []
+    for v in raw_m2_vals:
+        if v not in m2_vals:
+            m2_vals.append(v)
 
-            # 建築面積は延べ面積より小さい値で、1階床面積に相当するもの (例: 38.07)
-            if res['building_area'] is None:
-                for v in m2_vals:
-                    if 20.0 <= v <= 200.0 and v < res['total_area']:
-                        if v > res['total_area'] * 0.75:
-                            continue
-                        res['building_area'] = round(v, 2)
-                        break
+    if raw_m2_vals:
+        # 単位付き確定面積の最大値が延べ面積（例: 78.97）
+        if res['total_area'] is None:
+            res['total_area'] = round(max(raw_m2_vals), 2)
 
-        # B. ラベル走査による補完（単位付きで見つからなかった項目のフォールバック）
+    if texts_list:
+        # B. ラベル走査による直接抽出（最優先）
         for idx, t in enumerate(texts_list):
             if res['building_area'] is None and re.search(r'^(?:建築面積|建面積)$', t.strip()):
                 for cand in texts_list[idx+1:min(len(texts_list), idx+5)]:
@@ -629,6 +643,38 @@ def extract_area_data(text, texts_list=None):
                     if v and 10.0 <= v <= 1000.0:
                         res['floor_2_area'] = round(v, 2)
                         break
+
+    if raw_m2_vals:
+        # 延べ面積は最大値 (例: 78.97)
+        if res['total_area'] is None:
+            res['total_area'] = round(max(raw_m2_vals), 2)
+
+        # 日本の求積表の標準順序（建築面積 -> 1階床面積 -> 2階床面積）の判定（重複ありの生順序を使用）
+        # ※1階床面積＋2階床面積が延べ面積に近いこと
+        if (len(raw_m2_vals) >= 4 and raw_m2_vals[0] < res['total_area'] 
+            and raw_m2_vals[1] < res['total_area'] and raw_m2_vals[2] < res['total_area']
+            and abs((raw_m2_vals[1] + raw_m2_vals[2]) - res['total_area']) <= 25.0):
+            if res['building_area'] is None: res['building_area'] = round(raw_m2_vals[0], 2)
+            if res['floor_1_area'] is None: res['floor_1_area'] = round(raw_m2_vals[1], 2)
+            if res['floor_2_area'] is None: res['floor_2_area'] = round(raw_m2_vals[2], 2)
+
+        # 建築面積は延べ面積より小さい値で、1階/2階の投影面積に相当するもの (例: 38.07)
+        if res['building_area'] is None:
+            cands = [v for v in m2_vals if 20.0 <= v < res['total_area'] * 0.75]
+            if cands:
+                res['building_area'] = round(max(cands), 2)
+
+    # 1階床面積・2階床面積のフォールバック
+    if raw_m2_vals:
+        if res['floor_1_area'] is None and res['building_area']:
+            f1_cands = [v for v in m2_vals if 15.0 <= v <= res['building_area'] and v != res['building_area']]
+            if f1_cands:
+                res['floor_1_area'] = round(f1_cands[0], 2)
+            else:
+                res['floor_1_area'] = res['building_area']
+
+        if res['floor_2_area'] is None and res['building_area']:
+            res['floor_2_area'] = res['building_area']
 
     # 3. 一般的な正規表現マッチ（パーセント % / ％ は完全除外）
     if text:
@@ -720,8 +766,8 @@ def extract_metadata_data(text, texts_list=None):
             m_arch = re.search(r'(?:設計者(?:氏名)?|設計事務所|設計監理)[：:\s]+([^\n\r]{2,50})', text)
             if m_arch:
                 cand = m_arch.group(1).strip()
-                # ffff や M@ などの英記号ノイズを除外
-                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', cand):
+                # 印、印欄、㊞、登録番号などの汎用ラベルや記号を除外
+                if not re.search(r'^[a-zA-Z0-9\s@\.\-_]+$', cand) and cand not in ['印', '印欄', '㊞', '（印）', '氏名']:
                     res['architect_name'] = cand
 
         if not res['location']:
