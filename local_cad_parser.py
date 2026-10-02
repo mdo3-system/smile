@@ -16,6 +16,15 @@ import json
 import shutil
 import tempfile
 import subprocess
+
+# Windows環境でのUnicode文字出力エラー防止
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -464,14 +473,14 @@ def extract_height_data(text, texts_list=None):
             v1 = normalize_height(t1)
             v2 = normalize_height(t2)
             if v1 and v2:
-                # v1 が最高高さ(7.0〜15.0m), v2 が軒高(5.0〜7.5m)
-                if 7.0 <= v1 <= 15.0 and 5.0 <= v2 <= 7.5:
+                # v1 が最高高さ(6.0〜20.0m), v2 が軒高(3.0〜15.0m) 3階建て対応
+                if 6.0 <= v1 <= 20.0 and 3.0 <= v2 <= 15.0 and v1 > v2:
                     if res['max_height'] is None: res['max_height'] = v1
                     if res['eaves_height'] is None: res['eaves_height'] = v2
                     break
 
-        # B. ラベル走査（最近傍順: -1, +1, -2, +2, -3, +3, -4, +4, -5, +5 で最も近い寸法を最優先）
-        neighbor_offsets = [-1, 1, -2, 2, -3, 3, -4, 4, -5, 5]
+        # B. ラベル走査（見出しの直後 +1 を最優先、次に -1, +2, -2...）
+        neighbor_offsets = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5]
         for idx, t in enumerate(texts_list):
             # 最高高さの探索
             if res['max_height'] is None and re.search(r'(?:最高(?:の)?高(?:さ)?|最高部|最高高|棟高)', t):
@@ -485,8 +494,9 @@ def extract_height_data(text, texts_list=None):
                         if m:
                             val = normalize_height(m.group(1))
                             if val and 4.0 <= val <= 25.0:
-                                res['max_height'] = val
-                                break
+                                if res['eaves_height'] is None or val > res['eaves_height']:
+                                    res['max_height'] = val
+                                    break
 
             # 軒高の探索
             if res['eaves_height'] is None and re.search(r'(?:最高の軒高|軒高|軒の高さ)', t):
@@ -500,10 +510,12 @@ def extract_height_data(text, texts_list=None):
                         m = re.search(r'([1-9][0-9]{3,4}|[1-9]\.[0-9]{2,3})', candidate_clean)
                         if m:
                             val = normalize_height(m.group(1))
-                            # 2階建て住宅の軒高は通常 2.5m 〜 7.5m
-                            if val and 2.5 <= val <= 7.5:
-                                res['eaves_height'] = val
-                                break
+                            # 2階建て〜3階建て住宅の軒高 (2.5m 〜 15.0m)
+                            # かつ最高高さが判明している場合は最高高さ未満であること
+                            if val and 2.5 <= val <= 15.0:
+                                if res['max_height'] is None or val < res['max_height']:
+                                    res['eaves_height'] = val
+                                    break
 
             # 1FLの探索
             if res['floor_1_height'] is None and re.search(r'(?:1FL|1階床高)', t):
@@ -808,11 +820,31 @@ def parse_building_text(text, source="pdf", texts_list=None):
     data.update(metadata)
     return data
 
+def get_gemini_config():
+    """環境変数および .env から Gemini の設定を取得"""
+    api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+    custom_model = os.environ.get('GEMINI_MODEL')
+    
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    line_s = line.strip()
+                    if line_s.startswith('GEMINI_API_KEY=') and not api_key:
+                        api_key = line_s.split('=', 1)[1].strip('"\'')
+                    elif line_s.startswith('GEMINI_MODEL=') and not custom_model:
+                        custom_model = line_s.split('=', 1)[1].strip('"\'')
+        except Exception:
+            pass
+    return api_key, custom_model
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """ヘルスチェック & 実行環境情報の取得"""
     dracad_path = find_dracad_path()
     jac_path = find_jacconvert_path()
+    api_key, model_name = get_gemini_config()
     return jsonify({
         'status': 'ok',
         'service': 'Building CAD/PDF Parser',
@@ -824,66 +856,130 @@ def health():
         'jacconvert_path': jac_path or '未検出',
         'ezdxf_available': ezdxf is not None,
         'pypdf_available': pypdf is not None or pdfplumber is not None,
-        'gemini_available': bool(os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY'))
+        'gemini_available': bool(api_key),
+        'gemini_model_preferred': model_name or 'gemini-3.5-flash-lite'
     })
 
 def extract_with_gemini_vision(file_path):
     """
-    Gemini 2.0 / 1.5 Flash によるマルチモーダル図面視覚推論
+    Gemini によるマルチモーダル図面視覚推論
+    Lite系 (gemini-3.5-flash-lite) を最優先し、バージョン違いによるエラー発生時は自動フェイルオーバーで安定稼働
     PDF / 画像ファイルを直接解析し、寸法線・引出線・図枠から人間目線で高精度抽出
     """
-    api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
-    if not api_key:
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-        if os.path.exists(env_path):
-            try:
-                with open(env_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    for line in f:
-                        if line.startswith('GEMINI_API_KEY='):
-                            api_key = line.strip().split('=', 1)[1].strip('"\'')
-                            break
-            except Exception:
-                pass
+    api_key, custom_model = get_gemini_config()
 
     if not api_key:
         return None
 
+    # モデル候補リストの構築（指定モデル ➔ Flash-Lite系 ➔ Flash系 ➔ 安定版）
+    candidate_models = []
+    if custom_model:
+        # ユーザー表記のゆらぎ吸収 (例: 3.5-FLAS-LITE, 3.5-flash-lite, 2.0-flash-lite等)
+        cm_norm = custom_model.lower().strip()
+        if '3.5' in cm_norm or 'lite' in cm_norm:
+            candidate_models.extend(["gemini-3.5-flash-lite", custom_model])
+        else:
+            candidate_models.append(custom_model)
+            
+    # デフォルトの安定稼働順候補 (gemini-3.5-flash-lite 最優先)
+    default_candidates = [
+        "gemini-3.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash-8b"
+    ]
+    for c in default_candidates:
+        if c not in candidate_models:
+            candidate_models.append(c)
+
+    sample_file = None
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        
+        # ファイルのアップロード（Gemini File API）
+        try:
+            sample_file = genai.upload_file(path=file_path)
+            print(f"    📤 [Gemini File API] ファイルアップロード成功: {os.path.basename(file_path)}")
+        except Exception as ue:
+            print(f"    ⚠️ [Gemini File API アップロード失敗] {ue}")
+            return None
 
-        sample_file = genai.upload_file(path=file_path)
         prompt = """
-あなたは建築確認申請・設計図書の専門家です。提示された建築図書（PDFまたは図面画像）を詳細に視覚的に読解し、以下の項目を正確に抽出してJSON形式のみで出力してください。
-マークダウンのコードブロック（```json ... ```）形式で出力してください。
+あなたは日本の木造住宅・建築確認申請・設計図書の専門家です。
+提示された図面（確認申請書、立面図、矩計図、または求積図）を人間と同じ目線で詳細に視覚的に読解し、
+以下の設計数値を正確に特定してJSON形式のみで出力してください。
 
+【抽出ルール・留意事項】
+1. 最高高さ (max_height): 
+   - 設計GLから建築物の最高頂部（棟木天端・屋根頂部）までの垂直寸法（メートル単位、例: 9.010）。
+   - 斜線制限や部分的な数字ではなく、通しの最高数値を抽出すること。
+2. 最高の軒の高さ (eaves_height):
+   - 設計GLから最高の軒（外壁と屋根の交点）までの垂直寸法（メートル単位、例: 8.250）。
+   - 2階建て〜3階建ての建物全体での最高の軒高を特定すること。
+3. 1階床高 (floor_1_height): 
+   - 設計GLから1FLまでの高さ（メートル単位、例: 0.564 や 0.100）。
+4. 2階床高 (floor_2_height): 
+   - 設計GLから2FLまでの高さ（メートル単位）。
+5. 階高 (story_height): 
+   - 1階の階高、または標準階高（メートル単位、例: 2.925）。横架材間（2.775等）ではなく階高を優先。
+6. 面積情報:
+   - 確認申請書や面積表の場合、建築面積(building_area)、1階床面積(floor_1_area)、2階床面積(floor_2_area)、延べ面積(total_area)を㎡単位の数値で抽出（建蔽率や容積率の%は除外）。
+7. 物件・図枠情報:
+   - 工事名称(project_name)、建築主(client_name)、設計者・建築士事務所(architect_name)、地名地番(location)を抽出。
+
+出力は必ず以下のキーを持つJSONオブジェクト単体（```json ... ```）としてください。不明な項目は null または空文字にしてください：
+```json
 {
-  "max_height": 最高の高さ（GL基準、メートル単位の数値。例: 8.436。見つからない場合はnull）,
-  "eaves_height": 最高の軒の高さ（GL基準、メートル単位の数値。例: 6.076。見つからない場合はnull）,
-  "floor_1_height": 1階床高（1FL、GL基準、メートル単位の数値。例: 0.476。見つからない場合はnull）,
-  "floor_2_height": 2階床高（2FL、GL基準、メートル単位の数値。例: 3.276。見つからない場合はnull）,
-  "story_height": 階高（1階または2階の横架材間等、メートル単位の数値。例: 2.800。見つからない場合はnull）,
-  "building_area": 建築面積（㎡単位の数値。例: 38.07。建蔽率%は除外。見つからない場合はnull）,
-  "floor_1_area": 1階床面積（㎡単位の数値。例: 36.45。見つからない場合はnull）,
-  "floor_2_area": 2階床面積（㎡単位の数値。例: 38.07。見つからない場合はnull）,
-  "total_area": 延べ面積（㎡単位の数値。例: 78.97。容積率%は除外。見つからない場合はnull）,
-  "project_name": "工事名称・物件名（文字列。見つからない場合は空文字）",
-  "client_name": "建築主（文字列。見つからない場合は空文字）",
-  "architect_name": "設計者・事務所名（文字列。見つからない場合は空文字）",
-  "location": "地名地番・所在地（文字列。見つからない場合は空文字）"
+  "max_height": 9.010,
+  "eaves_height": 8.250,
+  "floor_1_height": 0.564,
+  "floor_2_height": null,
+  "story_height": 2.925,
+  "building_area": 93.57,
+  "floor_1_area": 93.57,
+  "floor_2_area": 93.57,
+  "total_area": 216.95,
+  "project_name": "斉藤様邸新築工事",
+  "client_name": "斉藤様",
+  "architect_name": "株式会社HIGH END",
+  "location": "福岡県..."
 }
+```
 """
-        response = model.generate_content([sample_file, prompt])
-        res_text = response.text
-        m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', res_text, re.DOTALL)
-        json_str = m.group(1) if m else res_text.strip()
-        data = json.loads(json_str)
-        print(f"    🌟 [Gemini API 視覚推論成功] 抽出データ: {data}")
-        return data
+        # バージョン違いで躓かない自動フェイルオーバー実行
+        last_error = None
+        for m_name in candidate_models:
+            try:
+                print(f"    🤖 [Gemini 推論試行] モデル: {m_name} ...")
+                model = genai.GenerativeModel(m_name)
+                response = model.generate_content([sample_file, prompt])
+                if response and response.text:
+                    res_text = response.text
+                    m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', res_text, re.DOTALL)
+                    json_str = m.group(1) if m else res_text.strip()
+                    data = json.loads(json_str)
+                    print(f"    🌟 [Gemini API 視覚推論成功 ({m_name})] 抽出データ: {data}")
+                    return data
+            except Exception as me:
+                last_error = me
+                print(f"    ⚠️ [モデル {m_name} スキップ/エラー] {me} ➔ 次の候補へフォールバックします")
+                continue
+
+        print(f"    ℹ [全Geminiモデル候補試行完了: ローカルパーサーへフォールバックします] 最終エラー: {last_error}")
+        return None
     except Exception as e:
         print(f"    ℹ [Gemini API スキップ/エラー: ローカルパーサーへフォールバックします] {e}")
         return None
+    finally:
+        # アップロードした一時ファイルをGeminiサーバーからクリーンアップ
+        if sample_file:
+            try:
+                sample_file.delete()
+            except Exception:
+                pass
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -1136,6 +1232,6 @@ if __name__ == '__main__':
     jac = find_jacconvert_path()
     if jac:
         print(f" JacConvert: [検出] {jac}")
-    print(f" JWW解析: [有効] DRA-CAD/JacConvert DXF変換 ➔ Pythonネイティブ解析")
+    print(f" JWW解析: [有効] DRA-CAD/JacConvert DXF変換 -> Pythonネイティブ解析")
     print(f"=====================================================")
     app.run(host='0.0.0.0', port=port, debug=False)
