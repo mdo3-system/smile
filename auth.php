@@ -73,8 +73,11 @@ if (isset($_GET['token'])) {
                 'samesite' => 'Lax'
             ]);
 
-            // トークンパラメータを除去したURLへリダイレクトしてログインセッションを保持
-            $clean_url = strtok($_SERVER['REQUEST_URI'], '?');
+            // トークンパラメータを除去し、他のクエリパラメータを保持したURLへリダイレクトしてログインセッションを保持
+            $params = $_GET;
+            unset($params['token']);
+            $script = strtok($_SERVER['REQUEST_URI'], '?');
+            $clean_url = $script . (!empty($params) ? '?' . http_build_query($params) : '');
             header("Location: " . $clean_url);
             exit;
         }

@@ -23,7 +23,8 @@ if (!$project) {
 }
 
 $client_id_to_check = $_SESSION['parent_id'] ?: $current_user_id;
-if ($_SESSION['role'] === 'client' && $project['client_id'] !== $client_id_to_check) {
+$is_allowed_project_user = (!empty($_SESSION['allowed_project_id']) && (int)$_SESSION['allowed_project_id'] === (int)$project_id);
+if ($_SESSION['role'] === 'client' && !$is_allowed_project_user && $project['client_id'] !== $client_id_to_check) {
     header("HTTP/1.1 403 Forbidden");
     die("この案件へのアクセス権限がありません。<br><a href='index.php'>ダッシュボードへ戻る</a>");
 }
