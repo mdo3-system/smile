@@ -995,11 +995,25 @@
 
 ---
 
-## 85. このドキュメントの所在
+## 85. マジックリンク認証のリダイレクトパラメータ保持および案件限定招待権限チェック修復 (v1.6.64)
 
-- **AIエージェント用ドキュメント**: `C:\Users\049sm\.gemini\antigravity-ide\brain\9be78ea4-2fc9-4b5a-9db1-621a70a5a54c\FIXED_LOGIC.md`
-- **システム仕様書（GEMINI.md）**: `d:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.62（2026-10-01）
+- **概要**:
+  - マジックリンク（メール内のワンタイム認証リンク）から案件詳細画面（`project_detail.php?id=XX&token=YY`）へアクセスした際、`token` 認証完了後のリダイレクトで `?id=XX` 等のURLクエリパラメータが削ぎ落とされ、アクセス権限エラー（HTTP 403）となる不具合を解消。
+  - 単一案件専用招待リンク（`register.php?invite_project_id=XX`）から登録したユーザー（`allowed_project_id` を持つユーザー）が、案件詳細画面（`project_detail.php`）へアクセスした際にクライアントID不一致（`$project['client_id'] !== $client_id_to_check`）で弾かれる不具合を解消。
+- **仕様1 (auth.php のクエリパラメータ保持)**:
+  - `auth.php` にてマジックリンク検証成功後、`$_GET['token']` のみを除去し、`id` など他のパラメータを `http_build_query` で維持した正規URLへリダイレクト。
+- **仕様2 (project_detail.php の allowed_project_id 認可)**:
+  - `$_SESSION['allowed_project_id'] === (int)$project_id` の場合、自社案件オーナーチェックをパスして正規に閲覧・操作を許可。
+- **仕様3 (石井工務店様代表ポータルへの統合・是正)**:
+  - 管理者が事前登録した `ishi@thanks.work`（ID: 87、案件67のオーナー）のメールアドレスを `contact@ishii-komuten.jp` へ正式変更し、代表ポータルアカウントとして統合。
+
+---
+
+## 86. このドキュメントの所在
+
+- **システム仕様書（gemini.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
+- **最終バージョン**: v1.6.64（2026-10-20）
+
 
 
 
