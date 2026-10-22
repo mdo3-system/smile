@@ -61,6 +61,7 @@ class UploadServiceTest extends TestCase
                 thread_type TEXT NOT NULL,
                 message_text TEXT NOT NULL,
                 file_path TEXT NULL,
+                file_type TEXT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
         ");
