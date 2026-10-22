@@ -129,7 +129,7 @@ $artifact_categories = [
     'sky_calc_doc', 'sky_dwg', 'other_artifact', 'kiso_hari_calc_doc'
 ];
 $placeholders = implode(',', array_fill(0, count($artifact_categories), '?'));
-$stmtHistory = $pdo->prepare("SELECT * FROM project_files WHERE project_id = ? AND (file_category IN ($placeholders) OR file_category LIKE 'custom_deliverable_%') ORDER BY file_category, version DESC");
+$stmtHistory = $pdo->prepare("SELECT * FROM project_files WHERE project_id = ? AND (file_category IN ($placeholders) OR file_category LIKE 'custom_deliverable_%') ORDER BY file_category, is_latest DESC, version DESC, id DESC");
 $params = array_merge([$project_id], $artifact_categories);
 $stmtHistory->execute($params);
 $artifact_history = $stmtHistory->fetchAll();
