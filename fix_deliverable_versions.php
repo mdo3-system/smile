@@ -7,7 +7,7 @@
  * バージョン番号（version）と最新フラグ（is_latest）を時系列順に正しく再設定するスクリプト。
  */
 
-require_once __DIR__ . '/db_connection.php';
+require_once __DIR__ . '/db_connect.php';
 
 echo "=== Deliverable Version Normalization Started ===\n";
 
