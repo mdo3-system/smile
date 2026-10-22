@@ -363,4 +363,51 @@ class UploadServiceTest extends TestCase
         $this->assertEquals('file', $msgs[1]['file_type']);
         $this->assertStringContainsString('仕様書.pdf', $msgs[1]['message_text']);
     }
+
+    public function testUploadArtifactReplacesLatestEvenWithDifferentDateFileName(): void
+    {
+        $projectId = 1;
+        $category = 'structural_dwg';
+
+        // 1回目の成果物UP（過去の日付ファイル）
+        $stmtInsert = $this->pdo->prepare("
+            INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+            VALUES (:pid, :cat, :name, :fid, 1, 1)
+        ");
+        $stmtInsert->execute(['pid' => $projectId, 'cat' => $category, 'name' => '構造図20261012.pdf', 'fid' => 'fid_old_date']);
+
+        // 2回目の成果物UP（今日の日付の別名ファイル）
+        $stmtOld = $this->pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+        $stmtOld->execute(['pid' => $projectId, 'cat' => $category]);
+
+        $stmtVer = $this->pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtVer->execute(['pid' => $projectId, 'cat' => $category]);
+        $nextVer = intval($stmtVer->fetchColumn()) + 1;
+
+        $stmtNew = $this->pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :fname, :fid, :ver, 1)");
+        $stmtNew->execute([
+            'pid' => $projectId,
+            'cat' => $category,
+            'fname' => '構造図20261022.pdf',
+            'fid' => 'fid_new_date',
+            'ver' => $nextVer
+        ]);
+
+        // 最新版（is_latest = 1）は1件のみであること
+        $stmtLatest = $this->pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category = :cat AND is_latest = 1");
+        $stmtLatest->execute(['pid' => $projectId, 'cat' => $category]);
+        $latestRows = $stmtLatest->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->assertCount(1, $latestRows);
+        $this->assertEquals('構造図20261022.pdf', $latestRows[0]['file_name']);
+        $this->assertEquals(2, $latestRows[0]['version']);
+
+        // 旧ファイルは is_latest = 0 の過去バージョンとして残っていること
+        $stmtOldRow = $this->pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid AND file_category = :cat AND version = 1");
+        $stmtOldRow->execute(['pid' => $projectId, 'cat' => $category]);
+        $oldRow = $stmtOldRow->fetch(PDO::FETCH_ASSOC);
+
+        $this->assertEquals('構造図20261012.pdf', $oldRow['file_name']);
+        $this->assertEquals(0, $oldRow['is_latest']);
+    }
 }

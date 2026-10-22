@@ -86,34 +86,14 @@ class UploadService
             $stmtCleanEmpty = $this->pdo->prepare("DELETE FROM project_files WHERE project_id = :pid AND file_category = :cat AND (drive_file_id IS NULL OR drive_file_id = '')");
             $stmtCleanEmpty->execute(['pid' => $projectId, 'cat' => $fileCategory]);
 
-            // 同名ファイルが存在するかチェック
-            $stmtCheckSame = $this->pdo->prepare("
-                SELECT MAX(version) FROM project_files 
-                WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
-            ");
-            $stmtCheckSame->execute([
-                'pid' => $projectId,
-                'cat' => $fileCategory,
-                'fname' => $fileName
-            ]);
-            $sameFileMaxVer = $stmtCheckSame->fetchColumn();
+            // 管理者成果物スロットでは、ファイル名（日付違い等）に関わらず既存ファイルをすべて過去バージョン（is_latest = 0）に退避
+            $stmtOld = $this->pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
+            $stmtOld->execute(['pid' => $projectId, 'cat' => $fileCategory]);
 
-            if ($sameFileMaxVer !== null && $sameFileMaxVer !== false && $sameFileMaxVer > 0) {
-                // 同名ファイルの旧バージョンを is_latest = 0 に
-                $stmtDisableSame = $this->pdo->prepare("
-                    UPDATE project_files 
-                    SET is_latest = 0 
-                    WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
-                ");
-                $stmtDisableSame->execute([
-                    'pid' => $projectId,
-                    'cat' => $fileCategory,
-                    'fname' => $fileName
-                ]);
-                $nextVer = (int)$sameFileMaxVer + 1;
-            } else {
-                $nextVer = 1;
-            }
+            // スロット内の最大バージョン番号を取得し +1
+            $stmtVer = $this->pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+            $stmtVer->execute(['pid' => $projectId, 'cat' => $fileCategory]);
+            $nextVer = intval($stmtVer->fetchColumn()) + 1;
 
             $stmtNew = $this->pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :fname, :fid, :ver, 1)");
             $stmtNew->execute([

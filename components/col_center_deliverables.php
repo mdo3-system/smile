@@ -105,19 +105,15 @@
                         <?php foreach ($categories as $cat => $label): ?>
                             <?php 
                             $history = $artifacts_by_cat[$cat] ?? []; 
-                            $actual_files_by_name = [];
+                            $actual_history = [];
                             if (!empty($history)) {
                                 foreach ($history as $h) {
                                     if (!empty($h['drive_file_id'])) {
-                                        $fname = $h['file_name'];
-                                        if (!isset($actual_files_by_name[$fname])) {
-                                            $actual_files_by_name[$fname] = [];
-                                        }
-                                        $actual_files_by_name[$fname][] = $h;
+                                        $actual_history[] = $h;
                                     }
                                 }
                             }
-                            $has_actual_file = !empty($actual_files_by_name);
+                            $has_actual_file = !empty($actual_history);
                             ?>
                             <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:6px 8px;">
                                 <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
@@ -130,40 +126,38 @@
                                     <?php endif; ?>
                                 </div>
                                 
-                                <?php if ($has_actual_file): ?>
-                                    <div style="display:flex; flex-direction:column; gap:4px;">
-                                        <?php foreach ($actual_files_by_name as $fname => $versions): 
-                                            $latest = $versions[0];
-                                            $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
-                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                                : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
-                                        ?>
-                                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:3px; padding:3px 5px;">
-                                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-                                                    <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#10b981; color:white; border-color:#059669; font-size:11px; padding:2px 6px;">
-                                                        📄 最新版ダウンロード (V<?= $latest['version'] ?>)
-                                                    </a>
-                                                    
-                                                    <?php if (count($versions) > 1): ?>
-                                                        <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:10px; padding:2px; max-width:130px;">
-                                                            <option value="">過去Ver(<?= count($versions) - 1 ?>件)...</option>
-                                                            <?php foreach ($versions as $idx => $h): 
-                                                                if ($idx === 0) continue;
-                                                                $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
-                                                                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                                                    : htmlspecialchars($h['drive_file_id'], ENT_QUOTES);
-                                                                $dateStr = date('m/d H:i', strtotime($h['created_at']));
-                                                            ?>
-                                                                <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>)</option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div style="font-size:10px; color:#64748b; margin-top:2px; word-break:break-all;">
-                                                    ファイル名: <?= htmlspecialchars($latest['file_name'], ENT_QUOTES) ?>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
+                                <?php if ($has_actual_file): 
+                                    $latest = $actual_history[0]; 
+                                    $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
+                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                        : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
+                                ?>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                                        <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#10b981; color:white; border-color:#059669; font-size:11px; padding:3px 8px;">
+                                            📄 最新版ダウンロード (V<?= $latest['version'] ?>)
+                                        </a>
+                                        
+                                        <?php if (count($actual_history) > 1): ?>
+                                            <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:10px; padding:2px 4px; max-width:140px;">
+                                                <option value="">過去バージョン (<?= count($actual_history) - 1 ?>件)...</option>
+                                                <?php foreach ($actual_history as $idx => $h): 
+                                                    if ($idx === 0) continue; // 最新は除外
+                                                    $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
+                                                        ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                                        : htmlspecialchars($h['drive_file_id'], ENT_QUOTES);
+                                                    $dateStr = date('m/d H:i', strtotime($h['created_at']));
+                                                ?>
+                                                    <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= htmlspecialchars($h['file_name']) ?> / <?= $dateStr ?>)</option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        <?php else: ?>
+                                            <select disabled style="font-size:10px; padding:2px 4px; max-width:130px; opacity:0.6; cursor:not-allowed;">
+                                                <option value="">過去バージョンなし</option>
+                                            </select>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div style="font-size:10px; color:#64748b; margin-top:3px; word-break:break-all;">
+                                        ファイル名: <?= htmlspecialchars($latest['file_name'], ENT_QUOTES) ?>
                                     </div>
                                 <?php else: ?>
                                     <div style="font-size:11px; color:#94a3b8; padding:2px 0;">未提出</div>
@@ -175,9 +169,9 @@
                                         <input type="hidden" name="action" value="upload_artifact">
                                         <input type="hidden" name="file_category" value="<?= $cat ?>">
                                         <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
-                                        <input type="file" name="artifact_files[]" multiple required style="font-size:10px; flex:1; min-width:120px;">
+                                        <input type="file" name="artifact_file" required style="font-size:10px; flex:1; min-width:120px;">
                                         <button type="submit" style="font-size:10px; background:#3b82f6; color:white; border:none; padding:3px 8px; border-radius:3px; cursor:pointer; font-weight:bold; white-space:nowrap;">
-                                            <?= $has_actual_file ? '＋追加/更新' : 'UP' ?>
+                                            <?= $has_actual_file ? '差し替えUP' : 'UP' ?>
                                         </button>
                                     </form>
                                 <?php endif; ?>
