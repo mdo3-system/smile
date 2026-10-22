@@ -953,6 +953,16 @@ class UploadService
 
         $this->pdo->beginTransaction();
         try {
+            // 削除前にスロットに登録されていたファイルを取得
+            $stmtFind = $this->pdo->prepare("
+                SELECT * FROM project_files 
+                WHERE project_id = :pid AND file_category = :cat AND drive_file_id IS NOT NULL AND drive_file_id != ''
+                ORDER BY version ASC, id ASC
+            ");
+            $stmtFind->execute(['pid' => $projectId, 'cat' => $category]);
+            $existingFiles = $stmtFind->fetchAll(PDO::FETCH_ASSOC);
+
+            // スロット枠レコードを削除
             $stmtDelete = $this->pdo->prepare("
                 DELETE FROM project_files 
                 WHERE project_id = :pid AND file_category = :cat
@@ -962,19 +972,75 @@ class UploadService
                 'cat' => $category
             ]);
 
-            // チャットへ通知
-            $chatMsg = "【図書スロット削除】\n設計担当が図書スロット「{$label}」を削除しました。";
             $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
-
-            $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
-            $stmtMsg->execute([
-                'pid' => $projectId,
-                'sid' => $userId,
-                'thread' => $threadType,
-                'msg' => $chatMsg
-            ]);
             require_once __DIR__ . '/../../functions.php';
-            sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+
+            if (empty($existingFiles)) {
+                // ファイルがない空スロットの場合
+                $chatMsg = "【図書スロット削除】\n設計担当が図書スロット「{$label}」を削除しました。";
+                $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                $stmtMsg->execute([
+                    'pid' => $projectId,
+                    'sid' => $userId,
+                    'thread' => $threadType,
+                    'msg' => $chatMsg
+                ]);
+                sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+            } else {
+                // ファイルが存在する場合: チャット欄に退避ファイルとして配置
+                $validFiles = [];
+                foreach ($existingFiles as $ef) {
+                    if ($ef['file_name'] !== '【他ファイルに記載】') {
+                        $validFiles[] = $ef;
+                    }
+                }
+
+                $chatMsg = "【図書スロット削除】\n設計担当が図書スロット「{$label}」を削除しました。\nスロットに登録されていたファイル（計" . count($validFiles) . "件）をチャットへ退避・保管しました。";
+
+                if (empty($validFiles)) {
+                    $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                    $stmtMsg->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $chatMsg
+                    ]);
+                } else {
+                    // 最初のファイルをメインメッセージに添付
+                    $firstFile = $validFiles[0];
+                    $firstType = preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $firstFile['file_name']) ? 'image' : 'file';
+                    $mainMsgText = $chatMsg . "\n📎 退避ファイル: {$firstFile['file_name']} (V{$firstFile['version']})";
+
+                    $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) VALUES (:pid, :sid, :thread, :msg, :fpath, :ftype)");
+                    $stmtMsg->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $mainMsgText,
+                        'fpath' => $firstFile['drive_file_id'],
+                        'ftype' => $firstType
+                    ]);
+
+                    // 2件目以降のファイルも個別の退避メッセージとして添付投稿
+                    for ($i = 1; $i < count($validFiles); $i++) {
+                        $subFile = $validFiles[$i];
+                        $subType = preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $subFile['file_name']) ? 'image' : 'file';
+                        $subMsgText = "📎 退避ファイル（スロット「{$label}」より）: {$subFile['file_name']} (V{$subFile['version']})";
+
+                        $stmtSub = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) VALUES (:pid, :sid, :thread, :msg, :fpath, :ftype)");
+                        $stmtSub->execute([
+                            'pid' => $projectId,
+                            'sid' => $userId,
+                            'thread' => $threadType,
+                            'msg' => $subMsgText,
+                            'fpath' => $subFile['drive_file_id'],
+                            'ftype' => $subType
+                        ]);
+                    }
+                }
+
+                sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+            }
 
             $this->pdo->commit();
             return true;
@@ -1006,6 +1072,16 @@ class UploadService
 
         $this->pdo->beginTransaction();
         try {
+            // 削除前にスロットに登録されていたファイルを取得
+            $stmtFind = $this->pdo->prepare("
+                SELECT * FROM project_files 
+                WHERE project_id = :pid AND file_category = :cat AND drive_file_id IS NOT NULL AND drive_file_id != ''
+                ORDER BY version ASC, id ASC
+            ");
+            $stmtFind->execute(['pid' => $projectId, 'cat' => $category]);
+            $existingFiles = $stmtFind->fetchAll(PDO::FETCH_ASSOC);
+
+            // スロット枠レコードを削除
             $stmtDelete = $this->pdo->prepare("
                 DELETE FROM project_files 
                 WHERE project_id = :pid AND file_category = :cat
@@ -1015,19 +1091,71 @@ class UploadService
                 'cat' => $category
             ]);
 
-            // チャットへ通知
-            $chatMsg = "【成果物スロット削除】\n設計担当が成果物スロット「{$label}」を削除しました。";
             $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
-
-            $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
-            $stmtMsg->execute([
-                'pid' => $projectId,
-                'sid' => $userId,
-                'thread' => $threadType,
-                'msg' => $chatMsg
-            ]);
             require_once __DIR__ . '/../../functions.php';
-            sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+
+            if (empty($existingFiles)) {
+                $chatMsg = "【成果物スロット削除】\n設計担当が成果物スロット「{$label}」を削除しました。";
+                $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                $stmtMsg->execute([
+                    'pid' => $projectId,
+                    'sid' => $userId,
+                    'thread' => $threadType,
+                    'msg' => $chatMsg
+                ]);
+                sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+            } else {
+                $validFiles = [];
+                foreach ($existingFiles as $ef) {
+                    if ($ef['file_name'] !== '【他ファイルに記載】') {
+                        $validFiles[] = $ef;
+                    }
+                }
+
+                $chatMsg = "【成果物スロット削除】\n設計担当が成果物スロット「{$label}」を削除しました。\nスロットに登録されていた成果物ファイル（計" . count($validFiles) . "件）をチャットへ退避・保管しました。";
+
+                if (empty($validFiles)) {
+                    $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+                    $stmtMsg->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $chatMsg
+                    ]);
+                } else {
+                    $firstFile = $validFiles[0];
+                    $firstType = preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $firstFile['file_name']) ? 'image' : 'file';
+                    $mainMsgText = $chatMsg . "\n📎 退避成果物: {$firstFile['file_name']} (V{$firstFile['version']})";
+
+                    $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) VALUES (:pid, :sid, :thread, :msg, :fpath, :ftype)");
+                    $stmtMsg->execute([
+                        'pid' => $projectId,
+                        'sid' => $userId,
+                        'thread' => $threadType,
+                        'msg' => $mainMsgText,
+                        'fpath' => $firstFile['drive_file_id'],
+                        'ftype' => $firstType
+                    ]);
+
+                    for ($i = 1; $i < count($validFiles); $i++) {
+                        $subFile = $validFiles[$i];
+                        $subType = preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $subFile['file_name']) ? 'image' : 'file';
+                        $subMsgText = "📎 退避成果物（スロット「{$label}」より）: {$subFile['file_name']} (V{$subFile['version']})";
+
+                        $stmtSub = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text, file_path, file_type) VALUES (:pid, :sid, :thread, :msg, :fpath, :ftype)");
+                        $stmtSub->execute([
+                            'pid' => $projectId,
+                            'sid' => $userId,
+                            'thread' => $threadType,
+                            'msg' => $subMsgText,
+                            'fpath' => $subFile['drive_file_id'],
+                            'ftype' => $subType
+                        ]);
+                    }
+                }
+
+                sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+            }
 
             $this->pdo->commit();
             return true;

@@ -317,4 +317,49 @@ class UploadServiceTest extends TestCase
         $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
         $this->assertStringContainsString('成果物スロット「施工計画書」を削除しました', $msg['message_text']);
     }
+
+    public function testDeleteCustomSlotWithFilesEvacuatesToChat(): void
+    {
+        $projectId = 1;
+        $customLabel = '太陽光割付図';
+        $category = 'custom_太陽光割付図';
+        $tab = 'skin';
+        $userId = 1;
+
+        // スロットにファイルを2件登録
+        $stmtInsert = $this->pdo->prepare("
+            INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) 
+            VALUES (:pid, :cat, :name, :fid, :ver, 1)
+        ");
+        $stmtInsert->execute(['pid' => $projectId, 'cat' => $category, 'name' => '割付図.pdf', 'fid' => 'gdrive_file_id_001', 'ver' => 1]);
+        $stmtInsert->execute(['pid' => $projectId, 'cat' => $category, 'name' => '仕様書.pdf', 'fid' => 'gdrive_file_id_002', 'ver' => 1]);
+
+        // スロット削除を実行
+        $res = $this->service->deleteCustomSlot($projectId, $category, $tab, $userId);
+        $this->assertTrue($res);
+
+        // project_files からはスロット枠が削除されていること
+        $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmtCheck->execute(['pid' => $projectId, 'cat' => $category]);
+        $this->assertEquals(0, $stmtCheck->fetchColumn());
+
+        // チャットメッセージに2件のファイルが退避・配置されていること
+        $stmtMsgs = $this->pdo->prepare("
+            SELECT * FROM messages 
+            WHERE project_id = :pid AND message_text LIKE '%太陽光割付図%' 
+            ORDER BY id ASC
+        ");
+        $stmtMsgs->execute(['pid' => $projectId]);
+        $msgs = $stmtMsgs->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->assertCount(2, $msgs);
+        $this->assertEquals('gdrive_file_id_001', $msgs[0]['file_path']);
+        $this->assertEquals('file', $msgs[0]['file_type']);
+        $this->assertStringContainsString('チャットへ退避・保管しました', $msgs[0]['message_text']);
+        $this->assertStringContainsString('割付図.pdf', $msgs[0]['message_text']);
+
+        $this->assertEquals('gdrive_file_id_002', $msgs[1]['file_path']);
+        $this->assertEquals('file', $msgs[1]['file_type']);
+        $this->assertStringContainsString('仕様書.pdf', $msgs[1]['message_text']);
+    }
 }
