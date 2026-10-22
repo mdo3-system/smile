@@ -9,9 +9,25 @@ $uploadService = new UploadService($pdo);
 // 成果物アップロード処理 (管理者専用)
 if ($action === 'upload_artifact' && $is_admin) {
     $file_category = trim($_POST['file_category'] ?? '');
-    if (!empty($file_category) && isset($_FILES['artifact_file'])) {
+    if (!empty($file_category)) {
         try {
-            $uploadService->uploadArtifact($project_id, $file_category, $_FILES['artifact_file'], $_SESSION['user_id'], $_POST['tab'] ?? '');
+            if (isset($_FILES['artifact_files']) && is_array($_FILES['artifact_files']['name'])) {
+                $count = count($_FILES['artifact_files']['name']);
+                for ($i = 0; $i < $count; $i++) {
+                    if ($_FILES['artifact_files']['error'][$i] === UPLOAD_ERR_OK) {
+                        $fInfo = [
+                            'name' => $_FILES['artifact_files']['name'][$i],
+                            'type' => $_FILES['artifact_files']['type'][$i],
+                            'tmp_name' => $_FILES['artifact_files']['tmp_name'][$i],
+                            'error' => $_FILES['artifact_files']['error'][$i],
+                            'size' => $_FILES['artifact_files']['size'][$i],
+                        ];
+                        $uploadService->uploadArtifact($project_id, $file_category, $fInfo, $_SESSION['user_id'], $_POST['tab'] ?? '');
+                    }
+                }
+            } elseif (isset($_FILES['artifact_file']) && $_FILES['artifact_file']['error'] === UPLOAD_ERR_OK) {
+                $uploadService->uploadArtifact($project_id, $file_category, $_FILES['artifact_file'], $_SESSION['user_id'], $_POST['tab'] ?? '');
+            }
         } catch (Exception $e) {
             die("アップロードに失敗しました: " . $e->getMessage());
         }
@@ -31,23 +47,60 @@ if ($action === 'toggle_cad_publish' && $is_admin) {
 }
 
 // ファイルアップロード処理（管理者・依頼主）
-$is_upload = isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK;
+$has_multi_files = isset($_FILES['upload_files']) && is_array($_FILES['upload_files']['name']);
+$has_single_file = isset($_FILES['upload_file']) && $_FILES['upload_file']['error'] === UPLOAD_ERR_OK;
 $is_included = isset($_POST['included_in_other']) && $_POST['included_in_other'] == '1';
 
-if (($_POST['action_type'] ?? '') === 'single_upload' && ($is_upload || $is_included)) {
+if (($_POST['action_type'] ?? '') === 'single_upload' && ($has_multi_files || $has_single_file || $is_included)) {
     $file_category = $_POST['file_category'] ?? '';
     if ($file_category !== '') {
         try {
-            $uploadService->singleUpload(
-                $project_id,
-                $file_category,
-                $is_upload ? $_FILES['upload_file'] : null,
-                $is_included,
-                $_POST['update_reason'] ?? null,
-                $_SESSION['user_id'] ?? 1,
-                $_SESSION['role'] ?? 'client',
-                $_POST['tab'] ?? ''
-            );
+            if ($is_included) {
+                $uploadService->singleUpload(
+                    $project_id,
+                    $file_category,
+                    null,
+                    true,
+                    $_POST['update_reason'] ?? null,
+                    $_SESSION['user_id'] ?? 1,
+                    $_SESSION['role'] ?? 'client',
+                    $_POST['tab'] ?? ''
+                );
+            } elseif ($has_multi_files) {
+                $count = count($_FILES['upload_files']['name']);
+                for ($i = 0; $i < $count; $i++) {
+                    if ($_FILES['upload_files']['error'][$i] === UPLOAD_ERR_OK) {
+                        $fInfo = [
+                            'name' => $_FILES['upload_files']['name'][$i],
+                            'type' => $_FILES['upload_files']['type'][$i],
+                            'tmp_name' => $_FILES['upload_files']['tmp_name'][$i],
+                            'error' => $_FILES['upload_files']['error'][$i],
+                            'size' => $_FILES['upload_files']['size'][$i],
+                        ];
+                        $uploadService->singleUpload(
+                            $project_id,
+                            $file_category,
+                            $fInfo,
+                            false,
+                            $_POST['update_reason'] ?? null,
+                            $_SESSION['user_id'] ?? 1,
+                            $_SESSION['role'] ?? 'client',
+                            $_POST['tab'] ?? ''
+                        );
+                    }
+                }
+            } elseif ($has_single_file) {
+                $uploadService->singleUpload(
+                    $project_id,
+                    $file_category,
+                    $_FILES['upload_file'],
+                    false,
+                    $_POST['update_reason'] ?? null,
+                    $_SESSION['user_id'] ?? 1,
+                    $_SESSION['role'] ?? 'client',
+                    $_POST['tab'] ?? ''
+                );
+            }
         } catch (Exception $e) {
             die("ファイルのアップロードまたはデータベース登録に失敗しました: " . $e->getMessage());
         }
@@ -172,6 +225,50 @@ if ($action === 'rename_custom_slot' && $is_admin) {
             );
         } catch (Exception $e) {
             die("カスタム図書スロットの名称変更に失敗しました: " . $e->getMessage());
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
+}
+
+// ==============================
+// カスタム図書スロット削除（管理者向け）
+// ==============================
+if ($action === 'delete_custom_slot' && $is_admin) {
+    $target_category = trim($_POST['target_category'] ?? '');
+    $tab = $_POST['tab'] ?? '';
+    
+    if ($target_category !== '') {
+        try {
+            $uploadService->deleteCustomSlot(
+                $project_id,
+                $target_category,
+                $tab,
+                $_SESSION['user_id'] ?? 1
+            );
+        } catch (Exception $e) {
+            die("カスタム図書スロットの削除に失敗しました: " . $e->getMessage());
+        }
+    }
+    header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;
+}
+
+// ==============================
+// カスタム成果物スロット削除（管理者向け）
+// ==============================
+if ($action === 'delete_custom_deliverable' && $is_admin) {
+    $target_category = trim($_POST['target_category'] ?? '');
+    $tab = $_POST['tab'] ?? '';
+    
+    if ($target_category !== '') {
+        try {
+            $uploadService->deleteCustomDeliverable(
+                $project_id,
+                $target_category,
+                $tab,
+                $_SESSION['user_id'] ?? 1
+            );
+        } catch (Exception $e) {
+            die("カスタム成果物スロットの削除に失敗しました: " . $e->getMessage());
         }
     }
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($tab) . "&t=" . time()); exit;

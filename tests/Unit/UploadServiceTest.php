@@ -260,4 +260,61 @@ class UploadServiceTest extends TestCase
         $this->assertStringContainsString('補正通知書', $msg['message_text']);
         $this->assertStringContainsString('補正対応中', $msg['message_text']);
     }
+
+    public function testDeleteCustomSlotSuccess(): void
+    {
+        $projectId = 1;
+        $customLabel = '仮設図面';
+        $sectionType = '共通図書';
+        $tab = 'permit';
+        $userId = 1;
+
+        // まずスロット作成
+        $this->service->addCustomSlot($projectId, $customLabel, $sectionType, $tab, $userId);
+
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmt->execute(['pid' => $projectId, 'cat' => 'custom_仮設図面']);
+        $this->assertEquals(1, $stmt->fetchColumn());
+
+        // スロット削除
+        $res = $this->service->deleteCustomSlot($projectId, 'custom_仮設図面', $tab, $userId);
+        $this->assertTrue($res);
+
+        // レコードが削除されていること
+        $stmt->execute(['pid' => $projectId, 'cat' => 'custom_仮設図面']);
+        $this->assertEquals(0, $stmt->fetchColumn());
+
+        // チャット通知確認
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertStringContainsString('図書スロット「仮設図面」を削除しました', $msg['message_text']);
+    }
+
+    public function testDeleteCustomDeliverableSuccess(): void
+    {
+        $projectId = 1;
+        $customLabel = '施工計画書';
+        $tab = 'permit';
+        $userId = 1;
+
+        // 成果物スロット作成
+        $this->service->addCustomDeliverable($projectId, $customLabel, $tab, $userId);
+
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM project_files WHERE project_id = :pid AND file_category = :cat");
+        $stmt->execute(['pid' => $projectId, 'cat' => 'custom_deliverable_施工計画書']);
+        $this->assertEquals(1, $stmt->fetchColumn());
+
+        // スロット削除
+        $res = $this->service->deleteCustomDeliverable($projectId, 'custom_deliverable_施工計画書', $tab, $userId);
+        $this->assertTrue($res);
+
+        // レコードが削除されていること
+        $stmt->execute(['pid' => $projectId, 'cat' => 'custom_deliverable_施工計画書']);
+        $this->assertEquals(0, $stmt->fetchColumn());
+
+        // チャット通知確認
+        $stmtMsg = $this->pdo->query("SELECT * FROM messages ORDER BY id DESC LIMIT 1");
+        $msg = $stmtMsg->fetch(PDO::FETCH_ASSOC);
+        $this->assertStringContainsString('成果物スロット「施工計画書」を削除しました', $msg['message_text']);
+    }
 }

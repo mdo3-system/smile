@@ -159,7 +159,7 @@
                 <?php endif; ?>
             </div>
             
-            <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="<?= ($section_title === '専門図書') ? 'display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:8px;' : 'display:flex; flex-direction:column; gap:8px;' ?>">
                 <?php foreach ($categories as $cat => $label): ?>
                     <?php 
                     $history = $files_by_cat[$cat] ?? []; 
@@ -168,104 +168,119 @@
                         $parts = explode('_', $cat);
                         $clean_label = end($parts);
                     }
-                    ?>
-                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:8px;">
-                        <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:5px; display:flex; align-items:center; gap:5px;">
-                            <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
-                            <?php if ($is_admin && strpos($cat, 'custom_') === 0): ?>
-                                <button type="button" onclick="renameCustomSlot('<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($clean_label, ENT_QUOTES) ?>', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>')" style="background:none; border:none; padding:0; cursor:pointer; font-size:11px;" title="名称変更">✏️</button>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <?php 
-                        $actual_history = [];
-                        if (!empty($history)) {
-                            foreach ($history as $h) {
-                                if (!empty($h['drive_file_id']) || $h['file_name'] === '【他ファイルに記載】') {
-                                    $actual_history[] = $h;
+
+                    // ファイル名（または他ファイル記載）ごとにグルーピング
+                    $actual_files_by_name = [];
+                    if (!empty($history)) {
+                        foreach ($history as $h) {
+                            if (!empty($h['drive_file_id']) || $h['file_name'] === '【他ファイルに記載】') {
+                                $fname = $h['file_name'];
+                                if (!isset($actual_files_by_name[$fname])) {
+                                    $actual_files_by_name[$fname] = [];
                                 }
+                                $actual_files_by_name[$fname][] = $h;
                             }
                         }
-                        $has_actual_file = !empty($actual_history);
-                        
-                        if ($has_actual_file): 
-                            $latest = $actual_history[0]; 
-                            $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
-                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
-                        ?>
-                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-                                <?php if ($latest['file_name'] === '【他ファイルに記載】'): ?>
-                                    <span style="background:#f59e0b; color:white; padding:3px 8px; border-radius:3px; font-size:11px; font-weight:bold;">
-                                        ✅ 提出済（他のCADファイルに記載）
+                    }
+                    $has_actual_file = !empty($actual_files_by_name);
+                    ?>
+                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:6px 8px; display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                            <div style="font-weight:bold; font-size:12px; color:#334155; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($label, ENT_QUOTES) ?>">
+                                    <?= htmlspecialchars($label, ENT_QUOTES) ?>
+                                </span>
+                                <?php if ($is_admin && strpos($cat, 'custom_') === 0): ?>
+                                    <span style="display:inline-flex; align-items:center; gap:2px; flex-shrink:0;">
+                                        <button type="button" onclick="renameCustomSlot('<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($clean_label, ENT_QUOTES) ?>', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>')" style="background:none; border:none; padding:0 2px; cursor:pointer; font-size:11px;" title="名称変更">✏️</button>
+                                        <button type="button" onclick="deleteCustomSlot('<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($clean_label, ENT_QUOTES) ?>', '<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>', <?= $has_actual_file ? 'true' : 'false' ?>)" style="background:none; border:none; padding:0 2px; cursor:pointer; font-size:11px;" title="スロット削除">🗑️</button>
                                     </span>
-                                <?php else: ?>
-                                    <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb;">
-                                        📄 最新版 (V<?= $latest['version'] ?>)
-                                    </a>
-                                <?php endif; ?>
-                                
-                                <?php if ($is_admin && (strpos($cat, 'cad_') === 0 || strpos($cat, 'custom_') === 0)): ?>
-                                    <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
-                                        <input type="hidden" name="action" value="toggle_cad_publish">
-                                        <input type="hidden" name="file_id" value="<?= $latest['id'] ?>">
-                                        <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
-                                        <?php if ($latest['is_published_to_sub']): ?>
-                                            <button type="submit" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;" onclick="return confirm('業者への公開を取り消しますか？')">業者公開を解除</button>
-                                        <?php else: ?>
-                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:10px; cursor:pointer;">業者へ公開する</button>
-                                        <?php endif; ?>
-                                    </form>
-                                <?php endif; ?>
-
-                                <?php if (count($actual_history) > 1): ?>
-                                    <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:11px; padding:3px; max-width:140px;">
-                                        <option value="">過去バージョン (<?= count($actual_history) - 1 ?>件)...</option>
-                                        <?php foreach ($actual_history as $idx => $h): 
-                                            if ($idx === 0) continue; 
-                                            $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
-                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                                : htmlspecialchars($h['drive_file_id'], ENT_QUOTES);
-                                            $dateStr = date('m/d H:i', strtotime($h['created_at']));
-                                        ?>
-                                            <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>)</option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                <?php else: ?>
-                                    <select disabled style="font-size:11px; padding:3px; max-width:140px; opacity:0.6; cursor:not-allowed;">
-                                        <option value="">過去バージョンなし</option>
-                                    </select>
                                 <?php endif; ?>
                             </div>
-                            <div style="font-size:10px; color:#64748b; margin-top:3px; word-break:break-all;">
-                                <?= htmlspecialchars($latest['file_name'], ENT_QUOTES) ?>
-                            </div>
-                        <?php else: ?>
-                            <div style="font-size:11px; color:#ef4444;">未提出</div>
-                        <?php endif; ?>
+                            
+                            <?php if ($has_actual_file): ?>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <?php foreach ($actual_files_by_name as $fname => $versions): 
+                                        $latest = $versions[0];
+                                        $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
+                                            ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                            : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
+                                    ?>
+                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:3px; padding:3px 5px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                                                <?php if ($latest['file_name'] === '【他ファイルに記載】'): ?>
+                                                    <span style="background:#f59e0b; color:white; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:bold;">
+                                                        ✅ 提出済（他のCADに記載）
+                                                    </span>
+                                                <?php else: ?>
+                                                    <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb; font-size:11px; padding:2px 6px;">
+                                                        📄 最新版 (V<?= $latest['version'] ?>)
+                                                    </a>
+                                                <?php endif; ?>
+                                                
+                                                <?php if ($is_admin && (strpos($cat, 'cad_') === 0 || strpos($cat, 'custom_') === 0)): ?>
+                                                    <form action="project_detail.php?id=<?= $project_id ?>" method="POST" style="margin:0;">
+                                                        <input type="hidden" name="action" value="toggle_cad_publish">
+                                                        <input type="hidden" name="file_id" value="<?= $latest['id'] ?>">
+                                                        <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
+                                                        <?php if ($latest['is_published_to_sub']): ?>
+                                                            <button type="submit" style="background:#dc3545; color:white; border:none; padding:2px 5px; border-radius:3px; font-size:9px; cursor:pointer;" onclick="return confirm('業者への公開を取り消しますか？')">公開解除</button>
+                                                        <?php else: ?>
+                                                            <button type="submit" style="background:#28a745; color:white; border:none; padding:2px 5px; border-radius:3px; font-size:9px; cursor:pointer;">業者公開</button>
+                                                        <?php endif; ?>
+                                                    </form>
+                                                <?php endif; ?>
 
-                        <!-- 個別アップロードフォーム -->
+                                                <?php if (count($versions) > 1): ?>
+                                                    <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:10px; padding:2px; max-width:120px;">
+                                                        <option value="">過去Ver(<?= count($versions) - 1 ?>件)...</option>
+                                                        <?php foreach ($versions as $idx => $h): 
+                                                            if ($idx === 0) continue; 
+                                                            $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
+                                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                                                : htmlspecialchars($h['drive_file_id'], ENT_QUOTES);
+                                                            $dateStr = date('m/d H:i', strtotime($h['created_at']));
+                                                        ?>
+                                                            <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>)</option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div style="font-size:10px; color:#64748b; margin-top:2px; word-break:break-all;">
+                                                <?= htmlspecialchars($latest['file_name'], ENT_QUOTES) ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div style="font-size:11px; color:#ef4444; padding:2px 0;">未提出</div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- アップロードフォーム -->
                         <?php if (!$is_admin): ?>
-                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:2px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:3px;">
+                            <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:4px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:4px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
                                 <input type="hidden" name="action_type" value="single_upload">
                                 <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                                 
                                 <div style="display:flex; gap:3px; align-items:center;">
-                                    <input type="file" name="upload_file" id="file_<?= $cat ?>" <?= !$has_actual_file ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:90px; padding:2px;">
+                                    <input type="file" name="upload_files[]" multiple id="file_<?= $cat ?>" <?= !$has_actual_file ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:80px; padding:2px;">
                                     
                                     <?php if (!$has_actual_file): ?>
-                                    <label style="font-size:9px; display:flex; align-items:center; gap:2px; color:#d97706; white-space:nowrap; cursor:pointer;" title="他のCADファイルに記載がある場合">
+                                    <label style="font-size:9px; display:flex; align-items:center; gap:1px; color:#d97706; white-space:nowrap; cursor:pointer;" title="他のCADファイルに記載がある場合">
                                         <input type="checkbox" name="included_in_other" value="1" onchange="document.getElementById('file_<?= $cat ?>').required = !this.checked; document.getElementById('file_<?= $cat ?>').disabled = this.checked;"> 
-                                        別ﾌｧｲﾙ済
+                                        別ﾌｧｲﾙ
                                     </label>
                                     <?php endif; ?>
 
-                                    <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; white-space:nowrap;">UP/更新</button>
+                                    <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; white-space:nowrap; font-weight:bold;">
+                                        <?= $has_actual_file ? '＋追加/更新' : 'UP' ?>
+                                    </button>
                                 </div>
                                 
                                 <?php if ($has_actual_file): ?>
-                                    <input type="text" name="update_reason" placeholder="差し替え理由を入力して下さい" required style="font-size:10px; width:100%; padding:2px; border:1px solid #cbd5e1; border-radius:3px; box-sizing:border-box;">
+                                    <input type="text" name="update_reason" placeholder="差し替え・追加理由（任意）" style="font-size:9px; width:100%; padding:2px; border:1px solid #cbd5e1; border-radius:3px; box-sizing:border-box;">
                                 <?php endif; ?>
                             </form>
                         <?php endif; ?>
@@ -396,6 +411,35 @@ function renameCustomSlot(oldCategory, currentLabel, activeTab) {
         form.appendChild(input);
     }
     
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function deleteCustomSlot(category, label, activeTab, hasFile) {
+    let msg = "スロット「" + label + "」を削除してもよろしいですか？\n※スロット枠が削除されます。";
+    if (hasFile) {
+        msg = "⚠️【警告】このスロットにはアップロード済みのファイルが存在します。\nスロット枠「" + label + "」を削除してもよろしいですか？\n（※Google Drive上の実ファイルは消えませんが、ダッシュボードのスロット枠は削除されます）";
+    }
+    if (!confirm(msg)) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'project_detail.php?id=<?= $project_id ?>';
+
+    const fields = {
+        'action': 'delete_custom_slot',
+        'target_category': category,
+        'tab': activeTab
+    };
+
+    for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    }
+
     document.body.appendChild(form);
     form.submit();
 }

@@ -86,14 +86,34 @@ class UploadService
             $stmtCleanEmpty = $this->pdo->prepare("DELETE FROM project_files WHERE project_id = :pid AND file_category = :cat AND (drive_file_id IS NULL OR drive_file_id = '')");
             $stmtCleanEmpty->execute(['pid' => $projectId, 'cat' => $fileCategory]);
 
-            // 既存の同カテゴリファイルを履歴に落とす
-            $stmtOld = $this->pdo->prepare("UPDATE project_files SET is_latest = 0 WHERE project_id = :pid AND file_category = :cat");
-            $stmtOld->execute(['pid' => $projectId, 'cat' => $fileCategory]);
+            // 同名ファイルが存在するかチェック
+            $stmtCheckSame = $this->pdo->prepare("
+                SELECT MAX(version) FROM project_files 
+                WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
+            ");
+            $stmtCheckSame->execute([
+                'pid' => $projectId,
+                'cat' => $fileCategory,
+                'fname' => $fileName
+            ]);
+            $sameFileMaxVer = $stmtCheckSame->fetchColumn();
 
-            // バージョン番号の決定
-            $stmtVer = $this->pdo->prepare("SELECT MAX(version) FROM project_files WHERE project_id = :pid AND file_category = :cat");
-            $stmtVer->execute(['pid' => $projectId, 'cat' => $fileCategory]);
-            $nextVer = intval($stmtVer->fetchColumn()) + 1;
+            if ($sameFileMaxVer !== null && $sameFileMaxVer !== false && $sameFileMaxVer > 0) {
+                // 同名ファイルの旧バージョンを is_latest = 0 に
+                $stmtDisableSame = $this->pdo->prepare("
+                    UPDATE project_files 
+                    SET is_latest = 0 
+                    WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
+                ");
+                $stmtDisableSame->execute([
+                    'pid' => $projectId,
+                    'cat' => $fileCategory,
+                    'fname' => $fileName
+                ]);
+                $nextVer = (int)$sameFileMaxVer + 1;
+            } else {
+                $nextVer = 1;
+            }
 
             $stmtNew = $this->pdo->prepare("INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest) VALUES (:pid, :cat, :fname, :fid, :ver, 1)");
             $stmtNew->execute([
@@ -312,31 +332,53 @@ class UploadService
             $stmtCleanEmpty = $this->pdo->prepare("DELETE FROM project_files WHERE project_id = :pid AND file_category = :cat AND (drive_file_id IS NULL OR drive_file_id = '') AND file_name != '【他ファイルに記載】'");
             $stmtCleanEmpty->execute(['pid' => $projectId, 'cat' => $fileCategory]);
 
-            // 1. 既存の同カテゴリのファイルを最新フラグから外す
-            $stmtDisable = $this->pdo->prepare("
-                UPDATE project_files 
-                SET is_latest = 0 
-                WHERE project_id = :pid AND file_category = :cat
-            ");
-            $stmtDisable->execute([
-                'pid' => $projectId,
-                'cat' => $fileCategory
-            ]);
+            // 1. バージョン番号の決定と同名ファイルの最新フラグ更新
+            if ($isIncluded) {
+                // 他ファイルに記載の場合、既存の他ファイルに記載レコードを非最新に
+                $stmtDisable = $this->pdo->prepare("
+                    UPDATE project_files 
+                    SET is_latest = 0 
+                    WHERE project_id = :pid AND file_category = :cat AND file_name = '【他ファイルに記載】'
+                ");
+                $stmtDisable->execute([
+                    'pid' => $projectId,
+                    'cat' => $fileCategory
+                ]);
+                $newVersion = 1;
+            } else {
+                // 通常ファイルの場合:
+                // 同名ファイルがすでに存在するかチェック
+                $stmtCheckSame = $this->pdo->prepare("
+                    SELECT MAX(version) FROM project_files 
+                    WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
+                ");
+                $stmtCheckSame->execute([
+                    'pid' => $projectId,
+                    'cat' => $fileCategory,
+                    'fname' => $fileName
+                ]);
+                $sameFileMaxVer = $stmtCheckSame->fetchColumn();
 
-            // 2. 現在の最大バージョンを取得
-            $stmtVersion = $this->pdo->prepare("
-                SELECT MAX(version) 
-                FROM project_files 
-                WHERE project_id = :pid AND file_category = :cat
-            ");
-            $stmtVersion->execute([
-                'pid' => $projectId,
-                'cat' => $fileCategory
-            ]);
-            $maxVersion = (int)$stmtVersion->fetchColumn();
-            $newVersion = $maxVersion + 1;
+                if ($sameFileMaxVer !== null && $sameFileMaxVer !== false && $sameFileMaxVer > 0) {
+                    // 同名ファイルが存在する場合: その同名ファイルの旧バージョンのみを is_latest = 0 に
+                    $stmtDisableSame = $this->pdo->prepare("
+                        UPDATE project_files 
+                        SET is_latest = 0 
+                        WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
+                    ");
+                    $stmtDisableSame->execute([
+                        'pid' => $projectId,
+                        'cat' => $fileCategory,
+                        'fname' => $fileName
+                    ]);
+                    $newVersion = (int)$sameFileMaxVer + 1;
+                } else {
+                    // 新規別名ファイルの場合: 既存ファイルを保持したまま、V1として追加
+                    $newVersion = 1;
+                }
+            }
 
-            // 3. 新しいレコードを挿入
+            // 2. 新しいレコードを挿入
             $stmtInsert = $this->pdo->prepare("
                 INSERT INTO project_files (project_id, file_category, file_name, drive_file_id, version, is_latest, update_reason) 
                 VALUES (:pid, :cat, :name, :drive_id, :ver, 1, :reason)
@@ -855,6 +897,126 @@ class UploadService
             $oldLabel = substr($oldCategory, strlen($prefix));
             $uploaderRoleName = '設計担当';
             $chatMsg = "【図書スロット名称変更】\n{$uploaderRoleName}が図書スロット「{$oldLabel}」の名称を「{$newLabel}」に変更しました。";
+            $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+
+            $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $projectId,
+                'sid' => $userId,
+                'thread' => $threadType,
+                'msg' => $chatMsg
+            ]);
+            require_once __DIR__ . '/../../functions.php';
+            sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * カスタム図書スロット削除 (管理者用)
+     *
+     * @param int $projectId
+     * @param string $category
+     * @param string $tab
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     */
+    public function deleteCustomSlot(int $projectId, string $category, string $tab, int $userId): bool
+    {
+        if (strpos($category, 'custom_') !== 0) {
+            throw new Exception("固定標準スロットは削除できません。");
+        }
+
+        $prefix = 'custom_';
+        if (strpos($category, 'custom_permit_') === 0) {
+            $prefix = 'custom_permit_';
+        } elseif (strpos($category, 'custom_soil_') === 0) {
+            $prefix = 'custom_soil_';
+        } elseif (strpos($category, 'custom_precut_') === 0) {
+            $prefix = 'custom_precut_';
+        } elseif (strpos($category, 'custom_wall_') === 0) {
+            $prefix = 'custom_wall_';
+        } elseif (strpos($category, 'custom_skin_') === 0) {
+            $prefix = 'custom_skin_';
+        } elseif (strpos($category, 'custom_sky_') === 0) {
+            $prefix = 'custom_sky_';
+        }
+        $label = substr($category, strlen($prefix));
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmtDelete = $this->pdo->prepare("
+                DELETE FROM project_files 
+                WHERE project_id = :pid AND file_category = :cat
+            ");
+            $stmtDelete->execute([
+                'pid' => $projectId,
+                'cat' => $category
+            ]);
+
+            // チャットへ通知
+            $chatMsg = "【図書スロット削除】\n設計担当が図書スロット「{$label}」を削除しました。";
+            $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
+
+            $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
+            $stmtMsg->execute([
+                'pid' => $projectId,
+                'sid' => $userId,
+                'thread' => $threadType,
+                'msg' => $chatMsg
+            ]);
+            require_once __DIR__ . '/../../functions.php';
+            sendChatEmailNotification($projectId, $userId, 'admin', $threadType, $chatMsg, $this->pdo);
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * カスタム成果物スロット削除 (管理者用)
+     *
+     * @param int $projectId
+     * @param string $category
+     * @param string $tab
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     */
+    public function deleteCustomDeliverable(int $projectId, string $category, string $tab, int $userId): bool
+    {
+        if (strpos($category, 'custom_deliverable_') !== 0) {
+            throw new Exception("成果物の固定標準スロットは削除できません。");
+        }
+
+        $label = substr($category, strlen('custom_deliverable_'));
+
+        $this->pdo->beginTransaction();
+        try {
+            $stmtDelete = $this->pdo->prepare("
+                DELETE FROM project_files 
+                WHERE project_id = :pid AND file_category = :cat
+            ");
+            $stmtDelete->execute([
+                'pid' => $projectId,
+                'cat' => $category
+            ]);
+
+            // チャットへ通知
+            $chatMsg = "【成果物スロット削除】\n設計担当が成果物スロット「{$label}」を削除しました。";
             $threadType = ($tab === 'permit' || $tab === '') ? 'client_admin_permit' : 'client_admin_' . $tab;
 
             $stmtMsg = $this->pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
