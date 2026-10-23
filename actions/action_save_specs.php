@@ -347,7 +347,6 @@ if ($action === 'update_client_info') {
     $contact_kana = trim($_POST['contact_kana'] ?? '');
     $mobile_number = trim($_POST['mobile_number'] ?? '');
     $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
-    $email = isset($_POST['email']) ? trim($_POST['email']) : null;
     
     $pdo->beginTransaction();
     try {
@@ -365,33 +364,6 @@ if ($action === 'update_client_info') {
             $stmt->execute(['name' => $project_name, 'billing' => $billing_company_name, 'pid' => $project_id]);
         }
         
-        // 管理者がメールアドレスを変更する場合の処理
-        if (!empty($is_admin) && $email !== null && $email !== '') {
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                throw new Exception("有効なメールアドレス形式を入力してください。");
-            }
-            // 他ユーザーとの競合チェック
-            $stmtConflict = $pdo->prepare("SELECT id, company_name FROM users WHERE email = :email AND id != :uid");
-            $stmtConflict->execute(['email' => $email, 'uid' => $target_uid]);
-            $conflict = $stmtConflict->fetch(PDO::FETCH_ASSOC);
-            if ($conflict) {
-                // 案件を持たない空アカウントなら統合削除
-                $stmtCheckPj = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE client_id = :cid");
-                $stmtCheckPj->execute(['cid' => $conflict['id']]);
-                if ((int)$stmtCheckPj->fetchColumn() === 0) {
-                    $pdo->prepare("UPDATE magic_links SET user_id = :new_uid WHERE user_id = :old_uid")->execute([
-                        'new_uid' => $target_uid,
-                        'old_uid' => $conflict['id']
-                    ]);
-                    $pdo->prepare("DELETE FROM users WHERE id = :old_uid")->execute(['old_uid' => $conflict['id']]);
-                } else {
-                    throw new Exception("メールアドレス「{$email}」は既に別のユーザー（ID: {$conflict['id']}）で使用されています。");
-                }
-            }
-            $stmtEmail = $pdo->prepare("UPDATE users SET email = :email WHERE id = :uid");
-            $stmtEmail->execute(['email' => $email, 'uid' => $target_uid]);
-        }
-
         $stmtUser = $pdo->prepare("
             UPDATE users SET 
                 company_name = :company_name,
