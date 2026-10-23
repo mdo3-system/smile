@@ -12,11 +12,19 @@
                     <strong>案件名:</strong> <?= htmlspecialchars($project_info['project_name'], ENT_QUOTES) ?><br>
                     <?php if ($is_admin): ?>
                     <strong>担当者:</strong> <?= htmlspecialchars($project_info['client_name'], ENT_QUOTES) ?> 様<br>
+                    <strong>✉️ メール:</strong> <?= !empty($project_info['client_email']) ? htmlspecialchars($project_info['client_email'], ENT_QUOTES) : '<span style="color:#e53e3e; font-size:11px;">未登録</span>' ?><br>
                     <?php endif; ?>
                     <?php if ($is_admin && !empty($project_info['mobile_number'])): ?>
                     <strong>📱 携帯番号:</strong> <a href="tel:<?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?>" style="color:#0056b3; font-weight:bold;"><?= htmlspecialchars($project_info['mobile_number'], ENT_QUOTES) ?></a><br>
                     <?php elseif ($is_admin): ?>
                     <strong>📱 携帯番号:</strong> <span style="color:#e53e3e; font-size:11px;">未登録（依頼主に入力を依頼してください）</span><br>
+                    <?php endif; ?>
+                    <?php if ($is_admin): ?>
+                    <div style="margin: 8px 0;">
+                        <button type="button" onclick="openClientLoginLinkModal(<?= $project_id ?>)" style="background:#4f46e5; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(79,70,229,0.3);">
+                            🔑 依頼主ログインリンクを発行
+                        </button>
+                    </div>
                     <?php endif; ?>
                     <strong>地盤調査:</strong> <?= htmlspecialchars($project_info['soil_status'] ?? '未定', ENT_QUOTES) ?><br>
                     <?php
@@ -802,6 +810,12 @@
                             </div>
                         </div>
 
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">登録メールアドレス（ログイン・通知用）</label>
+                            <input type="email" name="email" value="<?= htmlspecialchars($project_info['client_email'] ?? '', ENT_QUOTES) ?>" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="example@domain.com">
+                            <div style="font-size:11px; color:#64748b; margin-top:3px;">※変更すると依頼主のログイン用アドレスが更新されます。変更後は新しいログインリンクを発行して依頼主へお送りください。</div>
+                        </div>
+
                         <div style="margin-bottom:15px;">
                             <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px;">お見積書・ご請求書宛先名称</label>
                             <input type="text" name="billing_company_name" value="<?= htmlspecialchars($project_info['billing_company_name'] ?? '', ENT_QUOTES) ?>" placeholder="※変更がある場合のみ入力（空欄時は会社名＋担当者名）" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
@@ -819,6 +833,179 @@
                     </form>
                 </div>
             </div>
+
+            <!-- ===== 依頼主ログインリンク発行モーダル ===== -->
+            <div class="modal-overlay" id="clientLoginLinkModal">
+                <div class="modal-box" style="max-width:580px; text-align:left;">
+                    <div class="modal-title" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>🔑 依頼主ログインリンクの発行・設定</span>
+                        <span style="cursor:pointer; color:#94a3b8; font-size:16px;" onclick="closeClientLoginLinkModal()">✕</span>
+                    </div>
+                    
+                    <div id="clientLoginLinkLoading" style="padding:20px; text-align:center; color:#64748b; font-size:13px;">
+                        ⏳ リンクを発行中...
+                    </div>
+                    
+                    <div id="clientLoginLinkContent" style="display:none; font-size:13px;">
+                        <div style="background:#f1f5f9; padding:10px 14px; border-radius:6px; margin-bottom:15px; font-size:12px; border:1px solid #e2e8f0;">
+                            <div>🏢 <strong>依頼主:</strong> <span id="clm_company"></span>（<span id="clm_contact"></span> 様）</div>
+                            <div style="margin-top:4px; display:flex; align-items:center; gap:8px;">
+                                <span>✉️ <strong>登録メール:</strong></span>
+                                <input type="email" id="clm_email_input" style="flex:1; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;">
+                                <button type="button" onclick="updateClientEmailAndRegenerate()" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">メアド変更して再発行</button>
+                            </div>
+                            <div style="margin-top:4px; color:#10b981; font-weight:bold; font-size:11px;">
+                                ⏱️ 有効期限: 発行から7日間（ワンクリックでログイン完了）
+                            </div>
+                        </div>
+
+                        <!-- 1. 個別案件ダッシュボードリンク -->
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px; color:#1e293b;">
+                                📌 ① 個別の案件ダッシュボードへのログインリンク
+                            </label>
+                            <div style="display:flex; gap:6px;">
+                                <input type="text" id="clm_project_url" readonly style="flex:1; padding:6px 8px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; font-family:monospace; color:#334155;" onclick="this.select()">
+                                <button type="button" onclick="copyLoginLink('clm_project_url', '案件ダッシュボードのログインリンクをコピーしました！')" style="background:#0284c7; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">
+                                    📋 コピー
+                                </button>
+                            </div>
+                            <div style="font-size:11px; color:#64748b; margin-top:2px;">※クリックするとこの案件詳細画面（project_detail.php?id=<?= $project_id ?>）が直接開きます。</div>
+                        </div>
+
+                        <!-- 2. 依頼者ポータルリンク -->
+                        <div style="margin-bottom:15px;">
+                            <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:4px; color:#1e293b;">
+                                🏢 ② 依頼者の全案件ポータルへのログインリンク
+                            </label>
+                            <div style="display:flex; gap:6px;">
+                                <input type="text" id="clm_portal_url" readonly style="flex:1; padding:6px 8px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; font-family:monospace; color:#334155;" onclick="this.select()">
+                                <button type="button" onclick="copyLoginLink('clm_portal_url', '依頼者ポータルのログインリンクをコピーしました！')" style="background:#0284c7; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap;">
+                                    📋 コピー
+                                </button>
+                            </div>
+                            <div style="font-size:11px; color:#64748b; margin-top:2px;">※クリックすると依頼主が管理している全案件の一覧ポータル（index.php）が開きます。</div>
+                        </div>
+
+                        <!-- 3. 案内文テンプレート丸ごとコピー -->
+                        <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:10px 12px; margin-bottom:15px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-weight:bold; font-size:12px; color:#92400e;">✉️ メール・チャット案内用メッセージ</span>
+                                <button type="button" onclick="copyClientLoginTemplate()" style="background:#d97706; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">
+                                    📋 案内文を丸ごとコピー
+                                </button>
+                            </div>
+                            <textarea id="clm_template_text" readonly style="width:100%; height:90px; padding:6px; border:1px solid #fde68a; border-radius:4px; font-size:11px; box-sizing:border-box; background:white; font-family:sans-serif; resize:vertical;"></textarea>
+                        </div>
+
+                        <div style="text-align:right;">
+                            <button type="button" onclick="closeClientLoginLinkModal()" style="padding:6px 16px; background:#64748b; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">閉じる</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            let currentClmProjectId = <?= (int)$project_id ?>;
+            let currentClmUserId = <?= (int)($project_info['client_id'] ?? 0) ?>;
+
+            function openClientLoginLinkModal(projectId, userId = 0) {
+                currentClmProjectId = projectId || 0;
+                currentClmUserId = userId || currentClmUserId;
+                const modal = document.getElementById('clientLoginLinkModal');
+                const loading = document.getElementById('clientLoginLinkLoading');
+                const content = document.getElementById('clientLoginLinkContent');
+                
+                modal.classList.add('active');
+                loading.style.display = 'block';
+                content.style.display = 'none';
+
+                fetchLoginLinkData();
+            }
+
+            function closeClientLoginLinkModal() {
+                document.getElementById('clientLoginLinkModal').classList.remove('active');
+            }
+
+            function fetchLoginLinkData(newEmail = null) {
+                const payload = {
+                    project_id: currentClmProjectId,
+                    user_id: currentClmUserId
+                };
+                if (newEmail !== null) {
+                    payload.new_email = newEmail;
+                }
+
+                fetch('api_generate_client_login_url.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('エラー: ' + (data.error || 'ログインリンクの生成に失敗しました。'));
+                        closeClientLoginLinkModal();
+                        return;
+                    }
+                    document.getElementById('clientLoginLinkLoading').style.display = 'none';
+                    document.getElementById('clientLoginLinkContent').style.display = 'block';
+
+                    document.getElementById('clm_company').textContent = data.company_name || '';
+                    document.getElementById('clm_contact').textContent = data.contact_name || '';
+                    document.getElementById('clm_email_input').value = data.email || '';
+                    document.getElementById('clm_portal_url').value = data.portal_login_url || '';
+                    document.getElementById('clm_project_url').value = data.project_login_url || '';
+
+                    currentClmUserId = data.user_id;
+
+                    // 案内文テンプレート作成
+                    const tmpl = `${data.contact_name || data.company_name} 様\n\n平素より大変お世話になっております。\n木造住宅設計サポートのログインリンクを発行いたしました。\n下記URLをクリックいただくだけで、直接ログインいただけます。\n\n` +
+                        (data.project_login_url ? `■ 本案件ダッシュボード:\n${data.project_login_url}\n\n` : '') +
+                        `■ 依頼主ポータル（全案件一覧）:\n${data.portal_login_url}\n\n` +
+                        `※このリンクは発行から7日間有効です。`;
+                    document.getElementById('clm_template_text').value = tmpl;
+
+                    if (data.email_updated) {
+                        alert('登録メールアドレスを「' + data.email + '」に更新し、新しいログインリンクを発行しました！');
+                    }
+                })
+                .catch(err => {
+                    alert('通信エラーが発生しました: ' + err);
+                    closeClientLoginLinkModal();
+                });
+            }
+
+            function updateClientEmailAndRegenerate() {
+                const newEmail = document.getElementById('clm_email_input').value.trim();
+                if (!newEmail) {
+                    alert('メールアドレスを入力してください。');
+                    return;
+                }
+                if (!confirm('依頼主の登録メールアドレスを「' + newEmail + '」に変更し、新しいログインリンクを再発行します。よろしいですか？')) {
+                    return;
+                }
+                document.getElementById('clientLoginLinkLoading').style.display = 'block';
+                document.getElementById('clientLoginLinkContent').style.display = 'none';
+                fetchLoginLinkData(newEmail);
+            }
+
+            function copyLoginLink(elementId, msg) {
+                const el = document.getElementById(elementId);
+                el.select();
+                navigator.clipboard.writeText(el.value).then(() => {
+                    alert(msg);
+                });
+            }
+
+            function copyClientLoginTemplate() {
+                const el = document.getElementById('clm_template_text');
+                el.select();
+                navigator.clipboard.writeText(el.value).then(() => {
+                    alert('メール・チャット用案内メッセージをコピーしました！\nそのままメールやチャットに貼り付けてご案内いただけます。');
+                });
+            }
+            </script>
             <?php endif; ?>
 
          </div>

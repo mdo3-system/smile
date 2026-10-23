@@ -87,7 +87,7 @@ syncProjectStatusWithSchedule($project_id, $pdo);
 
 // 案件と仕様情報を取得
 $stmtProj = $pdo->prepare("
-    SELECT p.*, s.*, u.company_name, u.company_kana, u.zip_code, u.address, u.contact_name as client_name, u.contact_kana, u.phone_number as client_phone, u.mobile_number
+    SELECT p.*, s.*, u.company_name, u.company_kana, u.zip_code, u.address, u.contact_name as client_name, u.contact_kana, u.phone_number as client_phone, u.mobile_number, u.email as client_email
     FROM projects p 
     LEFT JOIN project_specs s ON p.id = s.project_id 
     LEFT JOIN users u ON p.client_id = u.id
@@ -349,6 +349,11 @@ $chat_messages = $stmtMsgs->fetchAll();
             $script_dir = rtrim($script_dir, '/');
             $invite_url = "{$protocol}://{$host}{$script_dir}/register.php?invite_project_id=" . $project_id;
             ?>
+            <?php if ($is_admin): ?>
+            <button onclick="if(typeof openClientLoginLinkModal === 'function'){ openClientLoginLinkModal(<?= $project_id ?>); }else{ alert('管理者画面からログインリンクを発行してください。'); }" style="background:#4f46e5; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(79,70,229,0.3);">
+                🔑 依頼主ログインリンク
+            </button>
+            <?php endif; ?>
             <div class="tooltip-btn-container">
                 <button onclick="navigator.clipboard.writeText('<?= $invite_url ?>'); alert('この案件専用の招待リンクをクリップボードにコピーしました！\nこのリンクから登録したユーザーは、本案件のみ表示可能です。');" style="background:#8b5cf6; color:white; padding:5px 12px; border-radius:4px; border:none; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(139,92,246,0.3);">
                     🔗 施工業者・設計者を招待
