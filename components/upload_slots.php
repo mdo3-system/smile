@@ -4,10 +4,14 @@
 
 if (!function_exists('renderUploadSlot')) {
     function renderUploadSlot($label, $name, $isRequired = true, $note = '', $accept = '.pdf,.zip,.jww,.dxf,.jw_,,.fcbz') {
-        $reqSpan = $isRequired ? '<span style="color:red;">*</span>' : '<span style="color:#d97706; font-size:10px;">(後出し可)</span>';
-        $requiredAttr = $isRequired ? 'required' : '';
+        global $files_by_cat;
+        $hasExisting = !empty($files_by_cat[$name]);
+        $reqSpan = $hasExisting 
+            ? '<span style="color:#059669; font-size:11px; font-weight:bold; margin-left:5px;">✅ 提出済（再選択で差し替え）</span>' 
+            : ($isRequired ? '<span style="color:red;">*</span>' : '<span style="color:#d97706; font-size:10px;">(後出し可)</span>');
+        $requiredAttr = ($isRequired && !$hasExisting) ? 'required' : '';
         $noteHtml = $note ? "<div style='font-size:10px; color:#64748b; margin-top:3px;'>{$note}</div>" : '';
-        $jsRequired = $isRequired ? 'true' : 'false';
+        $jsRequired = ($isRequired && !$hasExisting) ? 'true' : 'false';
         return <<<HTML
         <div style="margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>

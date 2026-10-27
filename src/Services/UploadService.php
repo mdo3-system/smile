@@ -393,7 +393,7 @@ class UploadService
             $isPostPrimary = !in_array($currentProjectStatus, ['quote_req', 'primary_prep']);
             $isNoticeOrExtra = in_array($fileCategory, ['other_extra', 'correction_notice']) || (strpos($fileCategory, 'custom_') === 0);
 
-            if ($role === 'client' && ($isPostPrimary || $isNoticeOrExtra)) {
+            if ($role === 'client' && $isPostPrimary) {
                 $headerTag = "🚨【一次回答後の追加図書・チェックバック提出】";
             } elseif ($newVersion > 1) {
                 $headerTag = "【図書差し替え】";
