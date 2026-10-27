@@ -4,14 +4,39 @@
 
 if (!function_exists('renderUploadSlot')) {
     function renderUploadSlot($label, $name, $isRequired = true, $note = '', $accept = '.pdf,.zip,.jww,.dxf,.jw_,,.fcbz') {
-        global $files_by_cat;
-        $hasExisting = !empty($files_by_cat[$name]);
+        global $files_by_cat, $has_any_design_doc;
+        
+        $aliases = [
+            'cad_plan_1f' => ['cad_plan_1f', 'pdf_plan', 'cad_design_all', 'all_in_one_zip'],
+            'cad_plan_2f' => ['cad_plan_2f', 'cad_design_all', 'all_in_one_zip'],
+            'cad_layout'  => ['cad_layout', 'pdf_layout', 'cad_design_all', 'all_in_one_zip'],
+            'cad_elevation' => ['cad_elevation', 'pdf_elevation', 'cad_design_all', 'all_in_one_zip'],
+            'cad_section' => ['cad_section', 'pdf_section', 'cad_design_all', 'all_in_one_zip'],
+            'cad_cross_section' => ['cad_cross_section', 'pdf_cross_section'],
+            'pdf_area_calc' => ['pdf_area_calc']
+        ];
+        
+        $searchKeys = $aliases[$name] ?? [$name];
+        $existingFileName = '';
+        foreach ($searchKeys as $k) {
+            if (!empty($files_by_cat[$k])) {
+                $existingFileName = $files_by_cat[$k][0]['file_name'] ?? '提出済ファイル';
+                break;
+            }
+        }
+        
+        $hasExisting = !empty($existingFileName);
+        // すでに何らかの意匠図面が存在する場合は、必須制約で送信がブロックされないようにする
+        $effectivelyRequired = $isRequired && !$hasExisting && empty($has_any_design_doc);
+
         $reqSpan = $hasExisting 
-            ? '<span style="color:#059669; font-size:11px; font-weight:bold; margin-left:5px;">✅ 提出済（再選択で差し替え）</span>' 
+            ? '<span style="color:#059669; font-size:11px; font-weight:bold; margin-left:5px;">✅ 提出済（' . htmlspecialchars($existingFileName, ENT_QUOTES) . '）</span>' 
             : ($isRequired ? '<span style="color:red;">*</span>' : '<span style="color:#d97706; font-size:10px;">(後出し可)</span>');
-        $requiredAttr = ($isRequired && !$hasExisting) ? 'required' : '';
+            
+        $requiredAttr = $effectivelyRequired ? 'required' : '';
         $noteHtml = $note ? "<div style='font-size:10px; color:#64748b; margin-top:3px;'>{$note}</div>" : '';
-        $jsRequired = ($isRequired && !$hasExisting) ? 'true' : 'false';
+        $jsRequired = $effectivelyRequired ? 'true' : 'false';
+        
         return <<<HTML
         <div style="margin-bottom:10px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
@@ -71,9 +96,38 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
 } elseif ($is_sky) {
     $req_road = true; $req_north = true;
 }
+
+// すでに意匠図書または見積時図面が提出されているかチェック
+$submitted_design_files = [];
+if (!empty($files_by_cat)) {
+    foreach ($files_by_cat as $cat => $fList) {
+        if (!in_array($cat, ['app_doc', 'soil_report', 'soil_impr'])) {
+            foreach ($fList as $f) {
+                if (!empty($f['file_name'])) {
+                    $submitted_design_files[] = $f['file_name'];
+                }
+            }
+        }
+    }
+}
+$has_any_design_doc = !empty($submitted_design_files);
 ?>
 
 <div id="upload_slots_container">
+
+    <?php if ($has_any_design_doc): ?>
+    <div style="background:#e6f4ea; border:2px solid #34a853; border-radius:6px; padding:12px; margin-bottom:15px;">
+        <strong style="display:block; color:#137333; font-size:13px; margin-bottom:5px;">✅ 以下の図書がアップロード済みとして認識されています：</strong>
+        <ul style="margin:0 0 8px 18px; padding:0; font-size:12px; color:#1e4620;">
+            <?php foreach (array_unique($submitted_design_files) as $sfname): ?>
+                <li><strong><?= htmlspecialchars($sfname, ENT_QUOTES) ?></strong></li>
+            <?php endforeach; ?>
+        </ul>
+        <div style="font-size:11px; color:#2e7d32;">
+            ※上記の図書をそのまま使用して正式発注できます。追加・差し替えがある場合のみ、該当スロットで新しいファイルを選択してください。
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- ============================================
          【共通】意匠図書データ（全依頼で必須・PDF/CAD）
@@ -561,11 +615,12 @@ if ($is_sky && isset($all_estimates) && !empty($all_estimates)) {
     // 2F平面図が未提出の場合の送信前確認
     document.addEventListener('DOMContentLoaded', function() {
         var form = document.querySelector('#orderModal form') || document.querySelector('form[action]');
+        var hasPlanExisting = <?= (!empty($files_by_cat['cad_plan_2f']) || !empty($files_by_cat['pdf_plan']) || !empty($has_any_design_doc)) ? 'true' : 'false' ?>;
         if (form) {
             form.addEventListener('submit', function(e) {
                 var f2 = document.getElementById('file_cad_plan_2f');
                 var chk2 = document.getElementById('chk_cad_plan_2f');
-                if (f2 && !f2.files.length && chk2 && !chk2.checked) {
+                if (!hasPlanExisting && f2 && !f2.files.length && chk2 && !chk2.checked) {
                     if (!confirm('2F平面図が未提出ですが、送信してよいですか？\n（平屋の場合はOKをクリックしてください）')) {
                         e.preventDefault();
                     }

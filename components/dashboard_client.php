@@ -431,7 +431,7 @@
                     <div style="margin-bottom:15px; background:#fef2f2; border:1px solid #fecaca; padding:10px; border-radius:6px;">
                         <label style="display:block; font-weight:bold; font-size:12px; margin-bottom:8px; color:#b91c1c;">【重要】見積時から図面の変更はありますか？</label>
                         <div style="display:flex; gap:15px; margin-bottom:10px;">
-                            <label style="font-size:13px; cursor:pointer;"><input type="radio" name="drawing_changed" value="no" required onchange="document.getElementById('drawing_change_notes_area').style.display='none'; document.getElementById('drawing_change_notes').removeAttribute('required');"> 変更なし</label>
+                            <label style="font-size:13px; cursor:pointer;"><input type="radio" name="drawing_changed" value="no" checked required onchange="document.getElementById('drawing_change_notes_area').style.display='none'; document.getElementById('drawing_change_notes').removeAttribute('required');"> 変更なし</label>
                             <label style="font-size:13px; cursor:pointer;"><input type="radio" name="drawing_changed" value="yes" required onchange="document.getElementById('drawing_change_notes_area').style.display='block'; document.getElementById('drawing_change_notes').setAttribute('required', 'required');"> 変更あり</label>
                         </div>
                         <div id="drawing_change_notes_area" style="display:none;">

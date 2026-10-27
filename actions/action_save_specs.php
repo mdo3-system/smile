@@ -210,18 +210,22 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             }
 
             // ============================
-            // CADデータ必須チェック（正式依頼時に必ず必要）
+            // 意匠図面/CADデータ必須チェック（正式依頼時に必ず必要）
             // ============================
             $stmtCadCheck = $pdo->prepare("
                 SELECT COUNT(*) FROM project_files 
                 WHERE project_id = :pid 
                 AND is_latest = 1 
-                AND file_category IN ('cad_design_all','cad_layout','cad_plan_1f','cad_plan_2f','cad_plan_3f','cad_plan_ph','cad_plan_rf','cad_elevation','cad_section','all_in_one_zip')
+                AND (
+                    file_category IN ('cad_design_all','cad_layout','cad_plan_1f','cad_plan_2f','cad_plan_3f','cad_plan_ph','cad_plan_rf','cad_elevation','cad_section','all_in_one_zip','pdf_plan','pdf_elevation','pdf_layout','pdf_section','pdf_cross_section','pdf_area_calc')
+                    OR file_category LIKE 'custom_%'
+                )
             ");
             $stmtCadCheck->execute(['pid' => $project_id]);
             $cad_count = (int)$stmtCadCheck->fetchColumn();
-            if ($cad_count === 0) {
-                throw new Exception("正式依頼には意匠CADデータ（JWW/DXF/FCBZ等）のアップロードが必須です。CADデータをアップロードしてから再度お試しください。");
+            $newly_uploaded = count($files_to_insert ?? []);
+            if ($cad_count === 0 && $newly_uploaded === 0) {
+                throw new Exception("正式依頼には意匠図面・CADデータのアップロードが必須です。図面をアップロードしてから再度お試しください。");
             }
 
             // Save drawing change report to messages
