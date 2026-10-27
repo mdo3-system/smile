@@ -164,7 +164,7 @@ $has_any_design_doc = !empty($submitted_design_files);
             正式依頼時に必須ですが、後から提出しても構いません。<br>
             <span style="color:#d97706; font-weight:bold;">提出が完了した時点が「一次回答」の起算日となります。</span>
         </div>
-        <?= renderUploadSlot('確認申請書（2面〜5面）', 'app_doc', false, '後出し可（揃った日が一次回答起算日）') ?>
+        <?= renderUploadSlot('確認申請書（2面〜5面）', 'app_doc', false, '後出し可（Word/Excel/PDF/ZIP対応・揃った日が一次回答起算日）', '.pdf,.doc,.docx,.xls,.xlsx,.zip') ?>
     </div>
 
     <?php if ($needs_soil): ?>

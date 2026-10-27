@@ -417,7 +417,7 @@
                 </div>
 
                 <div style="font-size:13px; margin-bottom:15px; color:#555;">承諾後、以下の必須データをアップロードして、正式に発注してください。</div>
-                <form method="POST" enctype="multipart/form-data" id="orderForm">
+                <form method="POST" action="project_detail.php?id=<?= $project_id ?>" enctype="multipart/form-data" id="orderForm" onsubmit="var btn=document.getElementById('orderSubmitBtn'); if(btn){ btn.disabled=true; btn.innerHTML='送信中...'; }">
                     <input type="hidden" name="action" value="request_design_start">
                     
                     <?php
@@ -447,7 +447,7 @@
                     
                     <div class="modal-btns">
                         <button type="button" onclick="document.getElementById('orderModal').classList.remove('active')" style="padding:8px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">キャンセル</button>
-                        <button type="submit" id="orderSubmitBtn" disabled style="padding:8px 20px; background:#9ca3af; color:white; border:none; border-radius:6px; cursor:not-allowed; font-weight:bold;" onclick="if(this.disabled) return false; this.innerHTML='送信中...';">送信して正式発注（承諾が必要です）</button>
+                        <button type="submit" id="orderSubmitBtn" disabled style="padding:8px 20px; background:#9ca3af; color:white; border:none; border-radius:6px; cursor:not-allowed; font-weight:bold;">送信して正式発注（承諾が必要です）</button>
                     </div>
                 </form>
             </div>

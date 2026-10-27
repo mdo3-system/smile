@@ -231,7 +231,8 @@
 // 1.6.68: 依頼主ダッシュボード（dashboard_client.php）中央パネル（カラム2）への依頼主アップロード図書スロット（col_center_uploads.php）の常時表示復元、および右パネルからの非表示ガード重複呼び出し削除
 // 1.6.69: 依頼主ダッシュボード3カラム復元（右カラムcol_right.php統合・チェックバック枠及び補正通知書スロット復元、構造仕様指定col_specs.phpの中央パネル配置）、正式発注誘導バナー新設、orderModalの既提出ファイル引き継ぎ対応、およびquote_req時のチャット見出し適正化
 // 1.6.70: 正式発注モーダル（orderModal）における既提出図書（見積時PDF・カスタム図書）のエイリアス照合・提出済認識強化、既提出図書サマリーバナーの提示、送信ブロック防止（required解除・変更なし初期選択）、およびバックエンド意匠図書バリデーションのPDF/カスタム拡張
-window.APP_VERSION = "1.6.70";
+// 1.6.71: 単一責任の原則に基づくPOSTルーター（project_detail_post.php）の抜本的リファクタリング（曖昧な$_FILES判定によるrequest_design_start横取り消失バグの根本解消）、確認申請書スロットへのWord/Excel形式（.doc,.docx,.xls,.xlsx）対応、および発注フォームaction明示化
+window.APP_VERSION = "1.6.71";
 const APP_LAST_UPDATED = '2026-10-27';
 
 

@@ -1063,10 +1063,26 @@
 
 ---
 
-## 91. このドキュメントの所在
+## 91. 単一責任の原則に基づくPOSTルーターのリファクタリングおよび確認申請書Word/Excel対応 (v1.6.71)
+
+- **概要**:
+  - 正式発注モーダル送信時（`action === 'request_design_start'`）、フォーム内にファイル入力が存在することで `project_detail_post.php` の手前のファイルアップロード判定条件 `(isset($_FILES['upload_files']) && !empty($_FILES['upload_files']['name']))` に吸い込まれ、本来処理すべき `action_save_specs.php` が一切実行されずに画面が再読み込みされて「変化なし」となる重大ルーティングバグを解消。
+  - 確認申請書（`app_doc`）スロットにおいて、自治体・検査機関指定のWord形式（`.doc, .docx`）やExcel形式（`.xls, .xlsx`）がファイル選択ダイアログで選べない不具合を解消。
+- **仕様1 (単一責任の原則に基づく明示的アクションルーティング)**:
+  - `actions/project_detail_post.php` における曖昧な `$_FILES` の存在チェックを全廃。
+  - 正式発注・仕様保存系（`request_design_start`, `save_client_specs_draft`, etc.）を最優先で `action_save_specs.php` へルーティング。
+  - ファイルアップロード系は明示的な `$action` または `$actionType`（`single_upload`, `bulk_upload`）のみで呼び出すよう責務境界を完全分離。
+- **仕様2 (確認申請書スロットのWord/Excel形式許可)**:
+  - `components/upload_slots.php` の `app_doc` スロットにおける `accept` 属性に `.doc,.docx,.xls,.xlsx` を追加。
+- **仕様3 (発注フォームaction明示化および二重送信防止)**:
+  - `components/dashboard_client.php` の `orderForm` に `action="project_detail.php?id=..."` を明示し、submit時のボタン無効化制御を安全化。
+
+---
+
+## 92. このドキュメントの所在
 
 - **システム仕様書（gemini.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.70（2026-10-27）
+- **最終バージョン**: v1.6.71（2026-10-27）
 
 
 
