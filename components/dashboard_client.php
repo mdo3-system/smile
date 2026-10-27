@@ -472,9 +472,10 @@
         }
         </script>
 
-        <!-- カラム2：成果物一覧 ＋ スケジュール -->
+        <!-- カラム2：成果物一覧 ＋ 依頼主アップロード図書 ＋ スケジュール -->
         <div style="flex:1; display:flex; flex-direction:column; gap:15px; min-width:300px;">
             <?php require __DIR__ . '/col_center_deliverables.php'; ?>
+            <?php require __DIR__ . '/col_center_uploads.php'; ?>
             <?php require __DIR__ . '/col_center_post_uploads.php'; ?>
 
             <!-- スケジュールボックス（旧左カラムから移動） -->
@@ -741,10 +742,6 @@
                     </div>
                 </div>
             </div>
-            <?php if (($project_info['status'] ?? '') !== 'quote_req'): ?>
-                <?php require __DIR__ . '/col_center_uploads.php'; ?>
-            <?php endif; ?>
-            
             <?php require __DIR__ . '/col_specs.php'; ?>
         </div>
         
