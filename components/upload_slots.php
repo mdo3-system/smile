@@ -3,16 +3,16 @@
 // 【正式依頼モーダル】依頼種別に応じた図書アップロードスロット
 
 if (!function_exists('renderUploadSlot')) {
-    function renderUploadSlot($label, $name, $isRequired = true, $note = '', $accept = '.pdf,.zip,.jww,.dxf,.jw_,,.fcbz') {
+    function renderUploadSlot($label, $name, $isRequired = true, $note = '', $accept = '.fcbz,.jww,.jws,.jw_,,.dxf,.dwg,.zip') {
         global $files_by_cat, $has_any_design_doc;
         
         $aliases = [
-            'cad_plan_1f' => ['cad_plan_1f', 'pdf_plan', 'cad_design_all', 'all_in_one_zip'],
+            'cad_plan_1f' => ['cad_plan_1f', 'cad_design_all', 'all_in_one_zip'],
             'cad_plan_2f' => ['cad_plan_2f', 'cad_design_all', 'all_in_one_zip'],
-            'cad_layout'  => ['cad_layout', 'pdf_layout', 'cad_design_all', 'all_in_one_zip'],
-            'cad_elevation' => ['cad_elevation', 'pdf_elevation', 'cad_design_all', 'all_in_one_zip'],
-            'cad_section' => ['cad_section', 'pdf_section', 'cad_design_all', 'all_in_one_zip'],
-            'cad_cross_section' => ['cad_cross_section', 'pdf_cross_section'],
+            'cad_layout'  => ['cad_layout', 'cad_design_all', 'all_in_one_zip'],
+            'cad_elevation' => ['cad_elevation', 'cad_design_all', 'all_in_one_zip'],
+            'cad_section' => ['cad_section', 'cad_design_all', 'all_in_one_zip'],
+            'cad_cross_section' => ['cad_cross_section'],
             'pdf_area_calc' => ['pdf_area_calc']
         ];
         
@@ -26,7 +26,7 @@ if (!function_exists('renderUploadSlot')) {
         }
         
         $hasExisting = !empty($existingFileName);
-        // すでに何らかの意匠図面が存在する場合は、必須制約で送信がブロックされないようにする
+        // すでに何らかの意匠CADデータが存在する場合は、必須制約で送信がブロックされないようにする
         $effectivelyRequired = $isRequired && !$hasExisting && empty($has_any_design_doc);
 
         $reqSpan = $hasExisting 
@@ -42,10 +42,13 @@ if (!function_exists('renderUploadSlot')) {
             <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">{$label} {$reqSpan}</label>
             {$noteHtml}
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[{$name}][]" accept="{$accept}" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="document.getElementById('chk_{$name}').checked && (this.required=false);">
+                <input type="file" name="upload_files[{$name}][]" accept="{$accept}" id="file_{$name}" {$requiredAttr} style="font-size:11px; flex:1;" onchange="handleCadFileChange(this, '{$name}');">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[{$name}]" id="chk_{$name}" value="1" onchange="if ({$jsRequired}) { document.getElementById('file_{$name}').required = !this.checked; }"> 他ﾌｧｲﾙに記載
                 </label>
+            </div>
+            <div id="zip_warn_{$name}" style="display:none; font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fef3c7; border-radius:4px; padding:4px 8px; margin-top:5px;">
+                📦 ZIPファイルを選択しました。中にアーキトレンドデータ、JWW、DXF、DWG等のCADデータが含まれていることをご確認ください（※PDF図面のみのZIPは受付不可）。
             </div>
         </div>
 HTML;
@@ -130,18 +133,21 @@ $has_any_design_doc = !empty($submitted_design_files);
     <?php endif; ?>
 
     <!-- ============================================
-         【共通】意匠図書データ（全依頼で必須・PDF/CAD）
+         【共通】意匠CADデータ（全依頼で必須・PDF不可）
     ============================================ -->
     <div style="margin-bottom:15px; border:2px solid #ef4444; padding:12px; border-radius:6px; background:#fef2f2;">
-        <strong style="display:block; margin-bottom:8px; color:#b91c1c;">🔴 【必須】意匠図書データ（PDF / CAD）</strong>
-        <div style="font-size:11px; color:#6b7280; margin-bottom:10px;">Goodnotes等の確認用PDF、またはJWW/DXF等のCADデータをアップロードしてください。個別図面でも一括ZIPでも構いません。</div>
-        <?= renderUploadSlot('配置図 (PDF/CAD)', 'cad_layout', true, 'PDFまたはJWW/DXF/FCBZ形式') ?>
-        <?= renderUploadSlot('1F平面図 (PDF/CAD)', 'cad_plan_1f', true, 'PDFまたはJWW/DXF/FCBZ形式') ?>
-        <?= renderUploadSlot('2F平面図 (PDF/CAD)', 'cad_plan_2f', false, '平屋の場合は不要（送信時に確認します）') ?>
-        <?= renderUploadSlot('3F・PH・RF 平面図 (PDF/CAD)', 'cad_plan_3f', false, '該当する場合のみ') ?>
-        <?= renderUploadSlot('立面図 (PDF/CAD)', 'cad_elevation', true, '各方向の立面図（PDFまたはCAD）') ?>
-        <?= renderUploadSlot('矩計図 (PDF/CAD)', 'cad_section', false, '必要に応じて提出（PDFまたはCAD）') ?>
-        <?= renderUploadSlot('断面図 (PDF/CAD)', 'cad_cross_section', false, '必要に応じて提出（PDFまたはCAD）') ?>
+        <strong style="display:block; margin-bottom:8px; color:#b91c1c;">🔴 【必須】意匠CADデータ（アーキトレンド / JWW / DXF / DWG ※PDF不可）</strong>
+        <div style="font-size:11px; color:#b91c1c; font-weight:bold; margin-bottom:10px;">
+            ⚠️ アーキトレンド（FCBZ/ZIP）、Jw_cad（JWW）、AutoCAD等（DXF/DWG）のCAD元データをアップロードしてください。<br>
+            <span style="color:#dc2626; text-decoration:underline;">※意匠図面のPDF形式は受付できません（CAD元データ必須）。</span>
+        </div>
+        <?= renderUploadSlot('配置図 (CAD専用)', 'cad_layout', true, 'FCBZ / JWW / DXF / DWG / ZIP形式 ※PDF不可') ?>
+        <?= renderUploadSlot('1F平面図 (CAD専用)', 'cad_plan_1f', true, 'FCBZ / JWW / DXF / DWG / ZIP形式 ※PDF不可') ?>
+        <?= renderUploadSlot('2F平面図 (CAD専用)', 'cad_plan_2f', false, '平屋の場合は不要（FCBZ/JWW/DXF/DWG/ZIP ※PDF不可）') ?>
+        <?= renderUploadSlot('3F・PH・RF 平面図 (CAD専用)', 'cad_plan_3f', false, '該当する場合のみ（FCBZ/JWW/DXF/DWG/ZIP ※PDF不可）') ?>
+        <?= renderUploadSlot('立面図 (CAD専用)', 'cad_elevation', true, '各方向の立面図（FCBZ/JWW/DXF/DWG/ZIP ※PDF不可）') ?>
+        <?= renderUploadSlot('矩計図 (CAD専用)', 'cad_section', false, '必要に応じて提出（FCBZ/JWW/DXF/DWG/ZIP ※PDF不可）') ?>
+        <?= renderUploadSlot('断面図 (CAD専用)', 'cad_cross_section', false, '必要に応じて提出（FCBZ/JWW/DXF/DWG/ZIP ※PDF不可）') ?>
         <?= renderUploadSlot('面積表 / 求積図 (PDF/画像)', 'pdf_area_calc', false, '※CAD不可（PDFまたはPNG/JPG画像のみ受付）', '.pdf,.png,.jpg,.jpeg') ?>
         
         <!-- 動的スロット追加先 -->
@@ -150,8 +156,10 @@ $has_any_design_doc = !empty($submitted_design_files);
             <button type="button" onclick="addDynamicCadSlot()" style="background:#3b82f6; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">➕ 別のCAD図面スロットを追加</button>
         </div>
 
-        <div style="background:#fff8e1; border:1px solid #f59e0b; border-radius:4px; padding:6px; font-size:11px; color:#92400e; margin-top:8px;">
-            💡 全図面を一括ZIPにまとめてアップロードすることもできます → 「配置図」スロットにZIPを添付してください。
+        <div style="background:#fffbeb; border:1px solid #f59e0b; border-radius:4px; padding:8px; font-size:11px; color:#92400e; margin-top:8px;">
+            💡 <strong>全図面を一括ZIPにまとめてアップロードすることもできます</strong><br>
+            「配置図」スロットにZIPを添付してください。<br>
+            <span style="color:#b45309; font-weight:bold;">⚠️ ZIP内には必ずアーキトレンドデータ、JWW、DXF、DWG等のCADデータを含めてください（※PDF図面のみのZIPは受付できません）。</span>
         </div>
     </div>
 
@@ -703,10 +711,13 @@ $has_any_design_doc = !empty($submitted_design_files);
                 <span style="color:#d97706; font-size:10px; font-weight:normal;">(後出し可)</span>
             </label>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <input type="file" name="upload_files[${catName}][]" accept=".pdf,.zip,.jww,.dxf,.jw_,,.fcbz" id="file_${catName}" style="font-size:11px; flex:1;">
+                <input type="file" name="upload_files[${catName}][]" accept=".fcbz,.jww,.jws,.jw_,,.dxf,.dwg,.zip" id="file_${catName}" style="font-size:11px; flex:1;" onchange="handleCadFileChange(this, '${catName}');">
                 <label style="font-size:11px; color:#475569; display:flex; align-items:center; gap:3px; white-space:nowrap;">
                     <input type="checkbox" name="included_in_other[${catName}]" id="chk_${catName}" value="1" onchange="document.getElementById('file_${catName}').required = !this.checked;"> 他ﾌｧｲﾙに記載
                 </label>
+            </div>
+            <div id="zip_warn_${catName}" style="display:none; font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fef3c7; border-radius:4px; padding:4px 8px; margin-top:5px;">
+                📦 ZIPファイルを選択しました。中にアーキトレンドデータ、JWW、DXF、DWG等のCADデータが含まれていることをご確認ください（※PDF図面のみのZIPは受付不可）。
             </div>
         `;
         container.appendChild(div);
@@ -782,6 +793,27 @@ $has_any_design_doc = !empty($submitted_design_files);
             </div>
         `;
         container.appendChild(div);
+    }
+
+    function handleCadFileChange(input, slotName) {
+        var chk = document.getElementById('chk_' + slotName);
+        if (chk && chk.checked) {
+            input.required = false;
+        }
+        var warnDiv = document.getElementById('zip_warn_' + slotName);
+        if (!warnDiv) return;
+        
+        var isZip = false;
+        if (input.files && input.files.length > 0) {
+            for (var i = 0; i < input.files.length; i++) {
+                var fn = input.files[i].name.toLowerCase();
+                if (fn.endsWith('.zip')) {
+                    isZip = true;
+                    break;
+                }
+            }
+        }
+        warnDiv.style.display = isZip ? 'block' : 'none';
     }
     </script>
 

@@ -302,6 +302,10 @@ class UploadService
                 $fileName = $fileInfo['name'];
                 $tmpName = $fileInfo['tmp_name'];
                 $mimeType = $fileInfo['type'];
+
+                require_once __DIR__ . '/../../functions.php';
+                validateCadDesignFileUpload($tmpName, $fileName, $fileCategory);
+
                 require_once __DIR__ . '/../../google_drive_client.php';
                 $driveFileId = upload_to_google_drive($tmpName, $fileName, $mimeType, $projectId, $this->pdo);
             }

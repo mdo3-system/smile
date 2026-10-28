@@ -11,12 +11,12 @@
 
     // 1. 共通図書
     $default_common_docs = [
-        'cad_layout' => '配置図 (PDF/CAD) ※正式依頼時必須',
-        'cad_plan_1f' => '1F平面図 (PDF/CAD) ※正式依頼時必須',
-        'cad_plan_2f' => '2F平面図 (PDF/CAD) ※正式依頼時必須',
-        'cad_elevation' => '立面図 (PDF/CAD) ※正式依頼時必須',
-        'cad_section' => '矩計図 (PDF/CAD) ※正式依頼時必須',
-        'cad_cross_section' => '断面図 (PDF/CAD)',
+        'cad_layout' => '配置図 (CAD専用) ※正式依頼時必須',
+        'cad_plan_1f' => '1F平面図 (CAD専用) ※正式依頼時必須',
+        'cad_plan_2f' => '2F平面図 (CAD専用) ※正式依頼時必須',
+        'cad_elevation' => '立面図 (CAD専用) ※正式依頼時必須',
+        'cad_section' => '矩計図 (CAD専用) ※正式依頼時必須',
+        'cad_cross_section' => '断面図 (CAD専用)',
         'pdf_area_calc' => '面積表 / 求積図 (PDF/画像 ※CAD不可)',
     ];
     $common_docs = [];
@@ -258,14 +258,24 @@
                         </div>
 
                         <!-- アップロードフォーム -->
-                        <?php if (!$is_admin): ?>
+                        <?php if (!$is_admin): 
+                            $slot_accept = '';
+                            $is_cad_slot = (strpos($cat, 'cad_') === 0 || (strpos($cat, 'custom_') === 0 && ($section_title ?? '') === '共通図書・CAD'));
+                            if ($is_cad_slot) {
+                                $slot_accept = 'accept=".fcbz,.jww,.jws,.jw_,,.dxf,.dwg,.zip"';
+                            } elseif ($cat === 'pdf_area_calc') {
+                                $slot_accept = 'accept=".pdf,.png,.jpg,.jpeg"';
+                            } elseif ($cat === 'app_doc') {
+                                $slot_accept = 'accept=".pdf,.doc,.docx,.xls,.xlsx,.zip"';
+                            }
+                        ?>
                             <form action="project_detail.php?id=<?= $project_id ?>" method="POST" enctype="multipart/form-data" style="margin-top:4px; display:flex; flex-direction:column; gap:2px; border-top:1px dashed #e2e8f0; padding-top:4px;">
                                 <input type="hidden" name="file_category" value="<?= $cat ?>">
                                 <input type="hidden" name="action_type" value="single_upload">
                                 <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab, ENT_QUOTES) ?>">
                                 
                                 <div style="display:flex; gap:3px; align-items:center;">
-                                    <input type="file" name="upload_files[]" multiple id="file_<?= $cat ?>" <?= !$has_actual_file ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:80px; padding:2px;">
+                                    <input type="file" name="upload_files[]" multiple id="file_<?= $cat ?>" <?= $slot_accept ?> <?= !$has_actual_file ? 'required' : '' ?> style="font-size:10px; flex:1; min-width:80px; padding:2px;" onchange="if(this.files && this.files.length){ var z=false; for(var i=0;i<this.files.length;i++){ if(this.files[i].name.toLowerCase().endsWith('.zip')){ z=true; break; } } var w=document.getElementById('center_zip_warn_<?= $cat ?>'); if(w){ w.style.display=z?'block':'none'; } }">
                                     
                                     <?php if (!$has_actual_file): ?>
                                     <label style="font-size:9px; display:flex; align-items:center; gap:1px; color:#d97706; white-space:nowrap; cursor:pointer;" title="他のCADファイルに記載がある場合">
@@ -277,6 +287,9 @@
                                     <button type="submit" style="font-size:10px; background:#10b981; color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; white-space:nowrap; font-weight:bold;">
                                         <?= $has_actual_file ? '＋追加/更新' : 'UP' ?>
                                     </button>
+                                </div>
+                                <div id="center_zip_warn_<?= $cat ?>" style="display:none; font-size:9px; color:#b45309; background:#fffbeb; border:1px solid #fef3c7; border-radius:3px; padding:2px 4px; margin-top:2px;">
+                                    📦 ZIP内にCADデータ（FCBZ/JWW/DXF/DWG）が含まれていることをご確認ください（※PDFのみZIP不可）。
                                 </div>
                                 
                                 <?php if ($has_actual_file): ?>

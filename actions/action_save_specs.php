@@ -82,12 +82,14 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
 
         // 個別ファイルアップロード (配列対応)
         if (!empty($_FILES['upload_files']['name'])) {
+            require_once 'functions.php';
             foreach ($_FILES['upload_files']['name'] as $cat => $file_names) {
                 if (is_array($file_names)) {
                     foreach ($file_names as $idx => $file_name) {
                         if ($_FILES['upload_files']['error'][$cat][$idx] === UPLOAD_ERR_OK && $file_name !== '') {
                             $tmp_name = $_FILES['upload_files']['tmp_name'][$cat][$idx];
                             $mime_type = $_FILES['upload_files']['type'][$cat][$idx];
+                            validateCadDesignFileUpload($tmp_name, $file_name, $cat);
                             try {
                                 $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
                                 $files_to_insert[] = [
@@ -107,6 +109,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                     if ($_FILES['upload_files']['error'][$cat] === UPLOAD_ERR_OK && $file_name !== '') {
                         $tmp_name = $_FILES['upload_files']['tmp_name'][$cat];
                         $mime_type = $_FILES['upload_files']['type'][$cat];
+                        validateCadDesignFileUpload($tmp_name, $file_name, $cat);
                         try {
                             $drive_file_id = upload_to_google_drive($tmp_name, $file_name, $mime_type, $project_id, $pdo);
                             $files_to_insert[] = [
@@ -217,7 +220,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
                 WHERE project_id = :pid 
                 AND is_latest = 1 
                 AND (
-                    file_category IN ('cad_design_all','cad_layout','cad_plan_1f','cad_plan_2f','cad_plan_3f','cad_plan_ph','cad_plan_rf','cad_elevation','cad_section','all_in_one_zip','pdf_plan','pdf_elevation','pdf_layout','pdf_section','pdf_cross_section','pdf_area_calc')
+                    file_category IN ('cad_design_all','cad_layout','cad_plan_1f','cad_plan_2f','cad_plan_3f','cad_plan_ph','cad_plan_rf','cad_elevation','cad_section','cad_cross_section','all_in_one_zip')
                     OR file_category LIKE 'custom_%'
                 )
             ");
@@ -225,7 +228,7 @@ if ($action === 'save_client_specs_draft' || $action === 'request_design_start' 
             $cad_count = (int)$stmtCadCheck->fetchColumn();
             $newly_uploaded = count($files_to_insert ?? []);
             if ($cad_count === 0 && $newly_uploaded === 0) {
-                throw new Exception("正式依頼には意匠図面・CADデータのアップロードが必須です。図面をアップロードしてから再度お試しください。");
+                throw new Exception("正式依頼には意匠CADデータ（アーキトレンドFCBZ、JWW、DXF、DWG、またはCADを含むZIP等）のアップロードが必須です。CAD元データをアップロードしてから再度お試しください。");
             }
 
             // Save drawing change report to messages

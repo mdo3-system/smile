@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.6.71');
+define('SYSTEM_VERSION', 'v1.6.72');
 
 
 
@@ -732,5 +732,66 @@ function syncProjectStatusWithSchedule(int $projectId, PDO $pdo) {
     if ($new_status !== $project['status']) {
         $stmtUpd = $pdo->prepare("UPDATE projects SET status = :status WHERE id = :pid");
         $stmtUpd->execute(['status' => $new_status, 'pid' => $projectId]);
+    }
+}
+
+/**
+ * 意匠図面スロットへのアップロードが許可されたCAD形式（またはCADを含むZIP）であるかを検証する
+ * @param string $tmpPath アップロード一時ファイルのパス
+ * @param string $fileName アップロードファイル名
+ * @param string $category ファイルカテゴリ
+ * @throws Exception 不正なファイルの場合に例外を投げる
+ */
+function validateCadDesignFileUpload($tmpPath, $fileName, $category) {
+    // 意匠図面CADスロット（配置図、平面図、立面図、矩計図、断面図、共通CAD系カスタムスロット）
+    $cadCategories = [
+        'cad_layout', 'cad_plan_1f', 'cad_plan_2f', 'cad_plan_3f', 'cad_plan_ph', 'cad_plan_rf',
+        'cad_elevation', 'cad_section', 'cad_cross_section', 'cad_design_all', 'all_in_one_zip'
+    ];
+    $isCadCategory = in_array($category, $cadCategories) || (strpos($category, 'custom_') === 0 && strpos($category, 'custom_permit_') !== 0 && strpos($category, 'custom_soil_') !== 0 && strpos($category, 'custom_precut_') !== 0);
+
+    if (!$isCadCategory) {
+        return; // CAD対象外のスロット（面積表、確認申請書、地盤等）はチェックをパス
+    }
+
+    $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    // 1. PDF拡張子の直接禁止
+    if ($ext === 'pdf') {
+        throw new Exception("意匠図面（配置図・平面図・立面図・矩計図・断面図）にはPDFファイルはアップロードできません。アーキトレンド(FCBZ/ZIP)、JWW、DXF、DWG形式のCAD元データをご提出ください。");
+    }
+
+    // 2. 許可拡張子一覧
+    $allowedExts = ['fcbz', 'jww', 'jws', 'jw_', 'dxf', 'dwg', 'zip'];
+    if (!in_array($ext, $allowedExts)) {
+        throw new Exception("意匠図面にはアーキトレンドデータ(FCBZ)、JWW、DXF、DWG、またはそれらを含むZIP形式のみアップロード可能です。（指定された形式: .{$ext}）");
+    }
+
+    // 3. ZIPファイルの場合、内部を走査してCADデータが含まれているか検証
+    if ($ext === 'zip' && file_exists($tmpPath) && class_exists('ZipArchive')) {
+        $zip = new ZipArchive();
+        $res = $zip->open($tmpPath);
+        if ($res === true) {
+            $hasCadInside = false;
+            $cadExtsInside = ['fcbz', 'jww', 'jws', 'jw_', 'dxf', 'dwg'];
+            $fileCount = $zip->numFiles;
+            for ($i = 0; $i < $fileCount; $i++) {
+                $entryName = $zip->getNameIndex($i);
+                // ディレクトリを除外
+                if (substr($entryName, -1) === '/' || substr($entryName, -1) === '\\') {
+                    continue;
+                }
+                $entryExt = strtolower(pathinfo($entryName, PATHINFO_EXTENSION));
+                if (in_array($entryExt, $cadExtsInside)) {
+                    $hasCadInside = true;
+                    break;
+                }
+            }
+            $zip->close();
+
+            if (!$hasCadInside) {
+                throw new Exception("アップロードされたZIPファイル内に有効なCADデータ（アーキトレンドFCBZ、JWW、DXF、DWG）が見つかりませんでした。PDF図面のみのZIPファイルは受付できません。");
+            }
+        }
     }
 }

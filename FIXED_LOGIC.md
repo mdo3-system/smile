@@ -1079,10 +1079,33 @@
 
 ---
 
-## 92. このドキュメントの所在
+## 92. 意匠図面CAD限定（アーキトレンド/JWW/DXF/DWG/ZIP）・PDF完全禁止およびZIP内部CAD自動判定仕様 (v1.6.72)
+
+- **概要**:
+  - 依頼主が設計依頼時に提出する意匠図書（配置図、平面図、立面図、矩計図、断面図）について、意匠図面のPDF提出を完全に遮断・禁止し、「アーキトレンド形式（.fcbz）、JWW（.jww, .jws, .jw_）、DXF（.dxf）、DWG（.dwg）、およびこれらを含むZIP（.zip）」のみに厳格限定。
+  - ZIP圧縮ファイルが提出された場合、PHPの `ZipArchive` を利用して内部エントリを高速走査し、CADデータ（FCBZ/JWW/DXF/DWG）が1件も含まれていないZIP（PDFや画像のみのZIP）を自動判定してアップロードを即座に遮断・警告するバックエンド検証を実装。
+- **仕様1 (フロントUIのCAD限定化およびZIP注意ガイダンス)**:
+  - `components/upload_slots.php` の `renderUploadSlot()` におけるデフォルトの `accept` 属性から `.pdf` を完全除外（`accept=".fcbz,.jww,.jws,.jw_,,.dxf,.dwg,.zip"`）。
+  - セクション見出しを「🔴 【必須】意匠CADデータ（アーキトレンド / JWW / DXF / DWG ※PDF不可）」に刷新し、スロット表示名を「配置図 (CAD専用)」「1F平面図 (CAD専用)」等に更新。
+  - フロントエンドで `.zip` ファイルが選択された際、即座に「⚠️ ZIPファイルを選択中：内部にアーキトレンド(.fcbz)またはJWW/DXF/DWG形式のCAD図面データが含まれている必要があります」というインライン注意バッジを動的表示。
+  - `components/col_center_uploads.php`（中央スロット）の意匠図書スロットにも同様の `accept` 制限とインラインZIP注意ガイダンスを配備。
+  - ※ 面積表/求積図（`pdf_area_calc`: PDF/画像）、確認申請書（`app_doc`: PDF/Word/Excel/ZIP）、地盤調査報告書（`soil_report`: PDF/ZIP）は従来通りPDF等を許可。
+- **仕様2 (バックエンド高速ZIP走査 & CADバリデーション関数)**:
+  - `functions.php` に `validateCadDesignFileUpload($tmpPath, $fileName, $category)` を実装。
+  - 意匠CADカテゴリ（`cad_layout`, `cad_plan_*`, `cad_elevation`, `cad_section`, `cad_cross_section`, `all_in_one_zip`）へのファイルアップロード時：
+    1. 拡張子が `.pdf` の場合：即座に例外スロー（`意匠図面スロットにPDFはアップロードできません。アーキトレンド（.fcbz）またはJWW/DXF/DWGデータ、またはそれらを含むZIPを選択してください。`）。
+    2. 拡張子が `.zip` の場合：`ZipArchive::open()` によりサーバーの一時ファイルを走査し、内部ファイル名にCAD拡張子が含まれているかをチェック。CADファイルが0件の場合は例外スローで遮断。
+    3. その他許可されていない拡張子の場合：即座に例外スロー。
+- **仕様3 (サービス層および発注アクションへの組み込み)**:
+  - `src/Services/UploadService.php` の `singleUpload()` 内で上記検証を呼び出し、個別スロットUP時の不正アップロードを完全防御。
+  - `actions/action_save_specs.php` の正式発注処理時（`request_design_start`）において、マルチアップロードされた各意匠図書のバリデーションを実施。あわせて必須図書チェック（`$stmtCadCheck`）をCAD専用カテゴリおよびCAD含有ZIPに厳格化。
+
+---
+
+## 93. このドキュメントの所在
 
 - **システム仕様書（gemini.md）**: `e:\Dropbox\■設計ｻﾎﾟｰﾄ\■note\antigravity\system\gemini.md`
-- **最終バージョン**: v1.6.71（2026-10-27）
+- **最終バージョン**: v1.6.72（2026-10-28）
 
 
 
