@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // 4. スケジュール関連
-    elseif (in_array($action, ['set_primary_due_date', 'update_schedule_actual', 'start_design', 'submit_primary_response', 'update_schedule_override', 'complete_review', 'pay_intermediate', 'revert_completed_status'])) {
+    elseif (in_array($action, ['set_primary_due_date', 'update_schedule_actual', 'start_design', 'submit_primary_response', 'update_schedule_override', 'complete_review', 'pay_intermediate', 'revert_completed_status', 'update_schedule_wish'])) {
         require __DIR__ . '/action_schedule.php';
     }
 

@@ -633,14 +633,14 @@
                         if ($actual_date || $idx === 0 || $idx === 1) {
                             $wish_display = !empty($wish_val) ? '<span style="color:#6d28d9; font-weight:bold;">' . date('m/d', strtotime($wish_val)) . '</span>' : '<span style="color:#aaa;">-</span>';
                         } else {
+                            $safe_step_name = htmlspecialchars($step_name, ENT_QUOTES);
+                            $safe_sched_type = htmlspecialchars($scheduleItem['type'], ENT_QUOTES);
+                            $wish_input_id = 'wish_input_' . $safe_sched_type . '_' . $idx;
                             $wish_display = '
-                            <form action="project_detail.php?id='.$project_id.'" method="POST" style="margin:0; display:inline-flex; gap:3px; align-items:center;">
-                                <input type="hidden" name="action" value="update_schedule_wish">
-                                <input type="hidden" name="schedule_type" value="'.htmlspecialchars($scheduleItem['type'], ENT_QUOTES).'">
-                                <input type="hidden" name="step_idx" value="'.$idx.'">
-                                <input type="date" name="wish_date" value="'.htmlspecialchars($wish_val, ENT_QUOTES).'" style="font-size:10px; padding:2px; width:100px;">
-                                <button type="submit" style="font-size:9px; padding:2px 4px; background:#f5f3ff; border:1px solid #ddd6fe; color:#6d28d9; border-radius:3px; cursor:pointer;">保存</button>
-                            </form>';
+                            <div style="display:inline-flex; gap:3px; align-items:center;">
+                                <input type="date" id="' . $wish_input_id . '" value="' . htmlspecialchars($wish_val, ENT_QUOTES) . '" style="font-size:10px; padding:2px; width:100px;">
+                                <button type="button" onclick="handleWishSaveClick(\'' . $safe_sched_type . '\', ' . $idx . ', \'' . $safe_step_name . '\')" style="font-size:9px; padding:2px 4px; background:#f5f3ff; border:1px solid #ddd6fe; color:#6d28d9; border-radius:3px; cursor:pointer; font-weight:bold;">保存</button>
+                            </div>';
                         }
 
                         $is_current = ($idx === $current_step_idx);
@@ -670,6 +670,98 @@
             <?php require __DIR__ . '/col_right.php'; ?>
         </div>
         
+        <!-- ===== スケジュールご希望日・納期短縮確認モーダル ===== -->
+        <div class="modal-overlay" id="wishConfirmModal">
+            <div class="modal-box" style="max-width:540px; text-align:left;">
+                <div class="modal-title" style="margin-bottom:12px; font-size:16px; font-weight:bold; color:#1e293b; display:flex; align-items:center; gap:6px;">
+                    📅 ご希望日の確認・納期短縮のご案内
+                </div>
+
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px; font-size:12px;">
+                    <div style="margin-bottom:6px;">対象工程：<strong id="modalWishStepName" style="color:#0f172a; font-size:13px;">-</strong></div>
+                    <div>ご希望日：<strong id="modalWishDateDisplay" style="color:#6d28d9; font-size:14px;">-</strong></div>
+                </div>
+
+                <!-- 案内・注意書き -->
+                <div style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:12px; margin-bottom:18px; font-size:12px; line-height:1.6; color:#92400e;">
+                    <strong style="display:block; margin-bottom:4px; font-size:13px; color:#b45309;">⚠️ ご確認ください</strong>
+                    あくまでも希望日ですので、納期短縮をご希望の場合は<strong>＠10％/日の納期短縮依頼</strong>をしてください。<br>
+                    ご希望の区分を選択して保存してください。
+                </div>
+
+                <form method="POST" action="project_detail.php?id=<?= $project_id ?>" id="wishConfirmForm">
+                    <input type="hidden" name="action" value="update_schedule_wish">
+                    <input type="hidden" name="schedule_type" id="modalWishScheduleType" value="">
+                    <input type="hidden" name="step_idx" id="modalWishStepIdx" value="">
+                    <input type="hidden" name="wish_date" id="modalWishDate" value="">
+                    <input type="hidden" name="wish_mode" id="modalWishMode" value="wish_only">
+
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <!-- 選択肢1：追加料金発生しても依頼する（納期短縮・追加見積依頼） -->
+                        <button type="button" onclick="submitWishForm('rush_estimate')" style="width:100%; text-align:left; padding:12px 14px; background:#fef2f2; border:2px solid #ef4444; border-radius:8px; cursor:pointer; transition:all 0.15s ease;">
+                            <div style="font-weight:bold; color:#b91c1c; font-size:13px; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+                                <span>⚡</span> 追加料金発生しても依頼する（納期短縮依頼・追加見積依頼）
+                            </div>
+                            <div style="font-size:11px; color:#7f1d1d; line-height:1.4;">
+                                納期短縮（@10%/日）を前提として管理者へ追加見積を依頼します。
+                            </div>
+                        </button>
+
+                        <!-- 選択肢2：あくまでも希望日とする -->
+                        <button type="button" onclick="submitWishForm('wish_only')" style="width:100%; text-align:left; padding:12px 14px; background:#f5f3ff; border:2px solid #8b5cf6; border-radius:8px; cursor:pointer; transition:all 0.15s ease;">
+                            <div style="font-weight:bold; color:#6d28d9; font-size:13px; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+                                <span>📅</span> あくまでも希望日とする（追加料金なし）
+                            </div>
+                            <div style="font-size:11px; color:#5b21b6; line-height:1.4;">
+                                追加費用は発生しません。日程の保証はありませんが、可能な範囲でスケジュール善処を希望します。
+                            </div>
+                        </button>
+                    </div>
+
+                    <div style="margin-top:16px; text-align:right;">
+                        <button type="button" onclick="closeWishModal()" style="padding:7px 16px; background:#e2e8f0; border:none; border-radius:6px; font-size:12px; color:#475569; cursor:pointer;">
+                            キャンセル
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function handleWishSaveClick(schedType, stepIdx, stepName) {
+            var input = document.getElementById('wish_input_' + schedType + '_' + stepIdx);
+            var dateVal = input ? input.value : '';
+
+            if (!dateVal) {
+                if (confirm('ご希望日を解除（クリア）しますか？')) {
+                    document.getElementById('modalWishScheduleType').value = schedType;
+                    document.getElementById('modalWishStepIdx').value = stepIdx;
+                    document.getElementById('modalWishDate').value = '';
+                    document.getElementById('modalWishMode').value = 'wish_only';
+                    document.getElementById('wishConfirmForm').submit();
+                }
+                return;
+            }
+
+            document.getElementById('modalWishStepName').textContent = stepName;
+            document.getElementById('modalWishDateDisplay').textContent = dateVal;
+            document.getElementById('modalWishScheduleType').value = schedType;
+            document.getElementById('modalWishStepIdx').value = stepIdx;
+            document.getElementById('modalWishDate').value = dateVal;
+
+            document.getElementById('wishConfirmModal').classList.add('active');
+        }
+
+        function submitWishForm(mode) {
+            document.getElementById('modalWishMode').value = mode;
+            document.getElementById('wishConfirmForm').submit();
+        }
+
+        function closeWishModal() {
+            document.getElementById('wishConfirmModal').classList.remove('active');
+        }
+        </script>
+
         <!-- ===== 基本情報編集モーダル ===== -->
         <div class="modal-overlay" id="editInfoModal">
             <div class="modal-box" style="max-width:550px;">

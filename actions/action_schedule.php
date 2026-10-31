@@ -70,6 +70,7 @@ if ($action === 'set_primary_due_date') {
                 'sid' => $_SESSION['user_id'],
                 'msg' => $msg
             ]);
+
             sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', 'client_admin', $msg, $pdo);
         }
     }
@@ -140,6 +141,7 @@ if ($action === 'update_schedule_override') {
                 'thread' => $thread_type,
                 'msg' => $chat_msg
             ]);
+
             sendChatEmailNotification($project_id, $_SESSION['user_id'] ?? 1, 'admin', $thread_type, $chat_msg, $pdo);
         }
     }
@@ -155,6 +157,8 @@ if ($action === 'update_schedule_wish') {
     if ($is_admin || $_SESSION['role'] === 'client') {
         $step_idx = $_POST['step_idx'] ?? '';
         $wish_date = $_POST['wish_date'] ?? '';
+        $wish_mode = $_POST['wish_mode'] ?? 'wish_only';
+        $should_send_wish_email = false;
         $schedule_type = $_POST['schedule_type'] ?? 'permit';
         
         $col_map = [
@@ -194,8 +198,20 @@ if ($action === 'update_schedule_wish') {
             }
             
             $step_name = $steps[$step_idx]['name'] ?? "工程 #{$step_idx}";
-            $formatted_date = !empty($wish_date) ? date('Y/m/d', strtotime($wish_date)) : '希望なし';
-            $chat_msg = "【スケジュールご希望日登録】\n{$step_name} のご希望日が「{$formatted_date}」に設定されました。";
+            if (empty($wish_date)) {
+                $chat_msg = "【スケジュールご希望日登録】\n{$step_name} のご希望日が解除されました。";
+            } elseif ($wish_mode === 'rush_estimate') {
+                $formatted_date = date('Y/m/d', strtotime($wish_date));
+                $chat_msg = "【追加見積依頼（納期短縮）】\n{$step_name} のご希望日として「{$formatted_date}」が設定されました。\n※納期短縮（@10%/日）に伴う「追加見積依頼」です。";
+                $should_send_wish_email = true;
+
+            } else {
+                $formatted_date = date('Y/m/d', strtotime($wish_date));
+                $chat_msg = "【ご希望日登録】\n{$step_name} のご希望日として「{$formatted_date}」が設定されました。\n※追加料金なしの「希望日です」（可能な範囲での善処希望）。";
+                $should_send_wish_email = true;
+
+            }
+
 
             $thread_type = ($schedule_type === 'permit') ? 'client_admin_permit' : 'client_admin_' . $schedule_type;
             $stmtMsg = $pdo->prepare("INSERT INTO messages (project_id, sender_id, thread_type, message_text) VALUES (:pid, :sid, :thread, :msg)");
@@ -205,6 +221,10 @@ if ($action === 'update_schedule_wish') {
                 'thread' => $thread_type,
                 'msg' => $chat_msg
             ]);
+            if (!empty($should_send_wish_email) && function_exists('sendChatEmailNotification')) {
+                sendChatEmailNotification($project_id, $_SESSION['user_id'] ?? 1, $_SESSION['role'] ?? 'client', $thread_type, $chat_msg, $pdo);
+            }
+
         }
     }
     header("Location: project_detail.php?id=" . $project_id . "&tab=" . urlencode($schedule_type) . "&t=" . time()); exit;
@@ -294,6 +314,7 @@ if ($action === 'update_schedule_actual') {
                     'thread' => $thread_type,
                     'msg' => $chat_msg
                 ]);
+
                 sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', $thread_type, $chat_msg, $pdo);
             }
         }
@@ -353,6 +374,7 @@ if ($action === 'submit_primary_response') {
                 'pid' => $project_id
             ]);
 
+
             // B. 一次回答ファイルのアップロード (Google Drive ＋ project_files 登録)
             require_once 'google_drive_client.php';
             
@@ -403,6 +425,7 @@ if ($action === 'submit_primary_response') {
                 'msg' => $msg,
                 'fpath' => $drive_file_id
             ]);
+
             sendChatEmailNotification($project_id, $_SESSION['user_id'], 'admin', 'client_admin', $msg, $pdo);
 
             $pdo->commit();
