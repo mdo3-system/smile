@@ -234,8 +234,9 @@
 // 1.6.71: 単一責任の原則に基づくPOSTルーター（project_detail_post.php）の抜本的リファクタリング（曖昧な$_FILES判定によるrequest_design_start横取り消失バグの根本解消）、確認申請書スロットへのWord/Excel形式（.doc,.docx,.xls,.xlsx）対応、および発注フォームaction明示化
 // 1.6.72: 意匠図面（配置・平面・立面・矩計・断面）のCAD形式（アーキトレンド/JWW/DXF/DWG/ZIP）限定・PDF完全禁止、およびZipArchiveによるZIP内部CADデータ含有自動判定・警告UIの実装
 // 1.6.73: スケジュール希望日保存POSTルーティング不具合の解消、納期短縮確認モーダル（追加見積依頼／希望日分岐）、および管理者宛チャット通知・メール通知連携の実装
-window.APP_VERSION = "1.6.73";
-const APP_LAST_UPDATED = '2026-10-31';
+// 1.6.74: 依頼主向け操作マニュアル（manual_client.php）の最新化（最新3カラムUI・ご希望日/短縮モーダル解説の反映、および社内スタッフ招待と個別案件招待の用途・権限・誤用防止対比図解の徹底強化）
+window.APP_VERSION = "1.6.74";
+const APP_LAST_UPDATED = '2026-11-02';
 
 
 
