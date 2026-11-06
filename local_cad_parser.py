@@ -17,11 +17,26 @@ import shutil
 import tempfile
 import subprocess
 
+# GUI環境 (pythonw.exe) やバックグラウンド実行時のログ出力および None 対策
+try:
+    _log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cad_parser_service.log')
+    if sys.stdout is None:
+        sys.stdout = open(_log_path, 'a', encoding='utf-8', errors='replace')
+    if sys.stderr is None:
+        sys.stderr = open(_log_path, 'a', encoding='utf-8', errors='replace')
+except Exception:
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, 'w', encoding='utf-8', errors='replace')
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, 'w', encoding='utf-8', errors='replace')
+
 # Windows環境でのUnicode文字出力エラー防止
 if sys.platform == 'win32':
     try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        if sys.stdout:
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if sys.stderr:
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     except Exception:
         pass
 
@@ -1234,4 +1249,11 @@ if __name__ == '__main__':
         print(f" JacConvert: [検出] {jac}")
     print(f" JWW解析: [有効] DRA-CAD/JacConvert DXF変換 -> Pythonネイティブ解析")
     print(f"=====================================================")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    try:
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"FLASK EXCEPTION: {e}")
+    finally:
+        print("FLASK APP RUN FINISHED")
