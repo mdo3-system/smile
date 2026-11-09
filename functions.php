@@ -318,7 +318,10 @@ function getAdminNotificationEmails($pdo) {
 /**
  * チャット新着メッセージのメール通知を関係者に送信する（双方向）
  */
-function sendChatEmailNotification($projectId, $senderId, $senderRole, $threadType, $messageText, $pdo) {
+function sendChatEmailNotification($projectId, $senderId, $senderRole, $threadType, $messageText, $pdo = null) {
+    if (!$pdo) {
+        global $pdo;
+    }
     if (!$pdo) return;
     try {
         // 送信者IDから真のロール・送信者名をDBより安全に補正取得（セッション欠落・不一致対策）
