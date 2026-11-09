@@ -1,6 +1,6 @@
 <?php
 // functions.php
-define('SYSTEM_VERSION', 'v1.6.76');
+define('SYSTEM_VERSION', 'v1.6.77');
 
 
 
@@ -211,12 +211,23 @@ function sendSystemEmail($to, $subject, $body) {
         }
     }
 
-    mb_language("uni");
+    mb_language("Japanese");
     mb_internal_encoding("UTF-8");
-    $headers = "From: system@thanks.work\r\n";
+    
+    $fromAddress = "system@thanks.work";
+    $fromName = "木造住宅設計サポート";
+    $encodedFromName = mb_encode_mimeheader($fromName, "UTF-8", "B");
+
+    $headers = "From: {$encodedFromName} <{$fromAddress}>\r\n";
     $headers .= "Reply-To: info@thanks.work\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    return mb_send_mail($to, $subject, $body, $headers);
+    $headers .= "Content-Transfer-Encoding: 8bit\r\n";
+    $headers .= "X-Mailer: SystemMail/1.0\r\n";
+    
+    // -f パラメータで Envelope From (Return-Path) を明示し、SPF/DMARC 認証を PASS させて迷惑メール隔離を防止
+    $additionalParams = "-f " . $fromAddress;
+    return mb_send_mail($to, $subject, $body, $headers, $additionalParams);
 }
 
 
@@ -310,6 +321,20 @@ function getAdminNotificationEmails($pdo) {
 function sendChatEmailNotification($projectId, $senderId, $senderRole, $threadType, $messageText, $pdo) {
     if (!$pdo) return;
     try {
+        // 送信者IDから真のロール・送信者名をDBより安全に補正取得（セッション欠落・不一致対策）
+        $senderName = "依頼主";
+        if ($senderId) {
+            $stmtSender = $pdo->prepare("SELECT role, company_name, contact_name FROM users WHERE id = :uid LIMIT 1");
+            $stmtSender->execute(['uid' => (int)$senderId]);
+            $senderUser = $stmtSender->fetch(PDO::FETCH_ASSOC);
+            if ($senderUser) {
+                if (!empty($senderUser['role'])) {
+                    $senderRole = $senderUser['role'];
+                }
+                $senderName = trim(($senderUser['company_name'] ?? '') . ' ' . ($senderUser['contact_name'] ?? '')) ?: "依頼主";
+            }
+        }
+
         // プロジェクト名と依頼主会社IDを取得
         $stmtProj = $pdo->prepare("SELECT project_name, client_id FROM projects WHERE id = :pid");
         $stmtProj->execute(['pid' => (int)$projectId]);
@@ -344,8 +369,8 @@ function sendChatEmailNotification($projectId, $senderId, $senderRole, $threadTy
             elseif ($senderRole === 'client') {
                 $admin_emails = getAdminNotificationEmails($pdo);
                 if (!empty($admin_emails)) {
-                    $subject = "【設計サポート】依頼主から新着メッセージがあります（{$project_name}）";
-                    $body  = "案件「{$project_name}」にて、依頼主から新着メッセージが届きました。\n\n";
+                    $subject = "【設計サポート】{$senderName}様から新着メッセージがあります（{$project_name}）";
+                    $body  = "案件「{$project_name}」にて、{$senderName}様から新着メッセージが届きました。\n\n";
                     $body .= "送信メッセージ:\n{$messageText}\n\n";
                     $body .= "▼管理者用案件詳細で確認する:\n";
                     $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";
@@ -390,8 +415,8 @@ function sendChatEmailNotification($projectId, $senderId, $senderRole, $threadTy
             elseif ($senderRole === 'subcontractor') {
                 $admin_emails = getAdminNotificationEmails($pdo);
                 if (!empty($admin_emails)) {
-                    $subject = "【設計サポート】協力業者から新着メッセージがあります（{$project_name}）";
-                    $body  = "案件「{$project_name}」にて、協力業者からメッセージが届きました。\n\n";
+                    $subject = "【設計サポート】{$senderName}様（協力業者）から新着メッセージがあります（{$project_name}）";
+                    $body  = "案件「{$project_name}」にて、{$senderName}様（協力業者）からメッセージが届きました。\n\n";
                     $body .= "送信メッセージ:\n{$messageText}\n\n";
                     $body .= "▼管理者用案件詳細で確認する:\n";
                     $body .= "https://system.thanks.work/project_detail.php?id={$projectId}\n\n";

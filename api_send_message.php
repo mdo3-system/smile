@@ -5,6 +5,9 @@ require_once __DIR__ . '/db_connect.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/google_drive_client.php';
 require_once __DIR__ . '/session_config.php';
+require_once __DIR__ . '/auth.php';
+
+check_auth();
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(403);
