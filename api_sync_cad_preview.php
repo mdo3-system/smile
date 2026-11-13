@@ -43,7 +43,7 @@ try {
 
         $sql = "
             SELECT pf.id AS file_id, pf.project_id, pf.file_category, pf.file_name,
-                   pf.drive_file_id, pf.version, pf.uploaded_at,
+                   pf.drive_file_id, pf.version, pf.created_at,
                    p.project_name, p.drive_folder_id AS project_drive_folder_id,
                    u.company_name, u.contact_name
             FROM project_files pf
@@ -196,7 +196,7 @@ try {
         ]);
 
         // 新規アップロード分（直近24時間以内）または notify=1 指定時は管理者へメール通知
-        $uploaded_ts = !empty($fileRow['uploaded_at']) ? strtotime($fileRow['uploaded_at']) : 0;
+        $uploaded_ts = !empty($fileRow['created_at']) ? strtotime($fileRow['created_at']) : 0;
         $is_recent = ($uploaded_ts > 0 && (time() - $uploaded_ts) < 86400);
         $mail_sent = false;
 
@@ -254,7 +254,7 @@ try {
             $in = implode(',', array_fill(0, count($cats), '?'));
             $params = array_merge([$project_id], $cats);
             $stmt = $pdo->prepare("
-                SELECT id AS file_id, file_name, file_category, drive_file_id, preview_drive_file_id, preview_png_drive_file_id, version, uploaded_at
+                SELECT id AS file_id, file_name, file_category, drive_file_id, preview_drive_file_id, preview_png_drive_file_id, version, created_at
                 FROM project_files
                 WHERE project_id = ? AND file_category IN ({$in}) AND is_latest = 1
                 ORDER BY version DESC, id DESC LIMIT 1
