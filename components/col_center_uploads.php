@@ -212,10 +212,40 @@
                                                     <span style="background:#f59e0b; color:white; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:bold;">
                                                         ✅ 提出済（他のCADに記載）
                                                     </span>
-                                                <?php else: ?>
-                                                    <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb; font-size:11px; padding:2px 6px;">
-                                                        📄 最新版 (V<?= $latest['version'] ?>)
-                                                    </a>
+                                                <?php else: 
+                                                    $f_ext = strtolower(pathinfo($latest['file_name'], PATHINFO_EXTENSION));
+                                                    $is_cad_ext = in_array($f_ext, ['jww', 'jwc', 'dxf', 'zip', 'sfc', 'p21']);
+                                                    $prev_id = $latest['preview_drive_file_id'] ?? '';
+                                                    $prev_png_id = $latest['preview_png_drive_file_id'] ?? '';
+                                                ?>
+                                                    <span style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                                                        <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb; font-size:11px; padding:2px 6px;">
+                                                            📄 最新版 (V<?= $latest['version'] ?>)
+                                                        </a>
+                                                        <?php if (!empty($prev_id)): 
+                                                            $prev_view_url = (strpos($prev_id, 'uploads/') !== 0)
+                                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($prev_id, ENT_QUOTES) . '/view?usp=drivesdk'
+                                                                : htmlspecialchars($prev_id, ENT_QUOTES);
+                                                        ?>
+                                                            <button type="button"
+                                                                onclick="openCadPreviewModal('<?= htmlspecialchars($prev_id, ENT_QUOTES) ?>', '<?= htmlspecialchars($prev_png_id, ENT_QUOTES) ?>', '<?= htmlspecialchars($latest['file_name'], ENT_QUOTES) ?>')"
+                                                                style="background:#0d9488; color:white; border:1px solid #0f766e; border-radius:3px; font-size:10px; font-weight:bold; padding:2px 6px; cursor:pointer; display:inline-flex; align-items:center; gap:2px;"
+                                                                title="自動変換されたPDF/PNGプレビューをブラウザ上で直接確認します">
+                                                                👁️ プレビュー
+                                                            </button>
+                                                            <a href="<?= $prev_view_url ?>" target="_blank"
+                                                                style="background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; border-radius:3px; font-size:10px; padding:1px 4px; text-decoration:none; font-weight:bold;"
+                                                                title="プレビューPDFをGoogleドライブの別タブで開く">
+                                                                ↗PDF
+                                                            </a>
+                                                        <?php elseif ($is_cad_ext): ?>
+                                                            <span onclick="triggerZ840CadSync(<?= (int)$project_id ?>, this)"
+                                                                style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; border-radius:3px; font-size:9px; padding:1px 5px; cursor:pointer;"
+                                                                title="Z840にてブラウザ表示用PDF/PNGへ自動変換中です（クリックで即時変換リクエスト）">
+                                                                ⏳PDF自動変換中
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </span>
                                                 <?php endif; ?>
                                                 
                                                 <?php if ($is_admin && (strpos($cat, 'cad_') === 0 || strpos($cat, 'custom_') === 0)): ?>
@@ -456,5 +486,79 @@ function deleteCustomSlot(category, label, activeTab, hasFile) {
     document.body.appendChild(form);
     form.submit();
 }
+
+function openCadPreviewModal(previewDriveId, pngDriveId, fileName) {
+    const modal = document.getElementById('cad_preview_modal');
+    const titleEl = document.getElementById('cad_preview_modal_title');
+    const bodyEl = document.getElementById('cad_preview_modal_body');
+    const extLink = document.getElementById('cad_preview_modal_extlink');
+    if (!modal || !bodyEl) return;
+
+    titleEl.textContent = '👁️ 図面プレビュー: 【プレビュー】' + fileName;
+    const isLocal = previewDriveId.indexOf('uploads/') === 0;
+    const viewUrl = isLocal ? previewDriveId : ('https://drive.google.com/file/d/' + previewDriveId + '/view?usp=drivesdk');
+    const embedUrl = isLocal ? previewDriveId : ('https://drive.google.com/file/d/' + previewDriveId + '/preview');
+
+    extLink.href = viewUrl;
+    bodyEl.innerHTML = '<iframe src="' + embedUrl + '" style="width:100%; height:100%; border:none; background:#1e293b;" allow="autoplay"></iframe>';
+    modal.style.display = 'flex';
+}
+
+function closeCadPreviewModal() {
+    const modal = document.getElementById('cad_preview_modal');
+    const bodyEl = document.getElementById('cad_preview_modal_body');
+    if (modal) modal.style.display = 'none';
+    if (bodyEl) bodyEl.innerHTML = '';
+}
+
+async function triggerZ840CadSync(projectId, badgeEl) {
+    if (badgeEl) {
+        badgeEl.textContent = '🔄 Z840変換実行中...';
+        badgeEl.style.background = '#dbeafe';
+        badgeEl.style.color = '#1d4ed8';
+    }
+    try {
+        const res = await fetch('http://localhost:5005/api/sync_now?project_id=' + projectId, { method: 'POST' });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.converted && data.converted > 0) {
+                location.reload();
+                return;
+            }
+        }
+    } catch (e) {}
+    if (badgeEl) {
+        badgeEl.textContent = '⏳バックグラウンド変換中 (数十秒後に再読込してください)';
+    }
+}
+
+// 未変換CADファイルがある場合、Z840ローカルサービスが起動していれば自動で即時変換をトリガー
+document.addEventListener('DOMContentLoaded', function() {
+    const pendingBadges = document.querySelectorAll('[onclick^="triggerZ840CadSync"]');
+    if (pendingBadges.length > 0) {
+        fetch('http://localhost:5005/api/sync_now?project_id=<?= (int)$project_id ?>', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d && d.converted && d.converted > 0) {
+                    location.reload();
+                }
+            })
+            .catch(() => {});
+    }
+});
 </script>
+
+<!-- CAD図面ブラウザ直接プレビューモーダル -->
+<div id="cad_preview_modal" onclick="if(event.target===this) closeCadPreviewModal();" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); z-index:10050; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+    <div style="background:#fff; width:95%; max-width:1280px; height:90vh; border-radius:10px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="background:#0f172a; color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center;">
+            <div id="cad_preview_modal_title" style="font-size:14px; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">👁️ 図面プレビュー</div>
+            <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <a id="cad_preview_modal_extlink" href="#" target="_blank" style="background:#0d9488; color:#fff; text-decoration:none; padding:5px 12px; border-radius:5px; font-size:12px; font-weight:bold;">↗ Googleドライブ別タブで開く</a>
+                <button type="button" onclick="closeCadPreviewModal()" style="background:#ef4444; color:#fff; border:none; padding:5px 12px; border-radius:5px; font-size:12px; font-weight:bold; cursor:pointer;">✕ 閉じる</button>
+            </div>
+        </div>
+        <div id="cad_preview_modal_body" style="flex:1; background:#1e293b; width:100%; height:100%;"></div>
+    </div>
+</div>
 

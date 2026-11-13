@@ -84,9 +84,13 @@ DRACAD_CANDIDATES = [
 
 # JacConvert の実行可能ファイル候補
 JACCONVERT_CANDIDATES = [
-    r"C:\Program Files\JacConvert\JacConvert.exe",
-    r"C:\Program Files (x86)\JacConvert\JacConvert.exe",
+    r"C:\JacConvert\JacCv.exe",
     r"C:\JacConvert\JacConvert.exe",
+    r"C:\Program Files\JacConvert\JacCv.exe",
+    r"C:\Program Files\JacConvert\JacConvert.exe",
+    r"C:\Program Files (x86)\JacConvert\JacCv.exe",
+    r"C:\Program Files (x86)\JacConvert\JacConvert.exe",
+    r"C:\Jac\JacCv.exe",
     r"C:\Jac\JacConvert.exe",
     r"C:\jww\JacConvert.exe",
     r"C:\jw_win\JacConvert.exe",
@@ -215,14 +219,10 @@ End If
     return False
 
 def convert_jww_to_dxf_via_jacconvert(jww_path, dxf_path):
-    """JacConvert CLI による JWW -> DXF 変換"""
-    jac = find_jacconvert_path()
-    if not jac or not os.path.exists(jac):
-        return False
+    """JacConvert CLI による JWW -> DXF 変換 (cad_converter.convert_via_jaccv 連携)"""
     try:
-        cmd = [jac, f"-f{os.path.abspath(jww_path)}", f"-o{os.path.abspath(dxf_path)}", "-c", "-q"]
-        subprocess.run(cmd, capture_output=True, timeout=10)
-        if os.path.exists(dxf_path) and os.path.getsize(dxf_path) > 0:
+        from cad_converter import convert_via_jaccv
+        if convert_via_jaccv(jww_path, dxf_path, mode='D', option='C'):
             print(f"    ✓ [JacConvert] DXF自動変換成功: {os.path.basename(dxf_path)}")
             return True
     except Exception:
@@ -1066,33 +1066,47 @@ def compare_all():
             print(f"  ▶ [{doc_type}] 解析開始: {f.filename} ({file_size_kb} KB)")
 
             try:
-                # 1. Gemini 視覚推論API連携の試行（PDFまたは画像）
+                # 1. Gemini 視覚推論API連携の試行（PDF/画像、またはJWW/DXF/ZIPを自動PDF変換して視覚推論）
                 data = None
                 if fname_lower.endswith(('.pdf', '.png', '.jpg', '.jpeg')):
                     data = extract_with_gemini_vision(input_path)
+                elif fname_lower.endswith(('.jww', '.jwc', '.dxf', '.zip')):
+                    try:
+                        from cad_converter import convert_cad_to_pdf_and_png
+                        auto_pdf = os.path.join(tmpdir, os.path.splitext(f.filename)[0] + "_preview.pdf")
+                        if convert_cad_to_pdf_and_png(input_path, auto_pdf):
+                            data = extract_with_gemini_vision(auto_pdf)
+                    except Exception as ce:
+                        print(f"    ℹ [Auto PDF Convert Skip] {ce}")
 
-                # 2. ローカル高精度解析（Gemini未設定時またはフォールバック）
-                if not data:
-                    if fname_lower.endswith('.pdf'):
-                        data, _ = extract_from_pdf_content(input_path)
-                    elif fname_lower.endswith('.dxf'):
-                        data, _ = extract_from_dxf_content(input_path)
-                    elif fname_lower.endswith('.jww'):
-                        # 1. DRA-CAD 19 による自動DXF変換を最優先試行
-                        converted_dxf = os.path.join(tmpdir, os.path.splitext(f.filename)[0] + "_dracad.dxf")
-                        success = convert_jww_to_dxf_via_dracad(input_path, converted_dxf)
-                        if not success:
-                            # 2. JacConvert による変換試行
-                            success = convert_jww_to_dxf_via_jacconvert(input_path, converted_dxf)
-                        
-                        if success and os.path.exists(converted_dxf):
-                            print(f"    ✓ [{doc_type}] DXF変換成功 ➔ 高精度DXF解析を実行します")
-                            data, _ = extract_from_dxf_content(converted_dxf)
-                        else:
-                            print(f"    ℹ [{doc_type}] DXF自動変換スキップ ➔ Python直接ネイティブ解析を実行します")
-                            data, _ = extract_from_jww_native(input_path)
+                # 2. ローカル高精度解析（Gemini未設定時または不足フィールド補完フォールバック）
+                local_data = None
+                if fname_lower.endswith('.pdf'):
+                    if not data:
+                        local_data, _ = extract_from_pdf_content(input_path)
+                elif fname_lower.endswith('.dxf'):
+                    local_data, _ = extract_from_dxf_content(input_path)
+                elif fname_lower.endswith('.jww'):
+                    converted_dxf = os.path.join(tmpdir, os.path.splitext(f.filename)[0] + "_dracad.dxf")
+                    success = convert_jww_to_dxf_via_dracad(input_path, converted_dxf)
+                    if not success:
+                        success = convert_jww_to_dxf_via_jacconvert(input_path, converted_dxf)
+
+                    if success and os.path.exists(converted_dxf):
+                        print(f"    ✓ [{doc_type}] DXF変換成功 ➔ 高精度DXF解析を実行します")
+                        local_data, _ = extract_from_dxf_content(converted_dxf)
                     else:
-                        data = {'error': f'未対応形式: {f.filename}'}
+                        print(f"    ℹ [{doc_type}] DXF自動変換スキップ ➔ Python直接ネイティブ解析を実行します")
+                        local_data, _ = extract_from_jww_native(input_path)
+
+                if not data and local_data:
+                    data = local_data
+                elif data and local_data and isinstance(data, dict) and isinstance(local_data, dict):
+                    for k, v in local_data.items():
+                        if (data.get(k) is None or data.get(k) == "") and v not in (None, ""):
+                            data[k] = v
+                elif not data:
+                    data = {'error': f'未対応形式または抽出失敗: {f.filename}'}
                 results[doc_type] = data
                 print(f"    ✓ [{doc_type}] 抽出完了: {data}")
             except Exception as e:
@@ -1234,10 +1248,22 @@ def perform_comparison(res):
         }
     }
 
+@app.route('/api/sync_now', methods=['GET', 'POST', 'OPTIONS'])
+def api_sync_now():
+    """ポータルまたはローカルからの即時CADプレビュー変換トリガー"""
+    try:
+        from cad_auto_watcher import sync_pending_portal_files
+        pid = request.args.get('project_id') or request.form.get('project_id')
+        res = sync_pending_portal_files(project_id=pid, limit=15)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5005))
     print(f"=====================================================")
-    print(f" 建築図書 (CAD/JWW/PDF) 自動照合サービス")
+    print(f" 建築図書 (CAD/JWW/PDF) 自動照合 & プレビュー変換サービス")
     print(f" 稼働ポート: http://localhost:{port}")
     dracad = find_dracad_path()
     if dracad:
@@ -1247,8 +1273,13 @@ if __name__ == '__main__':
     jac = find_jacconvert_path()
     if jac:
         print(f" JacConvert: [検出] {jac}")
-    print(f" JWW解析: [有効] DRA-CAD/JacConvert DXF変換 -> Pythonネイティブ解析")
+    print(f" JWW解析: [有効] DRA-CAD/JacConvert DXF・PDF変換 -> Gemini Vision & Pythonネイティブ解析")
     print(f"=====================================================")
+    try:
+        from cad_auto_watcher import start_background_watcher
+        start_background_watcher()
+    except Exception as we:
+        print(f"Watcher Startup Warning: {we}")
     try:
         app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
     except Exception as e:

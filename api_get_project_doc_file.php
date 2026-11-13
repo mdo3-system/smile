@@ -61,6 +61,15 @@ try {
 
     $drive_id = $target_file['drive_file_id'];
     $file_name = $target_file['file_name'];
+    $prefer_preview = !empty($_GET['prefer_preview']);
+
+    // プレビューPDFが生成済で prefer_preview=1 (またはZIP等のアーカイブ) の場合は変換済PDFを返却
+    if ($prefer_preview && !empty($target_file['preview_drive_file_id'])) {
+        $drive_id = $target_file['preview_drive_file_id'];
+        $base_name = pathinfo($file_name, PATHINFO_FILENAME);
+        $file_name = $base_name . '.pdf';
+    }
+
     $file_content = null;
 
     if (strpos($drive_id, 'uploads/') === 0) {

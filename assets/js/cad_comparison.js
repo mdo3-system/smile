@@ -65,7 +65,7 @@ async function checkCadServiceStatus() {
     }
 }
 
-// 【メイン機能】管理者がUPしたPDF/画像図書（申請書のみスロット自動取得可）で整合性を照合
+// 【メイン機能】スロット最新図書（自動変換プレビューPDF含む）または手動選択ファイルで整合性を一括照合
 async function runComparisonWorkflow() {
     const slotFiles = window.SLOT_DOC_FILES || {};
     const projectId = window.CAD_COMPARISON_PROJECT_ID;
@@ -77,10 +77,15 @@ async function runComparisonWorkflow() {
     const fileElevManual = document.getElementById("cad_file_elev")?.files[0];
 
     const hasApp = !!(fileAppManual || slotFiles.app);
-    const hasAnyDrawing = !!(fileKanaManual || fileSecManual || fileAreaManual || fileElevManual);
+    const hasAnyDrawing = !!(
+        fileKanaManual || slotFiles.kanabakari ||
+        fileSecManual || slotFiles.section ||
+        fileAreaManual || slotFiles.area ||
+        fileElevManual || slotFiles.elevation
+    );
 
     if (!hasApp && !hasAnyDrawing) {
-        alert("照合対象の図書ファイルが選択されていません。\n①確認申請書、または②〜⑤のPDF/画像図面を選択してください。");
+        alert("照合対象の図書ファイルがスロットにも手動選択にも存在しません。\n①確認申請書、または②〜⑤の図面をアップロード・選択してください。");
         return;
     }
 
@@ -88,7 +93,7 @@ async function runComparisonWorkflow() {
     const btnRun = document.getElementById("btn_run_slot_compare");
     if (progressEl) {
         progressEl.style.display = "block";
-        progressEl.innerHTML = "⏳ 図書を準備中...";
+        progressEl.innerHTML = "⏳ スロット図書・自動変換PDFを準備中...";
     }
     if (btnRun) btnRun.disabled = true;
 
@@ -96,49 +101,40 @@ async function runComparisonWorkflow() {
         const fd = new FormData();
         let readyCount = 0;
 
-        // 1. 確認申請書 (手動優先、なければスロットから自動取得)
-        if (fileAppManual) {
-            fd.append("app_doc", fileAppManual);
-            readyCount++;
-        } else if (slotFiles.app) {
-            if (progressEl) progressEl.innerHTML = `⏳ 申請書 (${slotFiles.app.file_name}) を自動取得中...`;
-            const file = await fetchDocBlob(projectId, slotFiles.app.file_category, slotFiles.app.file_name, slotFiles.app.id);
-            if (file) {
-                fd.append("app_doc", file);
+        const slotTasks = [
+            { field: "app_doc",       label: "申請書", manual: fileAppManual,  slot: slotFiles.app },
+            { field: "kanabakari",    label: "矩計図", manual: fileKanaManual, slot: slotFiles.kanabakari },
+            { field: "cross_section", label: "断面図", manual: fileSecManual,  slot: slotFiles.section },
+            { field: "area_calc",     label: "面積表", manual: fileAreaManual, slot: slotFiles.area },
+            { field: "elevation",     label: "立面図", manual: fileElevManual, slot: slotFiles.elevation }
+        ];
+
+        for (const item of slotTasks) {
+            if (item.manual) {
+                fd.append(item.field, item.manual);
                 readyCount++;
+            } else if (item.slot) {
+                if (progressEl) progressEl.innerHTML = `⏳ ${item.label} (${item.slot.file_name}) を自動取得中...`;
+                const file = await fetchDocBlob(
+                    projectId,
+                    item.slot.file_category,
+                    item.slot.file_name,
+                    item.slot.id,
+                    item.slot.preview_drive_file_id
+                );
+                if (file) {
+                    fd.append(item.field, file);
+                    readyCount++;
+                }
             }
         }
 
-        // 2. 矩計図 (管理者がUPしたPDF/画像)
-        if (fileKanaManual) {
-            fd.append("kanabakari", fileKanaManual);
-            readyCount++;
-        }
-
-        // 3. 断面図 (管理者がUPしたPDF/画像)
-        if (fileSecManual) {
-            fd.append("cross_section", fileSecManual);
-            readyCount++;
-        }
-
-        // 4. 面積表 (管理者がUPしたPDF/画像)
-        if (fileAreaManual) {
-            fd.append("area_calc", fileAreaManual);
-            readyCount++;
-        }
-
-        // 5. 立面図 (管理者がUPしたPDF/画像)
-        if (fileElevManual) {
-            fd.append("elevation", fileElevManual);
-            readyCount++;
-        }
-
         if (readyCount === 0) {
-            throw new Error("照合対象のファイルがありません。ファイルを選択してください。");
+            throw new Error("照合対象のファイルを取得できませんでした。ファイルを選択してください。");
         }
 
         if (progressEl) {
-            progressEl.innerHTML = `⏳ ローカル解析サービス（Port: 5005）へ送信中... (対象ファイル: ${readyCount}件)`;
+            progressEl.innerHTML = `⏳ ローカル解析サービス（Port: 5005）へ送信中... (対象図書: ${readyCount}件)`;
         }
 
         // ローカル解析サービス (Port: 5005) へ一括送信
@@ -170,7 +166,7 @@ async function runComparisonWorkflow() {
         }
     } catch (err) {
         console.error("図書照合エラー:", err);
-        alert(`照合処理中にエラーが発生しました。\n\n詳細: ${err.message}\n\n※'start_cad_parser.bat' の黒い画面が開いているか確認してください。`);
+        alert(`照合処理中にエラーが発生しました。\n\n詳細: ${err.message}\n\n※ローカル解析サービス (Port: 5005) が稼働しているか確認してください。`);
     } finally {
         if (btnRun) btnRun.disabled = false;
         if (progressEl) progressEl.style.display = "none";
@@ -181,18 +177,24 @@ async function runComparisonWorkflow() {
 const runSlotAutoComparison = runComparisonWorkflow;
 const runManualCadComparison = runComparisonWorkflow;
 
-// サーバーAPIから図書バイナリを取得してFileオブジェクトに変換
-async function fetchDocBlob(projectId, category, filename, fileId) {
+// サーバーAPIから図書バイナリを取得してFileオブジェクトに変換（変換済プレビューPDF優先）
+async function fetchDocBlob(projectId, category, filename, fileId, previewDriveId) {
     try {
         const param = fileId ? `file_id=${encodeURIComponent(fileId)}` : `category=${encodeURIComponent(category)}`;
-        const url = `api_get_project_doc_file.php?project_id=${encodeURIComponent(projectId)}&${param}`;
+        const url = `api_get_project_doc_file.php?project_id=${encodeURIComponent(projectId)}&${param}&prefer_preview=1`;
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) {
             console.warn(`図書ファイル取得失敗 (${category || fileId}): HTTP ${res.status}`);
             return null;
         }
         const blob = await res.blob();
-        return new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+        let finalName = filename;
+        let finalType = blob.type || 'application/octet-stream';
+        if (previewDriveId || finalType === 'application/pdf') {
+            finalName = filename.replace(/\.[^/.]+$/, "") + ".pdf";
+            finalType = "application/pdf";
+        }
+        return new File([blob], finalName, { type: finalType });
     } catch (e) {
         console.warn(`図書ファイルfetchエラー (${category || fileId}):`, e);
         return null;
