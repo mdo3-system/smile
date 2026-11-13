@@ -40,5 +40,19 @@ if (-not $targetPython) {
     $targetPython = "pythonw.exe"
 }
 
-# 3. Launch pythonw silently using relative path to avoid unicode quoting issues
-Start-Process -FilePath $targetPython -ArgumentList 'local_cad_parser.py' -WindowStyle Hidden
+# 3. Launch pythonw via WMI Win32_Process (breaks out of any parent Job Object) with Start-Process fallback
+$launched = $false
+try {
+    $cmdLine = "`"$targetPython`" local_cad_parser.py"
+    $res = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+        CommandLine = $cmdLine
+        CurrentDirectory = $dir
+    } -ErrorAction Stop
+    if ($res.ReturnValue -eq 0) {
+        $launched = $true
+    }
+} catch {}
+
+if (-not $launched) {
+    Start-Process -FilePath $targetPython -ArgumentList 'local_cad_parser.py' -WindowStyle Hidden
+}
