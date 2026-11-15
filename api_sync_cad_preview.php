@@ -43,7 +43,8 @@ try {
 
         $sql = "
             SELECT pf.id AS file_id, pf.project_id, pf.file_category, pf.file_name,
-                   pf.drive_file_id, pf.version, pf.created_at,
+                   pf.drive_file_id, pf.preview_drive_file_id, pf.for_a_drive_file_id,
+                   pf.version, pf.created_at,
                    p.project_name, p.drive_folder_id AS project_drive_folder_id,
                    u.company_name, u.contact_name
             FROM project_files pf
@@ -52,8 +53,14 @@ try {
             WHERE pf.is_latest = 1
               AND pf.drive_file_id IS NOT NULL
               AND pf.drive_file_id != ''
-              AND (pf.preview_drive_file_id IS NULL OR pf.preview_drive_file_id = '')
-              AND (pf.preview_status IS NULL OR pf.preview_status NOT IN ('ready', 'error', 'skipped'))
+              AND (
+                  (pf.preview_drive_file_id IS NULL OR pf.preview_drive_file_id = '')
+                  OR (
+                      (pf.for_a_drive_file_id IS NULL OR pf.for_a_drive_file_id = '')
+                      AND LOWER(pf.file_name) NOT LIKE '%.zip'
+                  )
+              )
+              AND (pf.preview_status IS NULL OR pf.preview_status NOT IN ('error', 'skipped'))
               AND (
                   LOWER(pf.file_name) LIKE '%.jww'
                   OR LOWER(pf.file_name) LIKE '%.jwc'
@@ -61,7 +68,7 @@ try {
                   OR LOWER(pf.file_name) LIKE '%.zip'
               )
               {$where_proj}
-            ORDER BY pf.id DESC
+            ORDER BY (CASE WHEN pf.preview_drive_file_id IS NULL OR pf.preview_drive_file_id = '' THEN 0 ELSE 1 END), pf.id DESC
             LIMIT {$limit}
         ";
         $stmt = $pdo->query($sql);
@@ -152,8 +159,10 @@ try {
             exit;
         }
 
-        $preview_pdf_drive_id = $_POST['preview_drive_file_id'] ?? null;
-        $preview_png_drive_id = $_POST['preview_png_drive_file_id'] ?? null;
+        $had_preview_before = !empty($fileRow['preview_drive_file_id']);
+        $preview_pdf_drive_id = !empty($_POST['preview_drive_file_id']) ? $_POST['preview_drive_file_id'] : ($fileRow['preview_drive_file_id'] ?? null);
+        $preview_png_drive_id = !empty($_POST['preview_png_drive_file_id']) ? $_POST['preview_png_drive_file_id'] : ($fileRow['preview_png_drive_file_id'] ?? null);
+        $for_a_drive_id = !empty($_POST['for_a_drive_file_id']) ? $_POST['for_a_drive_file_id'] : ($fileRow['for_a_drive_file_id'] ?? null);
 
         if (isset($_FILES['preview_pdf']) && $_FILES['preview_pdf']['error'] === UPLOAD_ERR_OK) {
             $pdf_filename = "【プレビュー】{$base_name}.pdf";
@@ -177,30 +186,43 @@ try {
             );
         }
 
-        if (empty($preview_pdf_drive_id)) {
-            throw new Exception("No preview_pdf uploaded or drive_id provided");
+        if (isset($_FILES['for_a_dxf']) && $_FILES['for_a_dxf']['error'] === UPLOAD_ERR_OK) {
+            $for_a_filename = "【forA】{$base_name}.dxf";
+            $for_a_drive_id = upload_to_google_drive(
+                $_FILES['for_a_dxf']['tmp_name'],
+                $for_a_filename,
+                'application/dxf',
+                $project_id,
+                $pdo
+            );
+        }
+
+        if (empty($preview_pdf_drive_id) && empty($for_a_drive_id)) {
+            throw new Exception("No preview_pdf or for_a_dxf uploaded or drive_id provided");
         }
 
         $stmtUpd = $pdo->prepare("
             UPDATE project_files
             SET preview_drive_file_id = :pdf_id,
                 preview_png_drive_file_id = :png_id,
+                for_a_drive_file_id = :for_a_id,
                 preview_status = 'ready',
                 preview_updated_at = NOW()
             WHERE id = :fid
         ");
         $stmtUpd->execute([
-            'pdf_id' => $preview_pdf_drive_id,
-            'png_id' => $preview_png_drive_id,
-            'fid'    => $file_id
+            'pdf_id'   => $preview_pdf_drive_id,
+            'png_id'   => $preview_png_drive_id,
+            'for_a_id' => $for_a_drive_id,
+            'fid'      => $file_id
         ]);
 
-        // 新規アップロード分（直近24時間以内）または notify=1 指定時は管理者へメール通知
+        // 新規アップロード分（直近24時間以内）かつ初回プレビュー作成時、または notify=1 指定時は管理者へメール通知
         $uploaded_ts = !empty($fileRow['created_at']) ? strtotime($fileRow['created_at']) : 0;
         $is_recent = ($uploaded_ts > 0 && (time() - $uploaded_ts) < 86400);
         $mail_sent = false;
 
-        if ($notify === 1 || ($notify !== -1 && $is_recent)) {
+        if ($notify === 1 || ($notify !== -1 && $is_recent && !$had_preview_before && !empty($preview_pdf_drive_id))) {
             $adminEmails = getAdminNotificationEmails($pdo);
             $clientLabel = !empty($fileRow['company_name']) ? $fileRow['company_name'] : ($fileRow['contact_name'] ?: '依頼主');
             $projName = $fileRow['project_name'];
@@ -230,6 +252,7 @@ try {
             'project_id' => $project_id,
             'preview_drive_file_id' => $preview_pdf_drive_id,
             'preview_png_drive_file_id' => $preview_png_drive_id,
+            'for_a_drive_file_id' => $for_a_drive_id,
             'mail_sent' => $mail_sent
         ], JSON_UNESCAPED_UNICODE);
         exit;

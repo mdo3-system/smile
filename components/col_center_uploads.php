@@ -217,6 +217,7 @@
                                                     $is_cad_ext = in_array($f_ext, ['jww', 'jwc', 'dxf', 'zip', 'sfc', 'p21']);
                                                     $prev_id = $latest['preview_drive_file_id'] ?? '';
                                                     $prev_png_id = $latest['preview_png_drive_file_id'] ?? '';
+                                                    $for_a_id = $latest['for_a_drive_file_id'] ?? '';
                                                 ?>
                                                     <span style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">
                                                         <a href="<?= $url ?>" target="_blank" class="file-link" style="background:#3b82f6; color:white; border-color:#2563eb; font-size:11px; padding:2px 6px;">
@@ -244,6 +245,17 @@
                                                                 title="Z840にてブラウザ表示用PDF/PNGへ自動変換中です（クリックで即時変換リクエスト）">
                                                                 ⏳PDF自動変換中
                                                             </span>
+                                                        <?php endif; ?>
+                                                        <?php if ($is_admin && !empty($for_a_id)):
+                                                            $for_a_url = (strpos($for_a_id, 'uploads/') !== 0)
+                                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($for_a_id, ENT_QUOTES) . '/view?usp=drivesdk'
+                                                                : htmlspecialchars($for_a_id, ENT_QUOTES);
+                                                        ?>
+                                                            <a href="<?= $for_a_url ?>" target="_blank"
+                                                                style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:3px; font-size:10px; padding:1px 5px; text-decoration:none; font-weight:bold;"
+                                                                title="ARCHITREND ZERO 立体化自動インポート用にレイヤ整理済みのDXFをGoogleドライブで開く">
+                                                                🏗️ forA DXF
+                                                            </a>
                                                         <?php endif; ?>
                                                     </span>
                                                 <?php endif; ?>

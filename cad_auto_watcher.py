@@ -17,6 +17,19 @@ import urllib.request
 import urllib.parse
 
 from cad_converter import convert_cad_to_pdf_and_png
+from cad_for_architrend import convert_to_architrend_dxf
+
+def _guess_doc_hint(file_category='', file_name=''):
+    s = f"{file_category or ''} {file_name or ''}".lower()
+    if any(k in s for k in ('site', '配置', '敷地', '求積')):
+        return 'site'
+    if any(k in s for k in ('elevation', '立面')):
+        return 'elevation'
+    if any(k in s for k in ('section', 'kanabakari', '断面', '矩計')):
+        return 'section'
+    if any(k in s for k in ('plan', '平面', '間取', '伏', '基礎', '小屋')):
+        return 'plan'
+    return None
 
 PORTAL_SYNC_URL = os.environ.get(
     'CAD_PORTAL_SYNC_URL',
@@ -95,9 +108,15 @@ def sync_pending_portal_files(project_id=None, limit=10):
         for item in items:
             fid = item.get('file_id')
             pid = item.get('project_id')
+            fcat = item.get('file_category') or ''
             fname = item.get('file_name') or f"file_{fid}.jww"
             ext = os.path.splitext(fname)[1].lower()
             base_name = os.path.splitext(fname)[0]
+            need_preview = not bool(item.get('preview_drive_file_id'))
+            need_for_a = (ext in ('.jww', '.jwc', '.dxf')) and (not bool(item.get('for_a_drive_file_id')))
+
+            if not need_preview and not need_for_a:
+                continue
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 raw_path = os.path.join(tmpdir, f"raw_{fid}{ext}")
@@ -113,11 +132,27 @@ def sync_pending_portal_files(project_id=None, limit=10):
                 if not os.path.exists(raw_path) or os.path.getsize(raw_path) == 0:
                     continue
 
-                out_pdf = os.path.join(tmpdir, f"preview_{fid}.pdf")
-                out_png = os.path.join(tmpdir, f"preview_{fid}.png")
+                files_payload = {}
+                preview_ok = True
+                if need_preview:
+                    out_pdf = os.path.join(tmpdir, f"preview_{fid}.pdf")
+                    out_png = os.path.join(tmpdir, f"preview_{fid}.png")
+                    preview_ok = convert_cad_to_pdf_and_png(raw_path, out_pdf, out_png)
+                    if preview_ok and os.path.exists(out_pdf):
+                        files_payload['preview_pdf'] = (f"【プレビュー】{base_name}.pdf", out_pdf, 'application/pdf')
+                        if os.path.exists(out_png):
+                            files_payload['preview_png'] = (f"【プレビュー】{base_name}.png", out_png, 'image/png')
 
-                ok = convert_cad_to_pdf_and_png(raw_path, out_pdf, out_png)
-                if ok and os.path.exists(out_pdf):
+                if need_for_a:
+                    out_for_a = os.path.join(tmpdir, f"for_a_{fid}.dxf")
+                    try:
+                        doc_hint = _guess_doc_hint(fcat, fname)
+                        if convert_to_architrend_dxf(raw_path, out_for_a, doc_hint=doc_hint) and os.path.exists(out_for_a):
+                            files_payload['for_a_dxf'] = (f"【forA】{base_name}.dxf", out_for_a, 'application/dxf')
+                    except Exception as fae:
+                        print(f"  ⚠️ [forA DXF Warning] file_id={fid} ({fname}): {fae}")
+
+                if files_payload:
                     try:
                         up_res = _multipart_post(
                             PORTAL_SYNC_URL,
@@ -127,19 +162,17 @@ def sync_pending_portal_files(project_id=None, limit=10):
                                 'file_id': str(fid),
                                 'status': 'ready',
                             },
-                            files={
-                                'preview_pdf': (f"【プレビュー】{base_name}.pdf", out_pdf, 'application/pdf'),
-                                'preview_png': (f"【プレビュー】{base_name}.png", out_png, 'image/png'),
-                            },
-                            timeout=90
+                            files=files_payload,
+                            timeout=120
                         )
                         if up_res.get('status') == 'ok':
                             converted_count += 1
-                            touched_projects.add(pid)
-                            print(f"  ✅ [変換＆アップロード完了] 案件ID:{pid} {fname} -> PDF ID: {up_res.get('preview_drive_file_id')}")
+                            if need_preview:
+                                touched_projects.add(pid)
+                            print(f"  ✅ [変換＆アップロード完了] 案件ID:{pid} {fname} -> PDF:{up_res.get('preview_drive_file_id')} / forA:{up_res.get('for_a_drive_file_id')}")
                     except Exception as ue:
                         print(f"  ⚠️ [Upload Error] file_id={fid}: {ue}")
-                else:
+                elif need_preview and not preview_ok:
                     print(f"  ✗ [変換失敗] file_id={fid} ({fname})")
                     try:
                         _multipart_post(
@@ -255,7 +288,7 @@ def convert_local_gdrive_file(file_path):
     if not file_path or not os.path.exists(file_path):
         return False
     fname = os.path.basename(file_path)
-    if fname.startswith(('【プレビュー】', '_', '.', '~$')):
+    if fname.startswith(('【プレビュー】', '【forA】', '_', '.', '~$')):
         return False
     ext = os.path.splitext(fname)[1].lower()
     if ext not in ('.jww', '.jwc', '.dxf'):
@@ -264,19 +297,34 @@ def convert_local_gdrive_file(file_path):
     parent_dir = os.path.dirname(file_path)
     base_name = os.path.splitext(fname)[0]
     preview_pdf = os.path.join(parent_dir, f"【プレビュー】{base_name}.pdf")
+    for_a_dxf = os.path.join(parent_dir, f"【forA】{base_name}.dxf")
 
-    # 既に最新のプレビューが存在する場合はスキップ
-    if os.path.exists(preview_pdf):
+    def _is_up_to_date(target_path, min_size=500):
+        if not os.path.exists(target_path):
+            return False
         try:
-            if os.path.getmtime(preview_pdf) >= os.path.getmtime(file_path) and os.path.getsize(preview_pdf) > 500:
-                return False
+            return os.path.getmtime(target_path) >= os.path.getmtime(file_path) and os.path.getsize(target_path) > min_size
         except Exception:
-            pass
+            return False
+
+    need_pdf = not _is_up_to_date(preview_pdf, 500)
+    need_for_a = not _is_up_to_date(for_a_dxf, 500)
+    if not need_pdf and not need_for_a:
+        return False
 
     print(f"📂 [Google Drive Watch] 新規/更新CAD検知: {file_path}")
-    ok = convert_cad_to_pdf_and_png(file_path, preview_pdf, output_png_path=None)
-    if ok:
-        print(f"  ✅ [ローカルプレビュー生成完了] {preview_pdf}")
+    ok = False
+    if need_pdf:
+        if convert_cad_to_pdf_and_png(file_path, preview_pdf, output_png_path=None):
+            print(f"  ✅ [ローカルプレビュー生成完了] {preview_pdf}")
+            ok = True
+    if need_for_a:
+        try:
+            if convert_to_architrend_dxf(file_path, for_a_dxf, doc_hint=_guess_doc_hint('', fname)):
+                print(f"  ✅ [ローカルforA DXF生成完了] {for_a_dxf}")
+                ok = True
+        except Exception as fae:
+            print(f"  ⚠️ [ローカルforA DXFエラー] {fae}")
     return ok
 
 

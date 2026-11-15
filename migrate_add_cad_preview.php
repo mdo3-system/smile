@@ -4,6 +4,7 @@ require_once __DIR__ . '/db_connect.php';
 $columnsToAdd = [
     'preview_drive_file_id' => 'VARCHAR(255) DEFAULT NULL',
     'preview_png_drive_file_id' => 'VARCHAR(255) DEFAULT NULL',
+    'for_a_drive_file_id' => 'VARCHAR(255) DEFAULT NULL',
     'preview_status' => 'VARCHAR(32) DEFAULT NULL',
     'preview_updated_at' => 'DATETIME DEFAULT NULL',
 ];
