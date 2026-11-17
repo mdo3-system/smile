@@ -52,13 +52,11 @@
     $specialized_docs = [];
 
     if ($active_tab === 'permit') {
-        if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1) {
+        if (($project_info['req_permit'] ?? 0) == 1 || ($project_info['req_opt_kisohari'] ?? 0) == 1 || ($project_info['soil_status'] ?? '') === '改良あり') {
             $specialized_docs['soil_report'] = '地盤調査報告書 🟡後出し可';
+            $specialized_docs['soil_impr'] = '地盤改良設計書 🟡後出し可';
         }
         $specialized_docs['pdf_precut'] = 'プレカット図等';
-        if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり') {
-            $specialized_docs['soil_impr'] = '地盤改良関連図書 🟡後出し可';
-        }
         // 許容応力度・地盤・プレカット用のカスタム図書を抽出
         if (isset($files_by_cat) && is_array($files_by_cat)) {
             foreach ($files_by_cat as $cat => $files) {
@@ -169,20 +167,16 @@
                         $clean_label = end($parts);
                     }
 
-                    // ファイル名（または他ファイル記載）ごとにグルーピング
-                    $actual_files_by_name = [];
+                    // スロット単位で最新版1件＋過去履歴（ファイル名違いも含む）を整理
+                    $actual_files = [];
                     if (!empty($history)) {
                         foreach ($history as $h) {
                             if (!empty($h['drive_file_id']) || $h['file_name'] === '【他ファイルに記載】') {
-                                $fname = $h['file_name'];
-                                if (!isset($actual_files_by_name[$fname])) {
-                                    $actual_files_by_name[$fname] = [];
-                                }
-                                $actual_files_by_name[$fname][] = $h;
+                                $actual_files[] = $h;
                             }
                         }
                     }
-                    $has_actual_file = !empty($actual_files_by_name);
+                    $has_actual_file = !empty($actual_files);
                     ?>
                     <div style="background:#fff; border:1px solid #e2e8f0; border-radius:4px; padding:6px 8px; display:flex; flex-direction:column; justify-content:space-between;">
                         <div>
@@ -198,14 +192,13 @@
                                 <?php endif; ?>
                             </div>
                             
-                            <?php if ($has_actual_file): ?>
+                            <?php if ($has_actual_file): 
+                                $latest = $actual_files[0];
+                                $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
+                                    ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
+                                    : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
+                            ?>
                                 <div style="display:flex; flex-direction:column; gap:4px;">
-                                    <?php foreach ($actual_files_by_name as $fname => $versions): 
-                                        $latest = $versions[0];
-                                        $url = (strpos($latest['drive_file_id'], 'uploads/') !== 0 && !empty($latest['drive_file_id'])) 
-                                            ? 'https://drive.google.com/file/d/' . htmlspecialchars($latest['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
-                                            : htmlspecialchars($latest['drive_file_id'], ENT_QUOTES);
-                                    ?>
                                         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:3px; padding:3px 5px;">
                                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
                                                 <?php if ($latest['file_name'] === '【他ファイルに記載】'): ?>
@@ -273,17 +266,17 @@
                                                     </form>
                                                 <?php endif; ?>
 
-                                                <?php if (count($versions) > 1): ?>
-                                                    <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:10px; padding:2px; max-width:120px;">
-                                                        <option value="">過去Ver(<?= count($versions) - 1 ?>件)...</option>
-                                                        <?php foreach ($versions as $idx => $h): 
+                                                <?php if (count($actual_files) > 1): ?>
+                                                    <select onchange="if(this.value) window.open(this.value, '_blank');" style="font-size:10px; padding:2px; max-width:140px;">
+                                                        <option value="">過去Ver(<?= count($actual_files) - 1 ?>件)...</option>
+                                                        <?php foreach ($actual_files as $idx => $h): 
                                                             if ($idx === 0) continue; 
                                                             $h_url = (strpos($h['drive_file_id'], 'uploads/') !== 0 && !empty($h['drive_file_id'])) 
                                                                 ? 'https://drive.google.com/file/d/' . htmlspecialchars($h['drive_file_id'], ENT_QUOTES) . '/view?usp=drivesdk'
                                                                 : htmlspecialchars($h['drive_file_id'], ENT_QUOTES);
                                                             $dateStr = date('m/d H:i', strtotime($h['created_at']));
                                                         ?>
-                                                            <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>)</option>
+                                                            <option value="<?= $h_url ?>">V<?= $h['version'] ?> (<?= $dateStr ?>) <?= htmlspecialchars($h['file_name'], ENT_QUOTES) ?></option>
                                                         <?php endforeach; ?>
                                                     </select>
                                                 <?php endif; ?>
@@ -292,7 +285,6 @@
                                                 <?= htmlspecialchars($latest['file_name'], ENT_QUOTES) ?>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
                                 </div>
                             <?php else: ?>
                                 <div style="font-size:11px; color:#ef4444; padding:2px 0;">未提出</div>

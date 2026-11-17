@@ -316,50 +316,29 @@ class UploadService
             $stmtCleanEmpty = $this->pdo->prepare("DELETE FROM project_files WHERE project_id = :pid AND file_category = :cat AND (drive_file_id IS NULL OR drive_file_id = '') AND file_name != '【他ファイルに記載】'");
             $stmtCleanEmpty->execute(['pid' => $projectId, 'cat' => $fileCategory]);
 
-            // 1. バージョン番号の決定と同名ファイルの最新フラグ更新
+            // 1. バージョン番号の決定と同一スロット内の既存ファイルの最新フラグ更新（ファイル名に関わらず1スロット1最新版）
+            $stmtDisableOld = $this->pdo->prepare("
+                UPDATE project_files 
+                SET is_latest = 0 
+                WHERE project_id = :pid AND file_category = :cat
+            ");
+            $stmtDisableOld->execute([
+                'pid' => $projectId,
+                'cat' => $fileCategory
+            ]);
+
             if ($isIncluded) {
-                // 他ファイルに記載の場合、既存の他ファイルに記載レコードを非最新に
-                $stmtDisable = $this->pdo->prepare("
-                    UPDATE project_files 
-                    SET is_latest = 0 
-                    WHERE project_id = :pid AND file_category = :cat AND file_name = '【他ファイルに記載】'
+                $newVersion = 1;
+            } else {
+                $stmtMaxVer = $this->pdo->prepare("
+                    SELECT COALESCE(MAX(version), 0) FROM project_files 
+                    WHERE project_id = :pid AND file_category = :cat
                 ");
-                $stmtDisable->execute([
+                $stmtMaxVer->execute([
                     'pid' => $projectId,
                     'cat' => $fileCategory
                 ]);
-                $newVersion = 1;
-            } else {
-                // 通常ファイルの場合:
-                // 同名ファイルがすでに存在するかチェック
-                $stmtCheckSame = $this->pdo->prepare("
-                    SELECT MAX(version) FROM project_files 
-                    WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
-                ");
-                $stmtCheckSame->execute([
-                    'pid' => $projectId,
-                    'cat' => $fileCategory,
-                    'fname' => $fileName
-                ]);
-                $sameFileMaxVer = $stmtCheckSame->fetchColumn();
-
-                if ($sameFileMaxVer !== null && $sameFileMaxVer !== false && $sameFileMaxVer > 0) {
-                    // 同名ファイルが存在する場合: その同名ファイルの旧バージョンのみを is_latest = 0 に
-                    $stmtDisableSame = $this->pdo->prepare("
-                        UPDATE project_files 
-                        SET is_latest = 0 
-                        WHERE project_id = :pid AND file_category = :cat AND file_name = :fname
-                    ");
-                    $stmtDisableSame->execute([
-                        'pid' => $projectId,
-                        'cat' => $fileCategory,
-                        'fname' => $fileName
-                    ]);
-                    $newVersion = (int)$sameFileMaxVer + 1;
-                } else {
-                    // 新規別名ファイルの場合: 既存ファイルを保持したまま、V1として追加
-                    $newVersion = 1;
-                }
+                $newVersion = intval($stmtMaxVer->fetchColumn()) + 1;
             }
 
             // 2. 新しいレコードを挿入

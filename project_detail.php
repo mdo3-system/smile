@@ -107,8 +107,8 @@ $stmtAllEst = $pdo->prepare("SELECT * FROM estimates WHERE project_id = :pid ORD
 $stmtAllEst->execute(['pid' => $project_id]);
 $all_estimates = $stmtAllEst->fetchAll();
 
-// 案件に関連する全ファイル（履歴含む）を取得 (依頼主提出物用)
-$stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid ORDER BY version DESC, id DESC");
+// 案件に関連する全ファイル（履歴含む）を取得 (依頼主提出物用: 最新フラグ・ID降順で常に最新UPを先頭に)
+$stmtFiles = $pdo->prepare("SELECT * FROM project_files WHERE project_id = :pid ORDER BY is_latest DESC, id DESC");
 $stmtFiles->execute(['pid' => $project_id]);
 $all_files = $stmtFiles->fetchAll();
 

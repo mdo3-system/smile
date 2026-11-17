@@ -190,9 +190,7 @@ $has_any_design_doc = !empty($submitted_design_files);
         </div>
 
         <?= renderUploadSlot('地盤調査報告書', 'soil_report', false, '後出し可（揃った日が一次回答起算日）') ?>
-        <?php if (isset($project_info['soil_status']) && $project_info['soil_status'] === '改良あり'): ?>
         <?= renderUploadSlot('地盤改良設計書', 'soil_impr', false, '地盤改良がある場合') ?>
-        <?php endif; ?>
         
         <!-- 動的地盤スロット追加先 -->
         <div id="dynamic_soil_slots_container"></div>
