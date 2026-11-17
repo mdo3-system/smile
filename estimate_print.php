@@ -40,10 +40,20 @@ if (!$data) {
 }
 
 if (!empty($data['pdf_drive_file_id'])) {
-    // Google Drive上のPDFプレビュー画面へリダイレクト
-    $drive_url = "https://drive.google.com/file/d/" . $data['pdf_drive_file_id'] . "/view?usp=drivesdk";
-    header("Location: " . $drive_url);
-    exit;
+    if (strpos($data['pdf_drive_file_id'], 'uploads/') === 0) {
+        $local_pdf = __DIR__ . '/' . $data['pdf_drive_file_id'];
+        if (file_exists($local_pdf)) {
+            $encoded_path = implode('/', array_map('rawurlencode', explode('/', $data['pdf_drive_file_id'])));
+            header("Location: " . $encoded_path);
+            exit;
+        }
+        // ローカルファイルが存在しない場合は下のHTML見積書描画へフォールバック
+    } else {
+        // Google Drive上のPDFプレビュー画面へリダイレクト
+        $drive_url = "https://drive.google.com/file/d/" . $data['pdf_drive_file_id'] . "/view?usp=drivesdk";
+        header("Location: " . $drive_url);
+        exit;
+    }
 }
 
 if (!$data['total_price']) {

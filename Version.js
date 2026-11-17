@@ -239,7 +239,7 @@
 // 1.6.76: 自動常駐管理バッチ・スクリプト群のPowerShell 5.1/Windows文字コード非依存化（純ASCII化によるマルチバイト構文エラー完全根絶）
 // 1.6.77: チャット通知メールのSPF認証対応（-f system@thanks.work付与によるGmail迷惑メール隔離防止）、送信者ロール・会社名DB直接補正、Ajaxセッション復元統合、および管理者宛ダイレクト通知先登録
 // 1.6.78: Z840連携によるCAD図面（JWW/DXF/ZIP）のPDF/PNG自動変換（JacConvert CLI・ezdxf・pypdfium2連携）、ポータル（管理者・依頼主）での直接プレビュー表示、Googleドライブフォルダ監視＆ポータル同期デーモン、完了時メール通知、および建築図書整合性確認の全スロット自動配置・ワンクリック照合の完全実装
-window.APP_VERSION = "1.6.80";
+window.APP_VERSION = "1.6.81";
 const APP_LAST_UPDATED = '2026-11-17';
 
 
