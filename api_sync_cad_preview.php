@@ -46,7 +46,13 @@ try {
                    pf.drive_file_id, pf.preview_drive_file_id, pf.for_a_drive_file_id,
                    pf.version, pf.created_at,
                    p.project_name, p.drive_folder_id AS project_drive_folder_id,
-                   u.company_name, u.contact_name
+                   u.company_name, u.contact_name,
+                   EXISTS (
+                       SELECT 1 FROM project_files pf_at
+                       WHERE pf_at.project_id = pf.project_id
+                         AND pf_at.is_latest = 1
+                         AND LOWER(pf_at.file_name) LIKE '%.fcbz'
+                   ) AS is_architrend_project
             FROM project_files pf
             JOIN projects p ON pf.project_id = p.id
             LEFT JOIN users u ON p.client_id = u.id
@@ -58,6 +64,12 @@ try {
                   OR (
                       (pf.for_a_drive_file_id IS NULL OR pf.for_a_drive_file_id = '')
                       AND LOWER(pf.file_name) NOT LIKE '%.zip'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM project_files pf_at
+                          WHERE pf_at.project_id = pf.project_id
+                            AND pf_at.is_latest = 1
+                            AND LOWER(pf_at.file_name) LIKE '%.fcbz'
+                      )
                   )
               )
               AND (pf.preview_status IS NULL OR pf.preview_status NOT IN ('error', 'skipped'))

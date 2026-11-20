@@ -239,16 +239,11 @@
                                                                 ⏳PDF自動変換中
                                                             </span>
                                                         <?php endif; ?>
-                                                        <?php if ($is_admin && !empty($for_a_id)):
-                                                            $for_a_url = (strpos($for_a_id, 'uploads/') !== 0)
-                                                                ? 'https://drive.google.com/file/d/' . htmlspecialchars($for_a_id, ENT_QUOTES) . '/view?usp=drivesdk'
-                                                                : htmlspecialchars($for_a_id, ENT_QUOTES);
-                                                        ?>
-                                                            <a href="<?= $for_a_url ?>" target="_blank"
-                                                                style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:3px; font-size:10px; padding:1px 5px; text-decoration:none; font-weight:bold;"
-                                                                title="ARCHITREND ZERO 立体化自動インポート用にレイヤ整理済みのDXFをGoogleドライブで開く">
-                                                                🏗️ forA DXF
-                                                            </a>
+                                                        <?php if ($is_admin && !empty($for_a_id)): ?>
+                                                            <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; border-radius:3px; font-size:10px; padding:1px 5px; font-weight:bold; display:inline-flex; align-items:center;"
+                                                                title="ARCHITREND ZERO 立体化用DXF（【forA】*.dxf）がGoogleドライブ同期フォルダへ自動変換済みです">
+                                                                ✅ 自動化ファイル変換済
+                                                            </span>
                                                         <?php endif; ?>
                                                     </span>
                                                 <?php endif; ?>

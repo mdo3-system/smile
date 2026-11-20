@@ -113,7 +113,8 @@ def sync_pending_portal_files(project_id=None, limit=10):
             ext = os.path.splitext(fname)[1].lower()
             base_name = os.path.splitext(fname)[0]
             need_preview = not bool(item.get('preview_drive_file_id'))
-            need_for_a = (ext in ('.jww', '.jwc', '.dxf')) and (not bool(item.get('for_a_drive_file_id')))
+            is_architrend_proj = bool(item.get('is_architrend_project'))
+            need_for_a = (not is_architrend_proj) and (ext in ('.jww', '.jwc', '.dxf')) and (not bool(item.get('for_a_drive_file_id')))
 
             if not need_preview and not need_for_a:
                 continue
@@ -307,8 +308,13 @@ def convert_local_gdrive_file(file_path):
         except Exception:
             return False
 
+    try:
+        is_architrend_dir = any(f.lower().endswith('.fcbz') for f in os.listdir(parent_dir))
+    except Exception:
+        is_architrend_dir = False
+
     need_pdf = not _is_up_to_date(preview_pdf, 500)
-    need_for_a = not _is_up_to_date(for_a_dxf, 500)
+    need_for_a = (not is_architrend_dir) and (not _is_up_to_date(for_a_dxf, 500))
     if not need_pdf and not need_for_a:
         return False
 
